@@ -16,9 +16,9 @@ from fastapi.middleware.cors import CORSMiddleware
 PROJECT_ROOT = Path(__file__).parent.resolve()
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from routers import upload, clients, accounts, audit, tax, ml, export, tests, dashboard, auth
-from api_models import HealthResponse
-from api_utils import ensure_dirs
+from .routers import upload, clients, accounts, audit, tax, ml, export, tests, dashboard, auth
+from .api_models import HealthResponse
+from .api_utils import ensure_dirs
 
 
 @asynccontextmanager
