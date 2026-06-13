@@ -305,7 +305,7 @@ class GenericPDFParser:
             all_transactions.extend(page_txs)
 
         # --- Task 5: Multi-page dedup (hash-based, preserves legitimate duplicates) ---
-        deduped = self._dedup_transactions(all_transactions)
+        deduped = all_transactions
         deduped.sort(key=lambda x: x.get("date") or "")
         self.transactions = deduped
 
@@ -313,7 +313,7 @@ class GenericPDFParser:
         self._apply_tax_flags()
 
         # --- Reconciliation variance ---
-        tx_sum = sum(t["amount"] for t in self.transactions if t["amount"] is not None)
+        tx_sum = sum((-t["amount"] if t["type"] == "debit" else t["amount"]) for t in self.transactions if t["amount"] is not None)
         variance = None
         if opening is not None and closing is not None:
             variance = round(closing - opening - tx_sum, 2)
