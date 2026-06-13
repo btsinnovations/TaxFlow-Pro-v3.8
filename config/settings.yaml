@@ -1,0 +1,18 @@
+# Optional external configuration
+tax_rules:
+  - keyword: "fuel"
+    category: "fuel_expense"
+    line: "[Car and Truck Expenses (Line 9)]"
+    deductible: true
+  - keyword: "meal"
+    category: "meals_entertainment"
+    line: "[Meals and Entertainment (Line 24b)]"
+    deductible: true
+
+split_patterns:
+  - regex: "cash\\s*back\\s*\\$?(\\d+(\\.\\d{2})?)"
+    priority: 1
+  - regex: "atm.*\\$?(\\d+(\\.\\d{2})?)"
+    priority: 2
+
+default_cashback: "20.00"

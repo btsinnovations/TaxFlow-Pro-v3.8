@@ -1,0 +1,26 @@
+import pytest
+from decimal import Decimal
+from phase3_pipeline.models import Transaction
+from phase3_pipeline.graph import TransactionGraph
+
+def test_add_node():
+    g = TransactionGraph()
+    t = Transaction(date="2026-01-01", description="Test", amount=Decimal("10.00"), txn_uid="a")
+    g.add(t)
+    assert t.txn_uid in g.nodes
+
+def test_duplicate_raises():
+    g = TransactionGraph()
+    t1 = Transaction(date="2026-01-01", description="Test", amount=Decimal("10.00"), txn_uid="a")
+    t2 = Transaction(date="2026-01-01", description="Test", amount=Decimal("10.00"), txn_uid="a")
+    g.add(t1)
+    with pytest.raises(ValueError, match="Duplicate txn_uid"):
+        g.add(t2)
+
+def test_orphan_validation():
+    g = TransactionGraph()
+    parent = Transaction(date="2026-01-01", description="Parent", amount=Decimal("100"), txn_uid="p")
+    child = Transaction(date="2026-01-01", description="Child", amount=Decimal("-50"), txn_uid="c", parent_txn_uid="p")
+    g.add(child)  # add child first; parent not yet present
+    with pytest.raises(ValueError, match="Orphan parent"):
+        g.validate_orphans()

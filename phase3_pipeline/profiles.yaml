@@ -1,0 +1,25 @@
+# profiles.yaml – defines personal and business profiles
+# Each profile can have custom payee normalization rules and other settings.
+
+profiles:
+  personal:
+    payee_normalization:
+      - pattern: "WITHDRAWAL DEBIT CARD (.+)"
+        replace: "\\1"
+      - pattern: "POS #\\d+ (.+)"
+        replace: "\\1"
+      - pattern: "BILL PAYMENT #\\d+ (.+)"
+        replace: "\\1"
+      - pattern: "ACH PAYPAL (.+)"
+        replace: "PAYPAL"
+    default_category: "Personal:Uncategorized"
+    
+  business:
+    payee_normalization:
+      - pattern: "WITHDRAWAL DEBIT CARD (.+)"
+        replace: "\\1"
+      - pattern: "POS #\\d+ (.+)"
+        replace: "\\1"
+      - pattern: "BILL PAYMENT #\\d+ (.+)"
+        replace: "\\1"
+    default_category: "Business:Uncategorized"
