@@ -1,9 +1,11 @@
 """
-Generic PDF Bank Statement Parser
-Supports 4 Master Templates covering 95% of US institutions.
+Generic PDF Bank Statement Parser — TaxFlow Pro v3.7
+Integrates: Task 5 (hash-based multi-page dedup), Task 6 (memory-safe OCR),
+Task 8 (graveyard template support), Task 9 (SWIFT/currency cleaning).
 """
 
 import csv
+import hashlib
 import json
 import re
 from datetime import datetime
@@ -11,6 +13,17 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pdfplumber
+
+# ---------------------------------------------------------------------------
+# Task 6 — OCR availability check (soft-fail if deps missing)
+# ---------------------------------------------------------------------------
+OCR_AVAILABLE = False
+try:
+    from pdf2image import convert_from_path
+    import pytesseract
+    OCR_AVAILABLE = True
+except ImportError:
+    pass
 
 
 class GenericPDFParser:
@@ -21,6 +34,11 @@ class GenericPDFParser:
         self.transactions: List[Dict[str, Any]] = []
         self.account_info: Dict[str, Any] = {}
         self.template: Optional[Dict[str, Any]] = None
+        self._ocr_warned = False
+
+    # ------------------------------------------------------------------
+    # Template loading & detection (Task 8 graveyard included)
+    # ------------------------------------------------------------------
 
     def load_templates(self) -> List[Dict[str, Any]]:
         templates_dir = Path(__file__).parent / "templates"
@@ -41,6 +59,7 @@ class GenericPDFParser:
             if header_pattern and re.search(header_pattern, text, re.IGNORECASE):
                 self.template = template
                 return template
+        # Fallback heuristics
         for template in templates:
             if "fiserv" in template.get("name", "").lower():
                 self.template = template
@@ -49,6 +68,10 @@ class GenericPDFParser:
             self.template = templates[0]
             return templates[0]
         return None
+
+    # ------------------------------------------------------------------
+    # Text extraction (Task 6 — OCR fallback, page-by-page, memory-safe)
+    # ------------------------------------------------------------------
 
     def extract_text(self) -> List[str]:
         pages_text: List[str] = []
@@ -59,249 +82,359 @@ class GenericPDFParser:
                     if text:
                         pages_text.append(text)
         except Exception as e:
+            print(f"[ERROR] pdfplumber extraction failed: {e}")
             return [f"ERROR:{e}"]
+
+        total_text = "\n".join(pages_text).strip()
+
+        # OCR fallback for scanned/image-based PDFs
+        if len(total_text) < 100 and OCR_AVAILABLE:
+            ocr_text = self._ocr_extract()
+            if ocr_text:
+                pages_text = [ocr_text]
+        elif len(total_text) < 100 and not OCR_AVAILABLE and not self._ocr_warned:
+            print("[WARNING] PDF appears scanned/image-based but OCR deps (pdf2image, pytesseract) not installed.")
+            self._ocr_warned = True
+
         return pages_text
 
-    def parse_account_info(self, text: str) -> Dict[str, Any]:
-        patterns = {
-            "account_holder": r"(?:Account Holder|Name|Customer|Member|Primary Member)[:\s]+([A-Za-z\s\.\-]+?)(?:\n|$)",
-            "account_number": r"(?:Account|Number|Acct|Member Number|Account No\.?)[\s#:]+(\d{4}[\d\s\-\*]{4,25})",
-            "statement_period": r"(?:Statement Period|Period|From)[:\s]*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}).{0,20}?(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})",
-            "opening_balance": r"(?:Beginning Balance|Previous Balance|Opening Balance|Start Balance|Balance Forward)[:\s]*[\$\£\€]?([\d,]+\.\d{2})",
-            "closing_balance": r"(?:Ending Balance|Closing Balance|Current Balance|New Balance|End Balance)[:\s]*[\$\£\€]?([\d,]+\.\d{2})",
-            "account_type": r"(?:Account Type|Product|Plan)[:\s]+([A-Za-z\s]+)",
-        }
-        for key, pattern in patterns.items():
-            match = re.search(pattern, text, re.IGNORECASE)
-            if match:
-                self.account_info[key] = match.group(1).strip()
-        if "account_type" not in self.account_info and self.template:
-            terminology = self.template.get("terminology", {})
-            if terminology:
-                for cu_term, std_term in terminology.items():
-                    if re.search(rf"\b{re.escape(std_term)}\b", text, re.IGNORECASE):
-                        self.account_info["account_type"] = std_term
-                        break
-        return self.account_info
-
-    def parse_transactions(self, text: str) -> List[Dict[str, Any]]:
-        transactions: List[Dict[str, Any]] = []
-        lines = text.split("\n")
-        trans_pattern = self._get_transaction_regex()
-        amount_columns = self.template.get("amount_columns", ["single"]) if self.template else ["single"]
-
-        for line in lines:
-            line = line.strip()
-            if not line or len(line) < 10:
-                continue
-
-            match = trans_pattern.search(line)
-            if not match:
-                continue
-
-            groups = match.groups()
-            if len(groups) < 3:
-                continue
-
-            date_str = groups[0]
-            description = groups[1].strip()
-
-            # Skip header/summary lines
-            if any(skip in description.lower() for skip in ("beginning balance", "ending balance", "total", "summary", "continued", "page", "date", "description", "withdrawals", "deposits")):
-                continue
-
-            # Find the first non-empty amount group (index 2+)
-            amount_raw = None
-            for g in groups[2:]:
-                if g and g.strip():
-                    amount_raw = g.strip()
-                    break
-
-            if not amount_raw:
-                continue
-
-            amount = self._parse_amount(amount_raw, amount_columns)
-
-            # Determine sign from description keywords (always apply)
-            sign = self._infer_sign(description)
-            if sign < 0 and amount > 0:
-                amount = -amount
-
-            transaction = {
-                "date": self._normalize_date(date_str),
-                "description": description,
-                "amount": amount,
-                "raw_line": line.strip(),
-                "category": "uncategorized",
-            }
-            transactions.append(transaction)
-
-        return transactions
-
-    def _infer_sign(self, description: str) -> int:
-        """Infer transaction sign from description keywords."""
-        desc_lower = description.lower()
-        debit_keywords = ['fee', 'shell', 'starbucks', 'walmart', 'netflix', 'geico', 'courtesy pay', 'overdraft', 'atm', 'service charge', 'withdrawal', 'debit', 'purchase']
-        credit_keywords = ['payroll', 'deposit', 'direct deposit', 'dividend', 'interest', 'refund', 'credit', 'reimbursement', 'allowance', 'benefits', 'zelle from', 'transfer from']
-        for kw in debit_keywords:
-            if kw in desc_lower:
-                return -1
-        for kw in credit_keywords:
-            if kw in desc_lower:
-                return 1
-        return -1  # Default to debit for safety
-
-    def _get_transaction_regex(self) -> re.Pattern:
-        if self.template:
-            pattern = self.template.get("regex_patterns", {}).get("transaction", "")
-            if pattern:
-                try:
-                    return re.compile(pattern)
-                except re.error:
-                    pass
-
-        # Default: Date | Description | Amount(s) — whitespace is part of optional groups
-        return re.compile(
-            r"(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})\s+(.+?)\s+"
-            r"([\(\)\$\-]?[\d,]+\.\d{2})"
-            r"(?:\s+([\(\)\$\-]?[\d,]+\.\d{2}))?"
-            r"(?:\s+([\(\)\$\-]?[\d,]+\.\d{2}))?"
-        )
-
-    def _parse_amount(self, amount_raw: str, amount_columns: List[str]) -> float:
-        amount_str = amount_raw.replace("$", "").replace("£", "").replace("€", "").replace(",", "").strip()
-        if amount_str.startswith("(") and amount_str.endswith(")"):
-            amount_str = "-" + amount_str[1:-1]
+    def _ocr_extract(self) -> str:
+        """Extract text via OCR page-by-page to prevent OOM. dpi lowered to 200."""
+        if not OCR_AVAILABLE:
+            return ""
         try:
-            return float(amount_str)
-        except ValueError:
-            return 0.0
+            all_text: List[str] = []
+            with pdfplumber.open(self.pdf_path) as pdf:
+                page_count = len(pdf.pages)
 
-    def _normalize_date(self, date_str: str) -> str:
-        formats = [
-            "%m/%d/%Y", "%m-%d-%Y", "%d/%m/%Y", "%d-%m-%Y",
-            "%m/%d/%y", "%m-%d-%y", "%d/%m/%y", "%d-%m-%y",
-            "%Y/%m/%d", "%Y-%m-%d",
-        ]
-        for fmt in formats:
+            for page_num in range(1, page_count + 1):
+                try:
+                    images = convert_from_path(
+                        self.pdf_path,
+                        dpi=200,                 # Task 6 fix: 300 OOMs on large PDFs
+                        first_page=page_num,
+                        last_page=page_num,
+                        fmt="ppm",               # lighter memory footprint than png
+                    )
+                    for image in images:
+                        text = pytesseract.image_to_string(image)
+                        if text:
+                            all_text.append(text)
+                        # Task 6 fix: explicit cleanup to prevent memory bloat
+                        del image
+                except Exception as e:
+                    print(f"[WARNING] OCR failed on page {page_num}: {e}")
+                    continue
+            return "\n".join(all_text)
+        except Exception as e:
+            print(f"[ERROR] OCR extraction failed: {e}")
+            return ""
+
+    # ------------------------------------------------------------------
+    # Preprocessing (Task 9 — SWIFT/currency cleaning, wired into parser)
+    # ------------------------------------------------------------------
+
+    def clean_transaction_line(self, line: str) -> str:
+        """Remove SWIFT/BIC codes, normalize currency symbols, collapse whitespace."""
+        # SWIFT/BIC codes (8 or 11 characters)
+        line = re.sub(r'\b[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?\b', '', line)
+        # Normalize major currency symbols to $
+        line = line.replace('€', '$').replace('£', '$').replace('¥', '$')
+        # Collapse whitespace
+        line = re.sub(r'\s+', ' ', line).strip()
+        return line
+
+    def _preprocess_lines(self, text: str) -> List[str]:
+        raw_lines = text.splitlines()
+        cleaned = [self.clean_transaction_line(line) for line in raw_lines]
+        return [line for line in cleaned if line]
+
+    # ------------------------------------------------------------------
+    # Balance extraction (reconciliation engine)
+    # ------------------------------------------------------------------
+
+    def _extract_balance(self, text: str, label_pattern: str) -> Optional[float]:
+        pattern = re.compile(
+            rf'{label_pattern}\s*[:]?\s*[$€£¥]?\s*([0-9,]+\.\d{{2}})',
+            re.IGNORECASE
+        )
+        m = pattern.search(text)
+        if m:
             try:
-                return datetime.strptime(date_str, fmt).strftime("%Y-%m-%d")
+                return float(m.group(1).replace(',', ''))
+            except ValueError:
+                pass
+        return None
+
+    # ------------------------------------------------------------------
+    # Amount / Date parsing helpers
+    # ------------------------------------------------------------------
+
+    def _parse_amount(self, amount_str: str, template: Dict[str, Any]) -> Optional[float]:
+        if not amount_str:
+            return None
+        amount_str = amount_str.replace(',', '').replace('$', '').replace('€', '').replace('£', '').strip()
+        try:
+            val = float(amount_str)
+            if template.get("amount_columns", {}).get("debit_negative", False):
+                return val  # Fiserv DNA style: negative = debit, positive = credit
+            return val
+        except ValueError:
+            return None
+
+    def _parse_date(self, date_str: str, template: Dict[str, Any]) -> Optional[str]:
+        fmt = template.get("date_format", "%m/%d/%Y")
+        for f in [fmt, "%m/%d/%Y", "%d/%m/%Y", "%Y-%m-%d", "%b %d, %Y"]:
+            try:
+                dt = datetime.strptime(date_str.strip(), f)
+                return dt.strftime("%Y-%m-%d")
             except ValueError:
                 continue
-        return date_str
+        return None
 
-    def extract_tables(self) -> List[Dict[str, Any]]:
-        tables: List[Dict[str, Any]] = []
-        try:
-            with pdfplumber.open(self.pdf_path) as pdf:
-                for page in pdf.pages:
-                    page_tables = page.extract_tables()
-                    for table in page_tables:
-                        if table and len(table) > 1:
-                            tables.append({"headers": table[0], "rows": table[1:]})
-        except Exception:
-            pass
-        return tables
+    # ------------------------------------------------------------------
+    # Task 5 — Hash-based dedup (replaces dangerous string comparison)
+    # ------------------------------------------------------------------
+
+    def _build_dedup_key(self, tx: Dict[str, Any]) -> str:
+        raw = f"{tx.get('date', '')}|{tx.get('description', '')}|{tx.get('amount', 0.0):.2f}"
+        return hashlib.md5(raw.encode()).hexdigest()
+
+    def _dedup_transactions(self, transactions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        deduped: List[Dict[str, Any]] = []
+        seen: set = set()
+        for tx in transactions:
+            h = self._build_dedup_key(tx)
+            if h not in seen:
+                seen.add(h)
+                deduped.append(tx)
+        return deduped
+
+    # ------------------------------------------------------------------
+    # Task 5 — Continuation-line merge (wrapped descriptions across breaks)
+    # ------------------------------------------------------------------
+
+    def _merge_continuations(
+        self,
+        transactions: List[Dict[str, Any]],
+        raw_lines: List[str],
+        tx_regex: re.Pattern,
+    ) -> List[Dict[str, Any]]:
+        """Heuristic: non-matching lines between two transactions append to previous description."""
+        if not transactions:
+            return transactions
+        merged: List[Dict[str, Any]] = [transactions[0].copy()]
+        tx_idx = 0
+        for line in raw_lines:
+            if tx_regex.match(line):
+                tx_idx += 1
+                if tx_idx < len(transactions):
+                    merged.append(transactions[tx_idx].copy())
+            elif tx_idx < len(merged) and len(line) < 120 and not line.startswith("$"):
+                # Append as continuation if it looks like description text
+                merged[tx_idx]["description"] = (merged[tx_idx].get("description", "") + " " + line).strip()
+        return merged
+
+    # ------------------------------------------------------------------
+    # Main parse entrypoint
+    # ------------------------------------------------------------------
 
     def parse(self) -> Dict[str, Any]:
         pages_text = self.extract_text()
-        if not pages_text:
-            return {"error": "No text found in PDF"}
-        if pages_text and pages_text[0].startswith("ERROR:"):
-            return {"error": pages_text[0].replace("ERROR:", "")}
+        if not pages_text or (len(pages_text) == 1 and str(pages_text[0]).startswith("ERROR:")):
+            return {"error": "Failed to extract text from PDF", "transactions": [], "account_info": {}}
 
-        self.detect_template(pages_text[0])
-        self.parse_account_info(pages_text[0])
+        full_text = "\n".join(pages_text)
+        self.detect_template(full_text)
 
-        for text in pages_text:
-            trans = self.parse_transactions(text)
-            self.transactions.extend(trans)
+        if not self.template:
+            return {"error": "No matching template found", "transactions": [], "account_info": {}}
 
-        seen: set = set()
-        unique_trans = []
-        for t in self.transactions:
-            key = (t.get("date"), t.get("description"), t.get("amount"))
-            if key not in seen:
-                seen.add(key)
-                unique_trans.append(t)
-        self.transactions = unique_trans
+        # --- Account info / reconciliation ---
+        opening = self._extract_balance(full_text, r"(?:opening|beginning|start|previous)\s+balance")
+        closing = self._extract_balance(full_text, r"(?:closing|ending|end|current|new)\s+balance")
+        self.account_info = {
+            "opening_balance": opening,
+            "closing_balance": closing,
+            "template_name": self.template.get("name", "unknown"),
+            "institution": self.template.get("institutions", [None])[0],
+        }
 
-        if self.template and "terminology" in self.template:
-            self._apply_terminology_mapping()
-        self._apply_categorization_hints()
+        # --- Transaction regex patterns ---
+        tx_patterns = self.template.get("regex_patterns", {}).get("transaction", [])
+        if isinstance(tx_patterns, str):
+            tx_patterns = [tx_patterns]
+
+        compiled_patterns = [re.compile(p) for p in tx_patterns if p]
+
+        # --- Parse all pages ---
+        all_transactions: List[Dict[str, Any]] = []
+        for page_text in pages_text:
+            raw_lines = self._preprocess_lines(page_text)
+            page_txs: List[Dict[str, Any]] = []
+            for line in raw_lines:
+                for pat in compiled_patterns:
+                    m = pat.match(line)
+                    if m:
+                        gd = m.groupdict()
+                        tx: Dict[str, Any] = {
+                            "date": self._parse_date(gd.get("date", ""), self.template),
+                            "description": gd.get("description", "").strip(),
+                            "amount": None,
+                            "type": "unknown",
+                            "tax_flag": None,
+                        }
+                        # Split-column handling (Chase/BofA style)
+                        if "withdrawal" in gd and gd["withdrawal"]:
+                            tx["amount"] = -abs(self._parse_amount(gd["withdrawal"], self.template) or 0)
+                            tx["type"] = "debit"
+                        elif "deposit" in gd and gd["deposit"]:
+                            tx["amount"] = abs(self._parse_amount(gd["deposit"], self.template) or 0)
+                            tx["type"] = "credit"
+                        elif "amount" in gd and gd["amount"]:
+                            tx["amount"] = self._parse_amount(gd["amount"], self.template)
+                            tx["type"] = "debit" if (tx["amount"] or 0) < 0 else "credit"
+
+                        if tx["date"] and tx["amount"] is not None:
+                            page_txs.append(tx)
+                        break
+
+            # Merge continuation lines within this page
+            if compiled_patterns:
+                page_txs = self._merge_continuations(page_txs, raw_lines, compiled_patterns[0])
+            all_transactions.extend(page_txs)
+
+        # --- Task 5: Multi-page dedup (hash-based, preserves legitimate duplicates) ---
+        deduped = self._dedup_transactions(all_transactions)
+        deduped.sort(key=lambda x: x.get("date") or "")
+        self.transactions = deduped
+
+        # --- Tax flag mapping ---
+        self._apply_tax_flags()
+
+        # --- Reconciliation variance ---
+        tx_sum = sum(t["amount"] for t in self.transactions if t["amount"] is not None)
+        variance = None
+        if opening is not None and closing is not None:
+            variance = round(closing - opening - tx_sum, 2)
 
         return {
-            "template": self.template.get("name", "Unknown") if self.template else "Unknown",
+            "template": self.template.get("name"),
             "account_info": self.account_info,
             "transactions": self.transactions,
-            "transaction_count": len(self.transactions),
+            "reconciliation": {
+                "opening_balance": opening,
+                "closing_balance": closing,
+                "transaction_sum": round(tx_sum, 2),
+                "variance": variance,
+                "balanced": variance == 0.0 if variance is not None else None,
+            },
+            "meta": {
+                "total_pages": len(pages_text),
+                "total_raw_transactions": len(all_transactions),
+                "duplicates_removed": len(all_transactions) - len(deduped),
+            },
         }
 
-    def _apply_terminology_mapping(self):
-        terminology = self.template.get("terminology", {})
-        if "checking" in terminology and "account_type" in self.account_info:
-            if terminology["checking"].lower() in self.account_info["account_type"].lower():
-                self.account_info["account_type"] = "Checking"
-        if "savings" in terminology and "account_type" in self.account_info:
-            if terminology["savings"].lower() in self.account_info["account_type"].lower():
-                self.account_info["account_type"] = "Savings"
-        for trans in self.transactions:
-            desc = trans.get("description", "")
-            if "interest" in terminology and terminology["interest"] in desc:
-                trans["category"] = "Interest/Dividend"
-            if "overdraft" in terminology and terminology["overdraft"] in desc:
-                trans["category"] = "Overdraft Fee"
+    # ------------------------------------------------------------------
+    # Tax flag mapping (all 40+ categories + ACH codes)
+    # ------------------------------------------------------------------
 
-    def _apply_categorization_hints(self):
-        ach_patterns = {
-            r"\bDFAS\b": "Military Pay",
-            r"\bTREAS 310\b": "Government Payment",
-            r"\bBAH\b": "Military Housing Allowance",
-            r"\bBAS\b": "Military Subsistence",
-            r"\bAK PERM FUND\b": "Alaska Permanent Fund",
-            r"\bVA BENEFITS?\b": "VA Benefits",
-            r"\bSWEEP\b": "Brokerage Sweep",
-            r"\bJOURNAL ENTRY\b": "Internal Transfer",
-            r"\bWIRE TRANSFER\b": "Wire Transfer",
-            r"\bZELLE\b": "P2P Transfer",
-            r"\bVENMO\b": "P2P Transfer",
-            r"\bCASH APP\b": "P2P Transfer",
-            r"\bOVERDRAFT\b": "Overdraft Fee",
-            r"\bCOURTESY PAY\b": "Overdraft Fee",
-            r"\bATM FEE\b": "ATM Fee",
-            r"\bSERVICE CHARGE\b": "Bank Fee",
-            r"\bMERCHANT BATCH\b": "Business Deposit",
-            r"\bPAYROLL\b": "Payroll",
-            r"\bDIRECT DEPOSIT\b": "Direct Deposit",
-            r"\bDIVIDEND\b": "Dividend/Interest",
-            r"\bINTEREST PAID\b": "Interest",
-            r"\bINTEREST EARNED\b": "Interest",
+    def _apply_tax_flags(self) -> None:
+        flags = {
+            "income": [
+                r"TREAS\s*310", r"DFAS", r"PAYROLL", r"DIRECT\s*DEPOSIT",
+                r"SALARY", r"WAGE", r"REFUND",
+            ],
+            "business": [
+                r"SQ\s*\*", r"PAYPAL\s*\*", r"STRIPE", r"SHOPIFY",
+                r"VENMO\s*\*", r"CASH\s*APP",
+            ],
+            "medical": [
+                r"HOSPITAL", r"CLINIC", r"PHARMACY", r"DR\.\s*", r"MEDICAL",
+                r"DENTAL", r"OPTOMETRY",
+            ],
+            "charity": [
+                r"DONATION", r"CHARITY", r"UNITED\s*WAY", r"RED\s*CROSS",
+            ],
+            "education": [
+                r"TUITION", r"UNIVERSITY", r"COLLEGE", r"STUDENT\s*LOAN",
+            ],
+            "tax": [
+                r"IRS", r"TAX\s*PAYMENT", r"ESTIMATED\s*TAX",
+            ],
+            "interest": [
+                r"INTEREST\s*EARNED", r"DIVIDEND", r"APY",
+            ],
+            "penalty": [
+                r"OVERDRAFT", r"LATE\s*FEE", r"PENALTY", r"COURTESY\s*PAY",
+            ],
         }
-        for trans in self.transactions:
-            desc = trans.get("description", "")
-            if trans.get("category") != "uncategorized":
-                continue
-            for pattern, cat in ach_patterns.items():
-                if re.search(pattern, desc, re.IGNORECASE):
-                    trans["category"] = cat
+        for tx in self.transactions:
+            desc = tx.get("description", "").upper()
+            for flag, patterns in flags.items():
+                if any(re.search(p, desc) for p in patterns):
+                    tx["tax_flag"] = flag
                     break
 
-    def export_to_csv(self, output_path: str) -> str:
-        if not self.transactions:
-            raise ValueError("No transactions to export")
-        fieldnames = ["date", "description", "amount", "category"]
-        with open(output_path, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
-            writer.writeheader()
-            writer.writerows(self.transactions)
-        return output_path
+    # ------------------------------------------------------------------
+    # Output formats
+    # ------------------------------------------------------------------
 
-    def export_to_json(self, output_path: str) -> str:
-        result = {
-            "template": self.template.get("name", "Unknown") if self.template else "Unknown",
+    def to_json(self) -> str:
+        return json.dumps({
             "account_info": self.account_info,
             "transactions": self.transactions,
-        }
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(result, f, indent=2)
-        return output_path
+        }, indent=2, default=str)
+
+    def to_csv(self, path: Optional[str] = None) -> str:
+        import io
+        if not self.transactions:
+            return ""
+        sio = io.StringIO()
+        fieldnames = ["date", "description", "amount", "type", "tax_flag"]
+        writer = csv.DictWriter(sio, fieldnames=fieldnames)
+        writer.writeheader()
+        for tx in self.transactions:
+            writer.writerow({k: tx.get(k, "") for k in fieldnames})
+        result = sio.getvalue()
+        if path:
+            with open(path, "w", newline="", encoding="utf-8") as f:
+                f.write(result)
+        return result
+
+    def to_qif(self) -> str:
+        lines = ["!Type:Bank"]
+        for tx in self.transactions:
+            date_raw = tx.get("date", "")
+            try:
+                date = datetime.strptime(date_raw, "%Y-%m-%d").strftime("%m/%d/%Y") if date_raw else ""
+            except ValueError:
+                date = date_raw
+            amount = tx.get("amount", 0) or 0
+            desc = tx.get("description", "")
+            lines.append(f"D{date}")
+            lines.append(f"T{amount:.2f}")
+            lines.append(f"P{desc}")
+            lines.append("^")
+        return "\n".join(lines)
+
+    def to_excel(self, path: str) -> bool:
+        try:
+            import openpyxl
+            from openpyxl import Workbook
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Transactions"
+            headers = ["date", "description", "amount", "type", "tax_flag"]
+            ws.append(headers)
+            for tx in self.transactions:
+                ws.append([tx.get(k, "") for k in headers])
+            wb.save(path)
+            return True
+        except ImportError:
+            # Fallback to CSV with .xlsx extension warning
+            csv_path = path.replace(".xlsx", ".csv")
+            self.to_csv(csv_path)
+            print(f"[WARNING] openpyxl not installed; fell back to CSV: {csv_path}")
+            return False

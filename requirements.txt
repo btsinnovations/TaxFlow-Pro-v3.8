@@ -14,3 +14,10 @@ Pillow>=10.0.0
 fastapi>=0.110.0
 uvicorn>=0.30.0
 python-multipart>=0.0.9
+
+# Task 6 — OCR fallback for scanned/image-based PDFs
+pdf2image>=1.16.0
+pytesseract>=0.3.10
+
+# Task 8 — Graveyard test fixtures
+fpdf2>=2.7.0
