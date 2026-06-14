@@ -1,86 +1,59 @@
-"""
-ML training endpoints.
-"""
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from ..database import get_db
+from .. import models
+from .auth import get_current_user
 
-import os
-from fastapi import APIRouter
-from api_models import MLModelStatus, MLTrainingRequest
-from api_utils import log_event, PROJECT_ROOT
+CATEGORY_RULES = {
+    "SALARY": "Income", "PAYROLL": "Income", "DEPOSIT": "Income", "BAH": "Income",
+    "TREAS": "Income", "IRS": "Income", "TAX REFUND": "Income",
+    "DIVIDEND": "Investment Income", "INTEREST": "Investment Income",
+    "STARBUCKS": "Food & Dining", "COFFEE": "Food & Dining", "RESTAURANT": "Food & Dining",
+    "MCDONALDS": "Food & Dining", "SUBWAY": "Food & Dining", "CHIPOTLE": "Food & Dining",
+    "DOORDASH": "Food & Dining",
+    "WALMART": "Shopping", "TARGET": "Shopping", "AMAZON": "Shopping",
+    "BEST BUY": "Shopping", "HOME DEPOT": "Shopping", "LOWES": "Shopping",
+    "SHELL": "Auto & Transport", "CHEVRON": "Auto & Transport", "GAS": "Auto & Transport",
+    "GEICO": "Auto & Transport", "UBER": "Auto & Transport",
+    "NETFLIX": "Entertainment", "SPOTIFY": "Entertainment", "HULU": "Entertainment",
+    "STEAM": "Entertainment",
+    "ELECTRIC": "Utilities", "INTERNET": "Utilities", "PHONE": "Utilities",
+    "GYM": "Health & Fitness", "PHARMACY": "Health & Fitness", "DENTIST": "Health & Fitness",
+    "CVS": "Health & Fitness",
+    "ZELLE": "Transfer", "VENMO": "Transfer", "ATM": "Cash & ATM",
+    "COURTESY PAY": "Fees & Charges", "FEE": "Fees & Charges",
+    "INSURANCE": "Insurance", "RENT": "Housing", "MORTGAGE": "Housing",
+}
 
-router = APIRouter()
+def categorize(description: str) -> str:
+    desc_upper = description.upper()
+    for keyword, category in CATEGORY_RULES.items():
+        if keyword in desc_upper:
+            return category
+    return "Uncategorized"
 
+router = APIRouter(prefix="/ml", tags=["ml"])
 
-@router.get("/status", response_model=MLModelStatus)
-async def ml_status():
-    model_path = PROJECT_ROOT / "ml_model.pkl"
-    exists = model_path.exists()
-
-    accuracy = None
-    precision = None
-    recall = None
-    last_trained = None
-    categories = []
-
-    if exists:
-        try:
-            import joblib
-            data = joblib.load(model_path)
-            categories = list(data.get('classes', [])) if isinstance(data, dict) else []
-        except Exception:
-            pass
-
-    return MLModelStatus(
-        enabled=True,
-        model_exists=exists,
-        accuracy=accuracy or 0.942,
-        precision=0.928,
-        recall=0.951,
-        last_trained=last_trained or "2026-06-10T14:30:00",
-        sample_count=1847,
-        categories=categories or [
-            "Fuel", "Office Supplies", "Meals", "Software", "Transport",
-            "Utilities", "Repairs", "Contractor", "Income:Salary", "Income:Gig"
-        ],
-    )
-
-
-@router.post("/train")
-async def train_model(req: MLTrainingRequest):
-    log_event("INFO", "ML_TRAINING_STARTED", f"Training model (incremental={req.incremental})")
-
+@router.post("/categorize/{statement_id}")
+def categorize_statement(statement_id: int,
+                         db: Session = Depends(get_db),
+                         current_user: models.User = Depends(get_current_user)):
+    transactions = db.query(models.Transaction).join(models.Statement).join(models.Account).filter(
+        models.Account.user_id == current_user.id,
+        models.Transaction.statement_id == statement_id
+    ).all()
+    
+    updated = 0
+    for tx in transactions:
+        cat = categorize(tx.description)
+        if tx.category != cat:
+            tx.category = cat
+            updated += 1
+    db.commit()
+    
     return {
-        "job_id": "ml_train_001",
-        "status": "queued",
-        "incremental": req.incremental,
-        "estimated_time_seconds": 120,
-        "message": "Training job queued. Check /api/ml/status for progress.",
+        "statement_id": statement_id,
+        "transactions_processed": len(transactions),
+        "categories_updated": updated,
+        "categories": list(set(t.category for t in transactions))
     }
-
-
-@router.post("/toggle")
-async def toggle_ml():
-    """Toggle ML on/off by editing config.py."""
-    config_path = PROJECT_ROOT / "phase3_pipeline" / "config.py"
-    if not config_path.exists():
-        return {"success": False, "message": "config.py not found"}
-
-    try:
-        with open(config_path, "r") as f:
-            content = f.read()
-
-        if "USE_ML = True" in content:
-            new_content = content.replace("USE_ML = True", "USE_ML = False")
-            new_state = False
-        elif "USE_ML = False" in content:
-            new_content = content.replace("USE_ML = False", "USE_ML = True")
-            new_state = True
-        else:
-            return {"success": False, "message": "Could not find USE_ML in config.py"}
-
-        with open(config_path, "w") as f:
-            f.write(new_content)
-
-        log_event("INFO", "ML_TOGGLED", f"ML set to {new_state}")
-        return {"success": True, "enabled": new_state, "message": f"ML categorizer {'enabled' if new_state else 'disabled'}"}
-    except Exception as e:
-        return {"success": False, "message": str(e)}
