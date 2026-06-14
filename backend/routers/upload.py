@@ -25,20 +25,16 @@ def to_decimal(value):
         return None
 
 def standardize_date(date_str: str) -> str:
-    """Convert MM/DD/YYYY or YYYY-MM-DD to ISO YYYY-MM-DD."""
     if not date_str:
         return date_str
     date_str = date_str.strip()
-    # Already ISO format
     if len(date_str) == 10 and date_str[4] == '-' and date_str[7] == '-':
         return date_str
-    # Try MM/DD/YYYY
     try:
         dt = datetime.strptime(date_str, "%m/%d/%Y")
         return dt.strftime("%Y-%m-%d")
     except ValueError:
         pass
-    # Try M/D/YYYY (single-digit month/day)
     for fmt in ("%m/%d/%Y", "%m/%d/%y"):
         try:
             dt = datetime.strptime(date_str, fmt)
@@ -46,6 +42,22 @@ def standardize_date(date_str: str) -> str:
         except ValueError:
             continue
     return date_str
+
+
+def clean_header_bleed(desc: str) -> str:
+    """Truncate description at the first sign of bank header/footer bleed."""
+    if not desc: return desc
+    fragments = [
+        "Navy Federal", "P.O. Box", "Credit Union", "Statement of Account",
+        "Account Summary", "Account Number:", "Statement Period:",
+        "JPMorgan Chase", "Chase Total Checking", "Chase Bank",
+        "Date      Description", "Withdrawal      Deposit"
+    ]
+    for frag in fragments:
+        idx = desc.find(frag)
+        if idx != -1:
+            return desc[:idx].strip()
+    return desc.strip()
 
 @router.post("/")
 async def upload_statement(file: UploadFile = File(...),
@@ -63,12 +75,10 @@ async def upload_statement(file: UploadFile = File(...),
     try:
         parser = GenericPDFParser(file_path)
         result = parser.parse()
-        
         if hasattr(result, "model_dump"):
             result = result.model_dump()
         elif hasattr(result, "dict"):
             result = result.dict()
-            
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Parse error: {str(e)}")
     
@@ -77,6 +87,7 @@ async def upload_statement(file: UploadFile = File(...),
     
     statement = models.Statement(
         account_id=account_id,
+        user_id=current_user.id,
         filename=file.filename,
         period_start=standardize_date(meta.get("period_start")),
         period_end=standardize_date(meta.get("period_end")),
@@ -90,10 +101,10 @@ async def upload_statement(file: UploadFile = File(...),
     db.refresh(statement)
     
     for tx in result.get("transactions", []):
+        # --- ROUTER-LEVEL CLEANING: Scrub header bleed before DB insert ---
+        tx["description"] = clean_header_bleed(tx.get("description", ""))
         amount_dec = to_decimal(tx.get("amount"))
-        # FIXED: Safely determine tx_type using Decimal, never raw None/string
         tx_type = "credit" if amount_dec and amount_dec > 0 else "debit"
-        
         db_tx = models.Transaction(
             statement_id=statement.id,
             date=standardize_date(tx.get("date")),
@@ -108,7 +119,7 @@ async def upload_statement(file: UploadFile = File(...),
     return {
         "statement_id": statement.id,
         "transactions_count": len(result.get("transactions", [])),
-        "variance": float(statement.variance) if statement.variance else None,
+        "variance": float(statement.variance) if statement.variance is not None else None,
         "balanced": statement.is_balanced,
         "template": result.get("template")
     }
