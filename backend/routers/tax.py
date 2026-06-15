@@ -12,19 +12,16 @@ def tax_summary(year: int,
                 db: Session = Depends(get_db),
                 current_user: models.User = Depends(get_current_user)):
     prefix = f"{year}-"
-    
-    income = db.query(func.sum(models.Transaction.amount)).join(models.Statement).join(models.Account).filter(
-        models.Account.user_id == current_user.id,
+    income = db.query(func.sum(models.Transaction.amount)).join(models.Statement).filter(
+        models.Statement.user_id == current_user.id,
         models.Transaction.amount > 0,
         models.Transaction.date.startswith(prefix)
     ).scalar() or 0.0
-    
-    expenses = db.query(func.sum(models.Transaction.amount)).join(models.Statement).join(models.Account).filter(
-        models.Account.user_id == current_user.id,
+    expenses = db.query(func.sum(models.Transaction.amount)).join(models.Statement).filter(
+        models.Statement.user_id == current_user.id,
         models.Transaction.amount < 0,
         models.Transaction.date.startswith(prefix)
     ).scalar() or 0.0
-    
     return {
         "year": year,
         "total_income": round(float(income), 2),

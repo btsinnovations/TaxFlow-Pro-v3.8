@@ -13,6 +13,7 @@ class User(Base):
     created_at = Column(DateTime, server_default=func.now())
     clients = relationship("Client", back_populates="owner")
     accounts = relationship("Account", back_populates="owner")
+    statements = relationship("Statement", back_populates="owner")
 
 class Client(Base):
     __tablename__ = "clients"
@@ -43,6 +44,7 @@ class Statement(Base):
     __tablename__ = "statements"
     id = Column(Integer, primary_key=True, index=True)
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     filename = Column(String)
     period_start = Column(String)
     period_end = Column(String)
@@ -52,6 +54,7 @@ class Statement(Base):
     is_balanced = Column(Boolean)
     created_at = Column(DateTime, server_default=func.now())
     account = relationship("Account", back_populates="statements")
+    owner = relationship("User", back_populates="statements")
     transactions = relationship("Transaction", back_populates="statement")
 
 class Transaction(Base):

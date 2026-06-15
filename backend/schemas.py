@@ -73,6 +73,7 @@ class StatementBase(BaseModel):
 
 class Statement(StatementBase):
     id: int
+    user_id: int
     account_id: Optional[int] = None
     created_at: datetime
     transactions: List[Transaction] = []

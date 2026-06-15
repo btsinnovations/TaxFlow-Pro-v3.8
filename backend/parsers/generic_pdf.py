@@ -24,6 +24,9 @@ except ImportError:
 
 
 class GenericPDFParser:
+    def _is_transaction_start(self, line: str) -> bool:
+        """State machine: valid transaction lines begin with a date."""
+        return bool(re.match(r'^\d{1,2}[/-]\d{1,2}([/-]\d{2,4})?\s', line))
     def __init__(self, pdf_path: str):
         self.pdf_path = pdf_path
         self.transactions: List[Dict[str, Any]] = []
@@ -130,7 +133,30 @@ class GenericPDFParser:
     # ------------------------------------------------------------------
     # Core transaction line parser
     # ------------------------------------------------------------------
+    def _clean_description(self, desc: str) -> str:
+        """Truncate description at first header fragment to prevent bleed."""
+        if not desc:
+            return desc
+        fragments = [
+            "Navy Federal", "P.O. Box", "Credit Union", "Statement of Account",
+            "Account Summary", "Account Number:", "Statement Period:",
+            "JPMorgan Chase", "Chase Total Checking", "Chase Bank"
+        ]
+        for frag in fragments:
+            idx = desc.find(frag)
+            if idx != -1:
+                return desc[:idx].strip()
+        return desc.strip()
+
     def _parse_transaction_line(self, line: str, template: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        # Skip PDF header lines to prevent description bleed
+        header_indicators = [
+            "Navy Federal", "P.O. Box", "Credit Union", "Statement of Account",
+            "Account Summary", "Account Number:", "Statement Period:",
+            "JPMorgan Chase", "Chase Total Checking", "Chase Bank"
+        ]
+        if any(ind in line for ind in header_indicators):
+            return None
         clean = line.lstrip()
         date_match = re.match(r'^(\d{2}/\d{2}/\d{4})', clean)
         if not date_match:

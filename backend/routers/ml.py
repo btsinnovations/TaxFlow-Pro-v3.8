@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models
@@ -38,11 +38,12 @@ router = APIRouter(prefix="/ml", tags=["ml"])
 def categorize_statement(statement_id: int,
                          db: Session = Depends(get_db),
                          current_user: models.User = Depends(get_current_user)):
-    transactions = db.query(models.Transaction).join(models.Statement).join(models.Account).filter(
-        models.Account.user_id == current_user.id,
-        models.Transaction.statement_id == statement_id
+    transactions = db.query(models.Transaction).join(models.Statement).filter(
+        models.Statement.id == statement_id,
+        models.Statement.user_id == current_user.id
     ).all()
-    
+    if not transactions:
+        raise HTTPException(status_code=404, detail="Statement not found or unauthorized")
     updated = 0
     for tx in transactions:
         cat = categorize(tx.description)
@@ -50,7 +51,6 @@ def categorize_statement(statement_id: int,
             tx.category = cat
             updated += 1
     db.commit()
-    
     return {
         "statement_id": statement_id,
         "transactions_processed": len(transactions),

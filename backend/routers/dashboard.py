@@ -11,19 +11,15 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 def get_dashboard(db: Session = Depends(get_db),
                   current_user: models.User = Depends(get_current_user)):
     total_accounts = db.query(models.Account).filter(models.Account.user_id == current_user.id).count()
-    total_statements = db.query(models.Statement).join(models.Account).filter(
-        models.Account.user_id == current_user.id
+    total_statements = db.query(models.Statement).filter(models.Statement.user_id == current_user.id).count()
+    total_transactions = db.query(models.Transaction).join(models.Statement).filter(
+        models.Statement.user_id == current_user.id
     ).count()
-    total_transactions = db.query(models.Transaction).join(models.Statement).join(models.Account).filter(
-        models.Account.user_id == current_user.id
-    ).count()
-    
-    total_volume = db.query(func.sum(models.Transaction.amount)).join(models.Statement).join(models.Account).filter(
-        models.Account.user_id == current_user.id
+    total_volume = db.query(func.sum(models.Transaction.amount)).join(models.Statement).filter(
+        models.Statement.user_id == current_user.id
     ).scalar() or 0.0
-    
-    recent = db.query(models.Statement).join(models.Account).filter(
-        models.Account.user_id == current_user.id
+    recent = db.query(models.Statement).filter(
+        models.Statement.user_id == current_user.id
     ).order_by(models.Statement.created_at.desc()).limit(5).all()
     
     return {
@@ -34,7 +30,8 @@ def get_dashboard(db: Session = Depends(get_db),
         "recent_statements": [
             {
                 "id": s.id, "filename": s.filename, "account_id": s.account_id,
-                "is_balanced": s.is_balanced, "variance": float(s.variance) if s.variance else None,
+                "is_balanced": s.is_balanced,
+                "variance": float(s.variance) if s.variance is not None else None,
                 "created_at": s.created_at.isoformat() if s.created_at else None
             } for s in recent
         ]

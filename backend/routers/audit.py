@@ -10,8 +10,8 @@ router = APIRouter(prefix="/audit", tags=["audit"])
 def get_logs(skip: int = 0, limit: int = 100,
              db: Session = Depends(get_db),
              current_user: models.User = Depends(get_current_user)):
-    statements = db.query(models.Statement).join(models.Account).filter(
-        models.Account.user_id == current_user.id
+    statements = db.query(models.Statement).filter(
+        models.Statement.user_id == current_user.id
     ).order_by(models.Statement.created_at.desc()).offset(skip).limit(limit).all()
     
     return {
@@ -22,7 +22,7 @@ def get_logs(skip: int = 0, limit: int = 100,
                 "filename": s.filename,
                 "account_id": s.account_id,
                 "is_balanced": s.is_balanced,
-                "variance": float(s.variance) if s.variance else None,
+                "variance": float(s.variance) if s.variance is not None else None,
                 "created_at": s.created_at.isoformat() if s.created_at else None
             } for s in statements
         ]
