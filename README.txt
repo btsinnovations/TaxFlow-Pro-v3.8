@@ -1,21 +1,38 @@
-TaxFlow Pro v3.6 — One-Terminal Install
-========================================
+TaxFlow Pro v3.7
+================
 
-1. EXTRACT this folder.
+TaxFlow Pro is a local-first application for uploading PDF bank statements,
+extracting transactions, categorizing them, and exporting tax-ready reports.
 
-2. OPEN ONE TERMINAL.
+QUICK START
+-----------
 
-3. RUN:
-   cd Financial\ ETL
-   ./start.sh
+1. Install Python dependencies:
+   python -m pip install -r requirements.txt
 
-4. WAIT for "BOTH SERVERS RUNNING" message.
+2. Install frontend dependencies:
+   npm install
 
-5. OPEN BROWSER:
-   http://localhost:3000
+3. Start the backend:
+   python -m uvicorn backend.api:app --host 0.0.0.0 --port 8000
 
-6. DRAG a PDF bank statement into "Upload Statements" and click Process.
+4. Start the frontend in a second terminal:
+   npm run dev
 
-That's it. One terminal, one command, both servers.
+5. Open your browser:
+   http://localhost:5173
 
-To stop: Press Ctrl+C in the same terminal.
+DOCUMENTATION
+-------------
+
+- BUILDER_MANUAL.md    Full architecture and build guide
+- GETTING_STARTED.md   First-time setup walkthrough
+- TROUBLESHOOTING.md   Common issues and fixes
+- MIGRATIONS.md        Database migration guide
+- CHANGES.md           Change log
+
+PRIVACY
+-------
+
+TaxFlow Pro runs on your own machine. Your bank statements and transaction
+data stay local unless you choose to connect to a remote backend.

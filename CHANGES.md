@@ -264,7 +264,76 @@ python -m pytest backend/tests/ tests/ -v
 - No blockers. PostgreSQL RLS enforcement is ready but requires a live PostgreSQL database to validate the policies end-to-end. SQLite coverage remains intact.
 
 ---
-## 11. Remaining Recommendations
+## 13. Phase 3 — Local-First Bulletproof Backend
+
+**Decided by Josh (2026-06-14).**
+
+**Goal:** Make TaxFlow Pro fully functional offline on the user's machine. Backend is the only priority for this phase; frontend updates are deferred.
+
+### 13.1 Non-goals for this phase
+- Stripe / Paddle / any billing
+- Cloud sync, SaaS multi-tenant hosting
+- Plaid / live bank feeds
+- Mobile apps
+- SOC 2 / external compliance audits
+
+### 13.2 Core requirements
+- **No internet required at runtime.** All models, OCR, parsing, and categorization run locally. No external API calls on startup or during processing. Graceful behavior when the network is unavailable.
+- **Local-only data storage.** SQLite default for personal/small-biz tier; optional local PostgreSQL for heavier users. All data stays on disk the user controls. Encrypted at rest with a user-derived key (optional, not mandatory).
+- **Self-contained installer/package.** One-click install on Windows, macOS, and Linux. Bundles Python runtime, Tesseract, Poppler, and frontend assets. No manual dependency hunting.
+- **Offline model inference.** Categorizer trains and predicts locally. No cloud ML APIs. Model files are local artifacts the user owns.
+- **Local authentication.** No OAuth / Google / email verification over the network. Master password + optional local keyfile. Session tokens generated locally; no external JWT validation.
+- **Bulletproof reliability.** ACID transactions, automatic backups on every import, crash recovery / WAL mode SQLite, idempotent imports, validation invariants that reject corrupt data.
+
+### 13.3 Architecture target
+- Single-user-first local app. Multi-seat still possible on a local network if desired, but default install is one user, one encrypted SQLite database.
+- `users` table becomes local identity, not a SaaS account.
+- `clients` becomes "profile" or "business entity."
+- Remove `X-Tenant-ID` middleware reliance for single-user mode; keep it as optional multi-entity mode.
+- Authentication: local Argon2 password hash + optional keyfile.
+- Encryption: SQLCipher-style layer or application-level encryption before writes.
+
+### 13.4 Proposed module plan
+```
+backend/
+  local/
+    auth.py          # master password + keyfile auth
+    crypto.py        # encrypt/decrypt data at rest
+    backup.py        # local snapshot + restore
+    bootstrap.py     # first-run setup, self-test
+    offline.py       # network detection + graceful degradation
+  models.py          # keep, simplify for single-user default
+  api.py             # remove external middleware; local-only mode flag
+  settings.py        # local config file instead of env vars where possible
+```
+
+### 13.5 Backend work items
+
+| #  | Task | Why It Matters |
+| -- | ---- | -------------- |
+| 1 | Audit every external dependency | Replace or vendor anything that phones home |
+| 2 | Add offline startup self-test | Detects missing Tesseract, models, or DB and reports locally |
+| 3 | Implement local encryption layer | User master password derives key for data at rest |
+| 4 | Make SQLite bulletproof | WAL mode, backups, idempotent imports, integrity checks |
+| 5 | Remove or gate all cloud/API code | No Plaid, no SMTP, no telemetry, no update checks |
+| 6 | Local model training pipeline | User can retrain categorizer on their own data |
+| 7 | Local user/auth system | Master password, keyfile, local sessions |
+| 8 | Local backup/restore/export | Encrypted snapshots the user controls |
+| 9 | Graceful degradation specs | What works offline, what is disabled, clear messaging |
+| 10 | Hardened test suite | Property-based tests, corruption tests, recovery tests |
+
+### 13.6 Platform + packaging
+- **Holy trinity roadmap:** Windows, macOS, and Linux.
+- **Desktop wrapper vs browser + local server:** Chose **browser + local server** for now. The backend is already FastAPI/Vite React, LAN multi-seat is trivial, and the same bundle works on all three OSes. Wrappers (Electron/Tauri) add weight and update complexity; they can be explored later once the backend is bulletproof.
+
+### 13.7 Open questions resolved
+- Encryption: optional, not mandatory.
+- Multi-seat: keep LAN multi-seat capability; default is single-user.
+- OS roadmap: Windows, macOS, Linux.
+- Desktop wrapper: deferred; browser + local server first.
+
+---
+## 14. Remaining Recommendations
 
 - Unify the two PDF parsing paths: `backend/parsers/generic_pdf.py` (backend upload) and `phase3_pipeline/pdf_parser.py` (CLI pipeline) diverge in behavior and institution support.
 - Add a `.env.example` file documenting `DATABASE_URL` and `TAXFLOW_SECRET_KEY` for production deployments.
