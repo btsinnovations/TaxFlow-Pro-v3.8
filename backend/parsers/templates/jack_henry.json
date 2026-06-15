@@ -1,0 +1,16 @@
+{
+  "name": "Jack Henry",
+  "institutions": ["Associated Bank","Commerce Bank","Zions Bank","Zions","Frost Bank","Frost","Valley National Bank","Valley National","Michigan State","Michigan State University Federal Credit Union","MSUFCU","Vibrant","Vibrant Credit Union","Service CU","Service Credit Union"],
+  "date_format": "MM/DD/YYYY",
+  "amount_columns": ["withdrawals","deposits"],
+  "fixed_width": true,
+  "summary_box": "top_right",
+  "opening_balance_label": "Beginning Balance",
+  "closing_balance_label": "Ending Balance",
+  "regex_patterns": {
+    "header": "Associated Bank|Commerce Bank|Zions Bank|Frost Bank|Valley National Bank|Michigan State University Federal Credit Union|MSUFCU|Vibrant Credit Union|Service Credit Union",
+    "transaction": "(\\d{2}/\\d{2}/\\d{2,4})\\s+(.{30,40}?)\\s+([\\(\\)\\$\\-]?[\\d,]+\\.\\d{2})(?:\\s+([\\(\\)\\$\\-]?[\\d,]+\\.\\d{2}))?(?:\\s+([\\(\\)\\$\\-]?[\\d,]+\\.\\d{2}))?",
+    "column_widths": [12,40,15,15,15]
+  },
+  "notes": "Jack Henry SilverLake / Profitstar platform. Rigid, fixed-width grid-based PDFs."
+}
