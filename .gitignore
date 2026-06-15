@@ -29,3 +29,12 @@ Thumbs.db
 node_modules/
 frontend/node_modules/
 package-lock.json
+
+# Runtime artifacts
+api_db.json
+input/
+tests/fixtures/sample_scanned.pdf
+
+# Secrets
+.env
+.env.local

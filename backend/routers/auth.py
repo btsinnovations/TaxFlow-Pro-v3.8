@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -8,7 +9,7 @@ import bcrypt
 from ..database import get_db
 from .. import models, schemas
 
-SECRET_KEY = "taxflow-dev-secret-key-change-in-production-2026"
+SECRET_KEY = os.environ.get("TAXFLOW_SECRET_KEY", "dev-only-fallback")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
