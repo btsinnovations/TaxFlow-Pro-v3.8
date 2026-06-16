@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-<<<<<<< HEAD
+
 cd ~/Desktop/TaxFlow-Pro
 source venv/bin/activate
 uvicorn backend.api:app --host 0.0.0.0 --port 8000 --reload
@@ -99,4 +99,3 @@ trap cleanup INT TERM EXIT
 
 cd "$PROJECT_DIR"
 npm run dev
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
