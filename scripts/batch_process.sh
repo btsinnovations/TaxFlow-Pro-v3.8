@@ -1,75 +1,21 @@
 #!/bin/bash
-<<<<<<< HEAD
+# scripts/batch_process.sh -- TaxFlow Pro v3.8 Backend Compliant
+# Handles both PDF (multipart upload) and CSV/Excel (server-local path) files.
+
 set -e
-
-API_URL="${API_URL:-http://localhost:8000}"
-USERNAME="${USERNAME:-testuser}"
-PASSWORD="${PASSWORD:-testpass123}"
-INPUT_DIR="${INPUT_DIR:-./input}"
-
-mkdir -p "$INPUT_DIR"
-
-echo "=========================================="
-echo "  TaxFlow Pro Batch Processor"
-echo "=========================================="
-echo "API:    $API_URL"
-echo "User:   $USERNAME"
-echo "Input:  $INPUT_DIR"
-echo ""
-
-echo "→ Authenticating..."
-LOGIN_RESP=$(curl -s -X POST "$API_URL/auth/login" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=$USERNAME&password=$PASSWORD")
-TOKEN=$(echo "$LOGIN_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null || echo "")
-
-if [ -z "$TOKEN" ]; then
-    echo "❌ Login failed"
-    echo "$LOGIN_RESP"
-    exit 1
-fi
-echo "✅ Authenticated"
-echo ""
-
-PROCESSED=0
-FAILED=0
-
-for file in "$INPUT_DIR"/*.pdf; do
-    [ -e "$file" ] || continue
-    filename=$(basename "$file")
-    echo "→ Processing PDF: $filename"
-    resp=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/upload/" \
-      -H "Authorization: Bearer $TOKEN" -F "file=@$file")
-    http_code=$(echo "$resp" | tail -n1)
-    body=$(echo "$resp" | sed '$d')
-    if [ "$http_code" = "200" ]; then
-        echo "  ✅ Success (HTTP $http_code)"
-        ((PROCESSED++))
-    else
-        echo "  ❌ Failed (HTTP $http_code)"
-        echo "$body"
-        ((FAILED++))
-    fi
-    echo ""
-done
-
-echo "=========================================="
-echo "  Batch complete: $PROCESSED OK, $FAILED FAILED"
-echo "=========================================="
-=======
-# scripts/batch_process.sh — TaxFlow Pro v3.7 Backend Compliant
-# Fixes: non-PDF branch now sends file_path= (server-local path) instead of file upload.
-#        Adds client_id and output_format for proper backend logging.
 
 API_URL="${API_URL:-http://localhost:8000}"
 INPUT_DIR="${INPUT_DIR:-./input}"
 CLIENT_ID="${CLIENT_ID:-batch}"
 OUTPUT_FORMAT="${OUTPUT_FORMAT:-csv}"
 
-echo "Starting batch process against $API_URL..."
-echo "  Input dir : $INPUT_DIR"
-echo "  Client ID : $CLIENT_ID"
-echo "  Output fmt: $OUTPUT_FORMAT"
+echo "=========================================="
+echo "  TaxFlow Pro Batch Processor v3.8"
+echo "=========================================="
+echo "API:       $API_URL"
+echo "Input:     $INPUT_DIR"
+echo "Client ID: $CLIENT_ID"
+echo "Output:    $OUTPUT_FORMAT"
 echo ""
 
 if [ ! -d "$INPUT_DIR" ]; then
@@ -103,10 +49,10 @@ for file in "$INPUT_DIR"/*; do
         fi
 
         if [ "$HTTP_STATUS" -eq 200 ]; then
-            echo "  ✅ Success (HTTP 200) for $filename"
+            echo "  Success (HTTP 200) for $filename"
             ((processed++))
         else
-            echo "  ❌ Failed (HTTP $HTTP_STATUS) for $filename"
+            echo "  Failed (HTTP $HTTP_STATUS) for $filename"
             cat /tmp/resp.txt
             echo ""
             ((failed++))
@@ -115,7 +61,6 @@ for file in "$INPUT_DIR"/*; do
 done
 
 echo ""
-echo "Batch processing complete."
-echo "  Processed: $processed"
-echo "  Failed   : $failed"
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
+echo "=========================================="
+echo "  Batch complete: $processed OK, $failed FAILED"
+echo "=========================================="
