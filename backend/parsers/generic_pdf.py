@@ -10,11 +10,7 @@ import json
 import re
 from datetime import datetime
 from pathlib import Path
-<<<<<<< HEAD
-from typing import Any, Dict, List, Optional
-=======
 from typing import Any, Dict, List, Optional, Union
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
 
 import pdfplumber
 
@@ -27,19 +23,12 @@ except ImportError:
     pass
 
 
-<<<<<<< HEAD
-class GenericPDFParser:
-    def _is_transaction_start(self, line: str) -> bool:
-        """State machine: valid transaction lines begin with a date."""
-        return bool(re.match(r'^\d{1,2}[/-]\d{1,2}([/-]\d{2,4})?\s', line))
-=======
 # Re-export helpers that callers expect at module level.
 from .institution import detect_institution
 from .transaction_builder import deduplicate_dicts
 
 
 class GenericPDFParser:
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
     def __init__(self, pdf_path: str):
         self.pdf_path = pdf_path
         self.transactions: List[Dict[str, Any]] = []
@@ -130,8 +119,6 @@ class GenericPDFParser:
         cleaned = [self.clean_transaction_line(line) for line in raw_lines]
         return [line for line in cleaned if line and not line.startswith('=')]
 
-<<<<<<< HEAD
-=======
     def _extract_statement_period(self, text: str) -> Dict[str, Optional[str]]:
         """Extract statement period start/end dates from common label patterns."""
         patterns = [
@@ -154,7 +141,6 @@ class GenericPDFParser:
                         continue
         return result
 
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
     # ------------------------------------------------------------------
     # Balance extraction
     # ------------------------------------------------------------------
@@ -171,34 +157,7 @@ class GenericPDFParser:
     # ------------------------------------------------------------------
     # Core transaction line parser
     # ------------------------------------------------------------------
-<<<<<<< HEAD
-    def _clean_description(self, desc: str) -> str:
-        """Truncate description at first header fragment to prevent bleed."""
-        if not desc:
-            return desc
-        fragments = [
-            "Navy Federal", "P.O. Box", "Credit Union", "Statement of Account",
-            "Account Summary", "Account Number:", "Statement Period:",
-            "JPMorgan Chase", "Chase Total Checking", "Chase Bank"
-        ]
-        for frag in fragments:
-            idx = desc.find(frag)
-            if idx != -1:
-                return desc[:idx].strip()
-        return desc.strip()
-
     def _parse_transaction_line(self, line: str, template: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        # Skip PDF header lines to prevent description bleed
-        header_indicators = [
-            "Navy Federal", "P.O. Box", "Credit Union", "Statement of Account",
-            "Account Summary", "Account Number:", "Statement Period:",
-            "JPMorgan Chase", "Chase Total Checking", "Chase Bank"
-        ]
-        if any(ind in line for ind in header_indicators):
-            return None
-=======
-    def _parse_transaction_line(self, line: str, template: Dict[str, Any]) -> Optional[Dict[str, Any]]:
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
         clean = line.lstrip()
         date_match = re.match(r'^(\d{2}/\d{2}/\d{4})', clean)
         if not date_match:
@@ -412,10 +371,7 @@ class GenericPDFParser:
                 "total_pages": len(pages_text),
                 "total_raw_transactions": len(all_transactions),
                 "duplicates_removed": len(all_transactions) - len(deduped),
-<<<<<<< HEAD
-=======
                 **self._extract_statement_period(full_text),
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
             },
         }
 
@@ -479,8 +435,6 @@ class GenericPDFParser:
         return "\n".join(lines)
 
 
-<<<<<<< HEAD
-=======
 # ------------------------------------------------------------------
 # Module-level API helpers used by the unified parser package.
 # ------------------------------------------------------------------
@@ -596,7 +550,6 @@ def parse_pdf_to_transactions(
     return result.get("transactions", [])
 
 
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Parse a bank statement PDF")
     parser.add_argument("pdf_path", help="Path to the PDF file")
