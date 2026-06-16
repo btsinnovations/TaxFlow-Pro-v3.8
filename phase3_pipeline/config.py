@@ -9,6 +9,17 @@ LOGS_DIR.mkdir(parents=True, exist_ok=True)
 TAX_RULES: List[Tuple[str, str, str, bool]] = [
     ("fuel", "fuel_expense", "[Car and Truck Expenses (Line 9)]", True),
     ("gas", "fuel_expense", "[Car and Truck Expenses (Line 9)]", True),
+<<<<<<< HEAD
+=======
+    ("shell oil", "fuel_expense", "[Car and Truck Expenses (Line 9)]", True),
+    ("shell", "fuel_expense", "[Car and Truck Expenses (Line 9)]", True),
+    ("chevron", "fuel_expense", "[Car and Truck Expenses (Line 9)]", True),
+    ("exxon", "fuel_expense", "[Car and Truck Expenses (Line 9)]", True),
+    ("mobil", "fuel_expense", "[Car and Truck Expenses (Line 9)]", True),
+    ("marathon", "fuel_expense", "[Car and Truck Expenses (Line 9)]", True),
+    ("speedway", "fuel_expense", "[Car and Truck Expenses (Line 9)]", True),
+    ("bp", "fuel_expense", "[Car and Truck Expenses (Line 9)]", True),
+>>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
     ("office supplies", "office_expense", "[Office Expenses (Line 18)]", True),
     ("postage", "shipping_postage", "[Other Expenses (Line 27a)]", True),
     ("meal", "meals_entertainment", "[Meals and Entertainment (Line 24b)]", True),

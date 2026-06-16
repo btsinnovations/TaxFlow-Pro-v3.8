@@ -18,6 +18,10 @@ merchant_aliases:
   'DD *DOORDASH': 'DOORDASH'
   'AIRBNB *': 'AIRBNB'
   'AMZN Mktp': 'AMAZON'
+<<<<<<< HEAD
+=======
+  'AMAZON MARKETPLACE': 'AMAZON'
+>>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
   'AMZN Digital': 'AMAZON'
   'PRIME VIDEO': 'AMAZON PRIME'
   'APPLE.COM/BILL': 'APPLE'

@@ -1,19 +1,40 @@
+<<<<<<< HEAD
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
+=======
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+>>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 import bcrypt
 from ..database import get_db
 from .. import models, schemas
+<<<<<<< HEAD
 
 SECRET_KEY = os.environ.get("TAXFLOW_SECRET_KEY", "dev-only-fallback")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+=======
+from ..rls import is_postgres, set_tenant_id, clear_tenant_id
+
+import os
+
+SECRET_KEY = os.environ.get(
+    "TAXFLOW_SECRET_KEY",
+    "taxflow-dev-secret-key-change-in-production-2026"
+)
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+>>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -53,6 +74,20 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         raise credentials_exception
     return user
 
+<<<<<<< HEAD
+=======
+def _set_tenant_from_request(request: Optional[Request], db: Session) -> None:
+    """Set RLS tenant context when X-Tenant-ID header is present on PostgreSQL."""
+    if not is_postgres() or request is None:
+        return
+    tenant_id = request.headers.get("x-tenant-id")
+    if tenant_id:
+        try:
+            set_tenant_id(db, int(tenant_id))
+        except ValueError:
+            pass
+
+>>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
 @router.post("/register", response_model=schemas.User)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     if db.query(models.User).filter(models.User.username == user.username).first():

@@ -10,7 +10,11 @@ import json
 import re
 from datetime import datetime
 from pathlib import Path
+<<<<<<< HEAD
 from typing import Any, Dict, List, Optional
+=======
+from typing import Any, Dict, List, Optional, Union
+>>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
 
 import pdfplumber
 
@@ -23,10 +27,19 @@ except ImportError:
     pass
 
 
+<<<<<<< HEAD
 class GenericPDFParser:
     def _is_transaction_start(self, line: str) -> bool:
         """State machine: valid transaction lines begin with a date."""
         return bool(re.match(r'^\d{1,2}[/-]\d{1,2}([/-]\d{2,4})?\s', line))
+=======
+# Re-export helpers that callers expect at module level.
+from .institution import detect_institution
+from .transaction_builder import deduplicate_dicts
+
+
+class GenericPDFParser:
+>>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
     def __init__(self, pdf_path: str):
         self.pdf_path = pdf_path
         self.transactions: List[Dict[str, Any]] = []
@@ -117,6 +130,31 @@ class GenericPDFParser:
         cleaned = [self.clean_transaction_line(line) for line in raw_lines]
         return [line for line in cleaned if line and not line.startswith('=')]
 
+<<<<<<< HEAD
+=======
+    def _extract_statement_period(self, text: str) -> Dict[str, Optional[str]]:
+        """Extract statement period start/end dates from common label patterns."""
+        patterns = [
+            (r"(?:statement\s*period|period)\s*[:=]?\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\s*(?:through|to|[-])\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})", 1, 2),
+            (r"(?:from)\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\s*(?:to|through)\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})", 1, 2),
+            (r"(?:statement\s*date)\s*[:=]?\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})", 1, 1),
+        ]
+        result: Dict[str, Optional[str]] = {"period_start": None, "period_end": None}
+        for pattern, start_group, end_group in patterns:
+            m = re.search(pattern, text, re.IGNORECASE)
+            if m:
+                start_raw = m.group(start_group)
+                end_raw = m.group(end_group)
+                for fmt in ("%m/%d/%Y", "%m-%d-%Y", "%m/%d/%y", "%m-%d-%y"):
+                    try:
+                        result["period_start"] = datetime.strptime(start_raw, fmt).strftime("%Y-%m-%d")
+                        result["period_end"] = datetime.strptime(end_raw, fmt).strftime("%Y-%m-%d")
+                        return result
+                    except ValueError:
+                        continue
+        return result
+
+>>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
     # ------------------------------------------------------------------
     # Balance extraction
     # ------------------------------------------------------------------
@@ -133,6 +171,7 @@ class GenericPDFParser:
     # ------------------------------------------------------------------
     # Core transaction line parser
     # ------------------------------------------------------------------
+<<<<<<< HEAD
     def _clean_description(self, desc: str) -> str:
         """Truncate description at first header fragment to prevent bleed."""
         if not desc:
@@ -157,6 +196,9 @@ class GenericPDFParser:
         ]
         if any(ind in line for ind in header_indicators):
             return None
+=======
+    def _parse_transaction_line(self, line: str, template: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+>>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
         clean = line.lstrip()
         date_match = re.match(r'^(\d{2}/\d{2}/\d{4})', clean)
         if not date_match:
@@ -370,6 +412,10 @@ class GenericPDFParser:
                 "total_pages": len(pages_text),
                 "total_raw_transactions": len(all_transactions),
                 "duplicates_removed": len(all_transactions) - len(deduped),
+<<<<<<< HEAD
+=======
+                **self._extract_statement_period(full_text),
+>>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
             },
         }
 
@@ -433,6 +479,124 @@ class GenericPDFParser:
         return "\n".join(lines)
 
 
+<<<<<<< HEAD
+=======
+# ------------------------------------------------------------------
+# Module-level API helpers used by the unified parser package.
+# ------------------------------------------------------------------
+
+def _load_templates() -> List[Dict[str, Any]]:
+    """Load all JSON templates from backend/parsers/templates."""
+    templates_dir = Path(__file__).parent / "templates"
+    templates: List[Dict[str, Any]] = []
+    if templates_dir.exists():
+        for template_file in sorted(templates_dir.glob("*.json")):
+            try:
+                with open(template_file, "r", encoding="utf-8") as f:
+                    templates.append(json.load(f))
+            except Exception:
+                continue
+    return templates
+
+
+def _detect_template(text: str, templates: Optional[List[Dict[str, Any]]] = None) -> Optional[Dict[str, Any]]:
+    """Pick the best matching template for extracted text."""
+    if templates is None:
+        templates = _load_templates()
+    for template in templates:
+        header_pattern = template.get("regex_patterns", {}).get("header", "")
+        if header_pattern and re.search(header_pattern, text, re.IGNORECASE):
+            return template
+    if templates:
+        return templates[0]
+    return None
+
+
+def _extract_text_from_pdf(pdf_path: Union[str, Path]) -> str:
+    """Extract text from a PDF file using pdfplumber with OCR fallback."""
+    pdf_path = Path(pdf_path)
+    all_pages: List[str] = []
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            for page in pdf.pages:
+                text = page.extract_text(layout=True) or ""
+                if text.strip():
+                    all_pages.append(text)
+    except Exception as e:
+        raise RuntimeError(f"pdfplumber extraction failed: {e}") from e
+
+    full_text = "\n".join(all_pages).strip()
+    if len(full_text) < 200:
+        try:
+            ocr_text = _ocr_extract(pdf_path)
+        except Exception:
+            ocr_text = ""
+        if ocr_text:
+            return ocr_text
+        if not all_pages:
+            raise RuntimeError("PDF appears scanned but OCR dependencies are not installed.")
+    return full_text
+
+
+def _ocr_extract(pdf_path: Union[str, Path]) -> str:
+    """Run tesseract OCR on a PDF and return the combined text."""
+    if not OCR_AVAILABLE:
+        return ""
+    all_text: List[str] = []
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            page_count = len(pdf.pages)
+        for page_num in range(1, page_count + 1):
+            images = convert_from_path(str(pdf_path), dpi=200, first_page=page_num, last_page=page_num, fmt="ppm")
+            for image in images:
+                text = pytesseract.image_to_string(image)
+                if text:
+                    all_text.append(text)
+    except Exception as e:
+        print(f"[WARNING] OCR failed: {e}")
+    return "\n".join(all_text)
+
+
+def parse_pdf_to_dict(
+    pdf_path: Union[str, Path],
+    *,
+    institution: Optional[str] = None,
+    template: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    API-compatible parser entry point.
+
+    Returns a dict with:
+        - template
+        - account_info
+        - transactions (date, description, amount, type, tax_flag, balance)
+        - reconciliation
+        - meta
+    """
+    parser = GenericPDFParser(str(pdf_path))
+    if template:
+        parser.template = template
+    result = parser.parse()
+    # Ensure institution key is present
+    if "account_info" in result:
+        result["account_info"].setdefault(
+            "institution", institution or result.get("template", "unknown")
+        )
+    return result
+
+
+def parse_pdf_to_transactions(
+    pdf_path: Union[str, Path],
+    *,
+    institution: Optional[str] = None,
+    template: Optional[Dict[str, Any]] = None,
+) -> List[Dict[str, Any]]:
+    """Return just the transaction list from a PDF parse."""
+    result = parse_pdf_to_dict(pdf_path, institution=institution, template=template)
+    return result.get("transactions", [])
+
+
+>>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Parse a bank statement PDF")
     parser.add_argument("pdf_path", help="Path to the PDF file")

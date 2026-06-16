@@ -29,6 +29,7 @@ Thumbs.db
 node_modules/
 frontend/node_modules/
 package-lock.json
+<<<<<<< HEAD
 
 # Runtime artifacts
 api_db.json
@@ -38,3 +39,5 @@ tests/fixtures/sample_scanned.pdf
 # Secrets
 .env
 .env.local
+=======
+>>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
