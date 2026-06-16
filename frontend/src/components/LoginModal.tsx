@@ -11,6 +11,7 @@ interface LoginModalProps {
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -36,10 +37,11 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         await login(username, password);
         addToast("Signed in successfully", "success");
       } else {
-        await register(username, password);
+        await register(username, email, password);
         addToast("Account created successfully", "success");
       }
       setUsername("");
+      setEmail("");
       setPassword("");
       setConfirmPassword("");
       setError("");
@@ -93,6 +95,19 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               required
             />
           </div>
+
+          {mode === "register" && (
+            <div>
+              <label className="block text-sm text-text-secondary mb-1">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-canvas border border-divider rounded px-3 py-2 text-text-primary focus:outline-none focus:border-gold"
+                required
+              />
+            </div>
+          )}
 
           {mode === "register" && (
             <div>

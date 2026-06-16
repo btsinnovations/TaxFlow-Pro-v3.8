@@ -39,8 +39,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   };
 
-      const register = async (username: string, password: string) => {
-    await registerUser(username, password);  // Creates account
+      const register = async (username: string, email: string, password: string) => {
+    await registerUser(username, email, password);  // Creates account
     const data = await loginUser(username, password);  // Auto-login
     localStorage.setItem("token", data.access_token);
     setUser(data.user);
