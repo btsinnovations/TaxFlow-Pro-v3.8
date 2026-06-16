@@ -1,27 +1,15 @@
-<<<<<<< HEAD
-from fastapi import APIRouter
-=======
 from fastapi import APIRouter, Request
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
 import subprocess
 import sys
 
 router = APIRouter(prefix="/tests", tags=["tests"])
 
 @router.get("/")
-<<<<<<< HEAD
-def test_status():
-    return {"status": "ok", "message": "Test runner ready"}
-
-@router.post("/run")
-def run_tests():
-=======
 def test_status(request: Request):
     return {"status": "ok", "message": "Test runner ready"}
 
 @router.post("/run")
 def run_tests(request: Request):
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
     try:
         result = subprocess.run(
             [sys.executable, "-m", "pytest", "tests/", "-v", "--tb=short"],

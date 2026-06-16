@@ -3,12 +3,6 @@ import io
 import json
 from collections import defaultdict
 from datetime import datetime
-<<<<<<< HEAD
-from fastapi import APIRouter, Depends, HTTPException, Response
-from sqlalchemy.orm import Session
-from ..database import get_db
-from .. import models
-=======
 from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy.orm import Session
 from openpyxl import Workbook
@@ -17,18 +11,10 @@ from fpdf import FPDF
 from ..database import get_db
 from .. import models
 from ..rls import is_postgres, set_tenant_id
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
 from .auth import get_current_user
 
 router = APIRouter(prefix="/export", tags=["export"])
 
-<<<<<<< HEAD
-@router.get("/statement/{statement_id}")
-def export_statement(statement_id: int,
-                     format: str = "csv",
-                     db: Session = Depends(get_db),
-                     current_user: models.User = Depends(get_current_user)):
-=======
 def _wrap_tenant(request: Request, db: Session):
     if is_postgres() and request.headers.get("x-tenant-id"):
         try:
@@ -56,20 +42,12 @@ def export_statement(request: Request,
                      db: Session = Depends(get_db),
                      current_user: models.User = Depends(get_current_user)):
     _wrap_tenant(request, db)
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
     statement = db.query(models.Statement).filter(
         models.Statement.id == statement_id,
         models.Statement.user_id == current_user.id
     ).first()
     if not statement:
         raise HTTPException(status_code=404, detail="Statement not found")
-<<<<<<< HEAD
-    
-    transactions = db.query(models.Transaction).filter(
-        models.Transaction.statement_id == statement_id
-    ).order_by(models.Transaction.date.asc()).all()
-    
-=======
 
     transactions = db.query(models.Transaction).filter(
         models.Transaction.statement_id == statement_id,
@@ -77,7 +55,6 @@ def export_statement(request: Request,
     ).order_by(models.Transaction.date.asc()).all()
 
     # --- 1. JSON ---
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
     if format == "json":
         data = [{
             "id": t.id, "date": t.date, "description": t.description,
@@ -89,12 +66,8 @@ def export_statement(request: Request,
             media_type="application/json",
             headers={"Content-Disposition": f"attachment; filename=statement_{statement_id}.json"}
         )
-<<<<<<< HEAD
-    
-=======
 
     # --- 2. RAW CSV ---
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
     elif format == "csv":
         output = io.StringIO()
         writer = csv.writer(output)
@@ -110,25 +83,14 @@ def export_statement(request: Request,
             media_type="text/csv",
             headers={"Content-Disposition": f"attachment; filename=statement_{statement_id}.csv"}
         )
-<<<<<<< HEAD
-        
-=======
 
     # --- 3. QUICKBOOKS ONLINE (QBO) CSV ---
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
     elif format == "qbo":
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow(["Date", "Description", "Withdrawals", "Deposits"])
         for t in transactions:
             try:
-<<<<<<< HEAD
-                qbo_date = datetime.strptime(t.date, "%Y-%m-%d").strftime("%m/%d/%Y")
-            except (ValueError, TypeError):
-                qbo_date = t.date
-            amount = float(t.amount)
-            writer.writerow([qbo_date, t.description, abs(amount) if amount < 0 else "", amount if amount > 0 else ""])
-=======
                 dt = datetime.strptime(t.date, "%Y-%m-%d")
                 qbo_date = dt.strftime("%m/%d/%Y")
             except (ValueError, TypeError):
@@ -139,48 +101,25 @@ def export_statement(request: Request,
             deposits = amount if amount > 0 else ""
             writer.writerow([qbo_date, t.description, withdrawals, deposits])
 
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
         return Response(
             content=output.getvalue(),
             media_type="text/csv",
             headers={"Content-Disposition": f"attachment; filename=statement_{statement_id}_qbo.csv"}
         )
 
-<<<<<<< HEAD
-=======
     # --- 4. XERO CSV ---
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
     elif format == "xero":
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow(["Date", "Payee", "Description", "Reference", "Amount"])
         for t in transactions:
             writer.writerow([t.date, t.description, t.category, t.id, float(t.amount)])
-<<<<<<< HEAD
-=======
 
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
         return Response(
             content=output.getvalue(),
             media_type="text/csv",
             headers={"Content-Disposition": f"attachment; filename=statement_{statement_id}_xero.csv"}
         )
-<<<<<<< HEAD
-        
-    elif format == "excel":
-        from openpyxl import Workbook
-        from openpyxl.styles import Font, PatternFill
-        
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Transactions"
-        headers = ["Date", "Description", "Category", "Amount", "Type", "Running Balance"]
-        ws.append(headers)
-        for col in range(1, len(headers) + 1):
-            cell = ws.cell(row=1, column=col)
-            cell.font = Font(bold=True, color="FFFFFF")
-            cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-=======
 
     # --- 5. EXCEL (.xlsx) ---
     elif format == "excel":
@@ -198,20 +137,11 @@ def export_statement(request: Request,
             cell.font = header_font
             cell.fill = header_fill
 
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
         for t in transactions:
             ws.append([
                 t.date, t.description, t.category, float(t.amount),
                 t.tx_type, float(t.running_balance) if t.running_balance is not None else None
             ])
-<<<<<<< HEAD
-        for row in range(2, ws.max_row + 1):
-            ws.cell(row=row, column=4).number_format = '"$"#,##0.00'
-            ws.cell(row=row, column=6).number_format = '"$"#,##0.00'
-        for col in ws.columns:
-            max_length = max((len(str(cell.value)) for cell in col if cell.value is not None), default=0)
-            ws.column_dimensions[col[0].column_letter].width = min(max_length + 2, 50)
-=======
 
         for row in range(2, ws.max_row + 1):
             ws.cell(row=row, column=4).number_format = '"$"#,##0.00'
@@ -221,7 +151,6 @@ def export_statement(request: Request,
             max_length = max((len(str(cell.value)) for cell in col if cell.value is not None), default=0)
             ws.column_dimensions[col[0].column_letter].width = min(max_length + 2, 50)
 
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
         output = io.BytesIO()
         wb.save(output)
         output.seek(0)
@@ -231,25 +160,13 @@ def export_statement(request: Request,
             headers={"Content-Disposition": f"attachment; filename=statement_{statement_id}.xlsx"}
         )
 
-<<<<<<< HEAD
-    elif format == "pdf":
-        from fpdf import FPDF
-        
-=======
     # --- 6. PDF SUMMARY REPORT ---
     elif format == "pdf":
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Helvetica", "B", 16)
         pdf.cell(0, 10, "TaxFlow Pro - Statement Summary", ln=True, align="C")
         pdf.ln(10)
-<<<<<<< HEAD
-        pdf.set_font("Helvetica", "B", 12)
-        pdf.multi_cell(0, 8, f"Statement: {statement.filename}")
-        pdf.multi_cell(0, 8, f"Period: {statement.period_start or 'N/A'} to {statement.period_end or 'N/A'}")
-        pdf.ln(5)
-=======
 
         pdf.set_font("Helvetica", "B", 12)
         # FIXED: Use multi_cell for long filenames to prevent overflow
@@ -257,30 +174,12 @@ def export_statement(request: Request,
         pdf.multi_cell(0, 8, f"Period: {statement.period_start or 'N/A'} to {statement.period_end or 'N/A'}")
         pdf.ln(5)
 
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
         pdf.set_font("Helvetica", "B", 14)
         pdf.cell(0, 10, "Reconciliation", ln=True)
         pdf.set_font("Helvetica", "", 12)
         open_bal = float(statement.opening_balance) if statement.opening_balance is not None else 0.0
         close_bal = float(statement.closing_balance) if statement.closing_balance is not None else 0.0
         variance = float(statement.variance) if statement.variance is not None else 0.0
-<<<<<<< HEAD
-        pdf.cell(90, 8, f"Opening Balance: ${open_bal:,.2f}", ln=True)
-        pdf.cell(90, 8, f"Closing Balance: ${close_bal:,.2f}", ln=True)
-        pdf.cell(90, 8, f"Variance: ${variance:,.2f}", ln=True)
-        pdf.cell(90, 8, f"Balanced: {'Yes' if statement.is_balanced else 'No'}", ln=True)
-        pdf.ln(5)
-        pdf.set_font("Helvetica", "B", 14)
-        pdf.cell(0, 10, "Category Summary", ln=True)
-        pdf.set_font("Helvetica", "", 12)
-        cat_totals = defaultdict(float)
-        for t in transactions:
-            cat_totals[t.category] += float(t.amount)
-        for cat, total in sorted(cat_totals.items(), key=lambda x: abs(x[1]), reverse=True):
-            pdf.multi_cell(0, 8, f"{cat}: ${total:,.2f}")
-        return Response(
-            content=pdf.output(dest='B'),
-=======
         balanced = "Yes" if statement.is_balanced else "No"
 
         pdf.cell(90, 8, f"Opening Balance: ${open_bal:,.2f}", ln=True)
@@ -304,51 +203,35 @@ def export_statement(request: Request,
         pdf_bytes = pdf.output(dest='B')
         return Response(
             content=pdf_bytes,
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
             media_type="application/pdf",
             headers={"Content-Disposition": f"attachment; filename=statement_{statement_id}_summary.pdf"}
         )
 
-<<<<<<< HEAD
-=======
     # --- 7. PARQUET (Data Science / ML) ---
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
     elif format == "parquet":
         try:
             import pandas as pd
         except ImportError:
             raise HTTPException(status_code=500, detail="pandas not installed")
-<<<<<<< HEAD
-=======
 
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
         data = [{
             "id": t.id, "date": t.date, "description": t.description,
             "amount": float(t.amount), "tx_type": t.tx_type, "category": t.category,
             "running_balance": float(t.running_balance) if t.running_balance is not None else None
         } for t in transactions]
-<<<<<<< HEAD
-=======
 
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
         df = pd.DataFrame(data)
         output_parquet = io.BytesIO()
         df.to_parquet(output_parquet, engine="pyarrow", index=False)
         output_parquet.seek(0)
-<<<<<<< HEAD
-=======
 
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
         return Response(
             content=output_parquet.getvalue(),
             media_type="application/octet-stream",
             headers={"Content-Disposition": f"attachment; filename=statement_{statement_id}.parquet"}
         )
 
-<<<<<<< HEAD
-=======
     # --- 8. QIF (Legacy) ---
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
     elif format == "qif":
         lines = ["!Account", "NExported", "^", "!Type:Bank"]
         for t in transactions:
@@ -362,10 +245,6 @@ def export_statement(request: Request,
             media_type="text/plain",
             headers={"Content-Disposition": f"attachment; filename=statement_{statement_id}.qif"}
         )
-<<<<<<< HEAD
-    
-=======
 
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
     else:
         raise HTTPException(status_code=400, detail="Format must be json, csv, qbo, xero, excel, pdf, parquet, or qif")

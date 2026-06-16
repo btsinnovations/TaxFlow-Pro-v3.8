@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-from .generic_pdf import GenericPDFParser
-
-__all__ = ["GenericPDFParser"]
-=======
 """
 Unified PDF parsing package for TaxFlow Pro v3.7.
 
@@ -35,4 +30,3 @@ __all__ = [
     "deduplicate_dicts",
     "ensure_tx_type",
 ]
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd

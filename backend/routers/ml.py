@@ -1,15 +1,8 @@
-<<<<<<< HEAD
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from ..database import get_db
-from .. import models
-=======
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models
 from ..rls import is_postgres, set_tenant_id
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
 from .auth import get_current_user
 
 CATEGORY_RULES = {
@@ -42,18 +35,6 @@ def categorize(description: str) -> str:
 
 router = APIRouter(prefix="/ml", tags=["ml"])
 
-<<<<<<< HEAD
-@router.post("/categorize/{statement_id}")
-def categorize_statement(statement_id: int,
-                         db: Session = Depends(get_db),
-                         current_user: models.User = Depends(get_current_user)):
-    transactions = db.query(models.Transaction).join(models.Statement).filter(
-        models.Statement.id == statement_id,
-        models.Statement.user_id == current_user.id
-    ).all()
-    if not transactions:
-        raise HTTPException(status_code=404, detail="Statement not found or unauthorized")
-=======
 def _wrap_tenant(request: Request, db: Session):
     if is_postgres() and request.headers.get("x-tenant-id"):
         try:
@@ -95,7 +76,6 @@ def categorize_statement(request: Request, statement_id: int,
         models.Transaction.tenant_id == statement.tenant_id
     ).all()
 
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
     updated = 0
     for tx in transactions:
         cat = categorize(tx.description)
@@ -103,10 +83,7 @@ def categorize_statement(request: Request, statement_id: int,
             tx.category = cat
             updated += 1
     db.commit()
-<<<<<<< HEAD
-=======
 
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
     return {
         "statement_id": statement_id,
         "transactions_processed": len(transactions),
