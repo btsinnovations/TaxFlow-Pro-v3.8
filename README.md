@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # TaxFlow Pro Frontend
 
 **Standalone React Web UI**
