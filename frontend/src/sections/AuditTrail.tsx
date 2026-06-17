@@ -40,7 +40,8 @@ export default function AuditTrail() {
     const loadAudit = async () => {
       try {
         const data = await getAuditLog(100);
-        setAuditEvents(data);
+        const events = Array.isArray(data) ? data : data?.events ?? data?.logs ?? [];
+        setAuditEvents(events);
       } catch (err) {
         console.error('Failed to load audit log:', err);
       } finally {

@@ -327,7 +327,7 @@ fi
 rm -f backend/api_db.json 2>/dev/null || true
 rm -rf backend/uploads backend/output 2>/dev/null || true
 
-"$VENV_DIR/bin/uvicorn" backend.api:app --reload --host 0.0.0.0 --port 8000 > "$LOG_FILE" 2>&1 &
+"$VENV_DIR/bin/uvicorn" backend.api:app --reload --reload-dir "$PROJECT_DIR/backend" --host 0.0.0.0 --port 8000 > "$LOG_FILE" 2>&1 &
 BACKEND_PID=$!
 echo $BACKEND_PID > "$BACKEND_PID_FILE"
 
