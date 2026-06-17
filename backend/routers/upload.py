@@ -7,6 +7,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from .. import models
@@ -228,11 +229,20 @@ async def upload_statement(
     }
 
 
+class _ProcessPayload(BaseModel):
+    file_id: int
+    output_format: str = "qif"
+    # Accepted for frontend compatibility but not required for processing.
+    client_id: str = "default"
+    profile: str = "personal"
+    use_fast: bool = False
+    use_ml: bool = True
+
+
 @router.post("/process")
 def process_statement(
     request: Request,
-    file_id: int,
-    output_format: str = "qif",
+    payload: _ProcessPayload,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -240,7 +250,7 @@ def process_statement(
     _wrap_tenant(request, db)
     statement = (
         db.query(models.Statement)
-        .filter(models.Statement.id == file_id, models.Statement.user_id == current_user.id)
+        .filter(models.Statement.id == payload.file_id, models.Statement.user_id == current_user.id)
         .first()
     )
     if not statement:
@@ -269,7 +279,7 @@ def process_statement(
         "institution": statement.account.institution if statement.account else "Unknown",
         "reconciliation": {"status": reconciliation_status, "variance": float(statement.variance) if statement.variance is not None else None},
         "output_file": str(statement.id),
-        "output_format": output_format,
+        "output_format": payload.output_format,
         "warnings": warnings,
     }
 
