@@ -12,8 +12,15 @@ from backend.api import app
 from backend.models import User
 from backend.routers.auth import get_password_hash
 
-TEST_DB = "sqlite:///./test_taxflow.db"
-engine = create_engine(TEST_DB, connect_args={"check_same_thread": False})
+from sqlalchemy.pool import StaticPool
+
+# Use a shared in-memory SQLite database so each test starts completely fresh
+# and cannot be polluted by stale files from previous runs.
+engine = create_engine(
+    "sqlite:///:memory:",
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -26,6 +33,13 @@ def override_get_db():
 
 
 app.dependency_overrides[get_db] = override_get_db
+
+
+@pytest.fixture(autouse=True)
+def _reset_db_override():
+    """Re-apply backend/tests DB override in case another test module changed it."""
+    app.dependency_overrides[get_db] = override_get_db
+    yield
 
 
 @pytest.fixture(scope="function")

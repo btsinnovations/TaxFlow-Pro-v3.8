@@ -1,51 +1,4 @@
-# TaxFlow Pro Frontend
-
-**Standalone React Web UI**
-
-This is the frontend-only package. It provides a web interface for uploading and managing bank statements. No Python, no backend code, no OCR models.
-
-## Quick Start
-
-```bash
-# Install
-bash setup.sh
-
-# Start dev server
-bash start.sh
-```
-
-Then open http://localhost:5173
-
-## Connecting to a Backend
-
-The frontend needs a TaxFlow Pro backend to process statements. Configure the API URL in `.env`:
-
-```bash
-# Copy template
-cp .env.example .env
-
-# Edit .env — set your backend URL
-VITE_API_BASE_URL=http://localhost:8000/api
-```
-
-### Backend Options
-
-| Setup | URL | Use Case |
-|-------|-----|----------|
-| Same machine | `http://localhost:8000/api` | Running both on one computer |
-| Another computer | `http://192.168.1.xxx:8000/api` | LAN access |
-| Remote server | `https://api.yourdomain.com/api` | Hosted backend |
-
-## System Requirements
-
-- Node.js 20+
-- npm 10+
-
-## Privacy
-
-The frontend itself is just a static web app. All statement processing happens on the **backend server** you configure in `.env`. No data is sent anywhere else.
-=======
-# TaxFlow Pro v3.7
+# TaxFlow Pro v3.8
 
 Local-first, offline-capable financial document processing for individuals and small businesses.
 
@@ -65,28 +18,17 @@ TaxFlow Pro ingests bank statements and financial documents, extracts transactio
 
 ## Quick Start
 
-### Backend
+Run the bootstrap script from the project root:
 
 ```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-python -m alembic upgrade head
-uvicorn backend.api:app --reload --host 0.0.0.0 --port 8000
+./start.sh
 ```
+
+`start.sh` creates the Python virtual environment, installs dependencies, prepares the database, installs frontend packages, and starts both the backend and frontend dev servers.
+
+Then open http://localhost:3000.
 
 Default API base URL: `http://localhost:8000/api`
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Then open `http://localhost:5173`.
 
 ---
 
@@ -126,7 +68,7 @@ Expected: **48 passed, 0 failed**
 
 - [x] Loop 1 — PostgreSQL + Alembic + tenant isolation
 - [x] Phase 2 — Parser unification + PostgreSQL Row-Level Security
-- [ ] Phase 3 — Local-first bulletproof backend (offline, encrypted SQLite, local auth, no cloud)
+- [x] Phase 3 — Local-first bulletproof backend (offline, encrypted SQLite, local auth, no cloud)
 
 See `CHANGES.md` for full details.
 
@@ -135,4 +77,3 @@ See `CHANGES.md` for full details.
 ## Privacy
 
 All processing happens locally. Your statements, transactions, and models stay on your machine.
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd

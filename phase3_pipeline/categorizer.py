@@ -42,23 +42,12 @@ class PriorityCategorizer:
         self._compiled_aliases = []
         for key, value in self.aliases.items():
             # Convert alias key to regex pattern
-<<<<<<< HEAD
-            # Escape regex special characters except '*'
-            escaped = re.escape(key)
-            # Replace escaped '\*' with '.*' to match any sequence
-            pattern_str = escaped.replace('\\*', '.*')
-            # For keys that end with '*', we want to match from start? Not necessarily.
-            # We'll match anywhere (substring) to be flexible.
-            try:
-                pattern = re.compile(pattern_str, re.IGNORECASE)
-=======
             escaped = re.escape(key)
             # Replace escaped '\*' with '.*' to match any sequence
             pattern_str = escaped.replace('\\*', '.*')
             try:
                 # Match from the start of the description, ignoring case
                 pattern = re.compile(f"^{pattern_str}", re.IGNORECASE)
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
                 self._compiled_aliases.append((pattern, value))
             except re.error:
                 print(f"Warning: Invalid alias pattern '{key}' -> {value}")
@@ -67,14 +56,6 @@ class PriorityCategorizer:
         """Apply merchant aliases to normalize the description."""
         if not text:
             return text
-<<<<<<< HEAD
-        result = text
-        # Apply each alias pattern in order (order may matter if patterns overlap)
-        for pattern, replacement in self._compiled_aliases:
-            # Replace the matched portion with the alias value
-            # We want to replace the entire matched substring, not just pattern.
-            # Using sub with a lambda that replaces the whole match.
-=======
 
         # Prefer a start-of-string alias match and truncate trailing store/location
         # identifiers so variants like "WAL-MART #123" collapse to "WALMART".
@@ -90,7 +71,6 @@ class PriorityCategorizer:
         # Fallback: apply all substring aliases as before.
         result = text
         for pattern, replacement in self._compiled_aliases:
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
             result = pattern.sub(lambda m: replacement, result)
         return result
 

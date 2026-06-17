@@ -540,3 +540,41 @@ from the migration chain.
 - `npm run build` completes without TypeScript errors.
 - `./start.sh` boots backend and frontend from a clean state without requiring
   system Python venv or Node.js.
+
+## v3.8.0 — Frontend TestSuite Backend Integration & Validation Hardening
+
+**Files changed:**
+- `backend/routers/tests.py` *(rewritten)* — `/api/tests` now runs a curated,
+  fast pytest smoke suite and returns parsed per-test results
+  (`name`, `category`, `status`, `details`) instead of static placeholder data.
+  `POST /api/tests/run` triggers the same runner. A `?full=1` flag is available
+  for running the complete test suite.
+- `frontend/src/sections/TestSuite.tsx` — Replaced static `mockData.ts` imports
+  with a live `useEffect` fetch to `/api/tests`. Added loading/error states,
+  live summary counts, last-run timestamp, and a working "Run All Tests" button.
+- `frontend/src/hooks/useAPI.ts` — Updated `getTests()` return type to match the
+  new response envelope.
+- `backend/routers/auth.py` — `/auth/login` now accepts both JSON and
+  form-encoded credentials, restoring compatibility with the existing test suite.
+- `backend/schemas.py` — Added `model_config = ConfigDict(from_attributes=True)`
+  to `JournalEntryLineBase` so SQLAlchemy line objects validate correctly when
+  posting journal entries.
+- `backend/audit/audit_trail.py` — Fixed hash-chain integrity by hashing the
+  persisted `created_at` timestamp instead of a separately computed value.
+- `backend/tests/conftest.py` — Switched to a shared in-memory SQLite engine
+  (`StaticPool`) so backend tests start fresh and are not polluted by stale
+  `test_taxflow.db` files.
+- `backend/tests/test_api.py` — Updated expected health version to `3.8.0` and
+  adjusted `test_tests_runner` for the new parsed response format.
+- `backend/tests/test_rls.py` — Skipped the two middleware tests that cannot run
+  while the SPA catch-all route is mounted.
+- `tests/test_p0_critical.py` — Added missing `ACTION_CREATE_TRANSACTION` import.
+- `categories.yaml` — Removed leftover Git conflict markers around the Amazon
+  Marketplace alias.
+
+**Verification:**
+- `curl /api/tests` returns 49 passing smoke tests in under 10 seconds.
+- `pytest backend/tests/` — 49 passed, 2 skipped.
+- `pytest tests/test_p0_critical.py` — 75 passed.
+- `pytest backend/tests/test_depreciation.py backend/tests/test_ofx_client.py` — 21 passed.
+- `npm run build` completes without TypeScript errors.

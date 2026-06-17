@@ -135,6 +135,7 @@ class TransactionNote(TransactionNoteBase):
 class TransactionFlagBase(BaseModel):
     flag_type: str
     reason: Optional[str] = None
+    is_resolved: bool = False
 
 class TransactionFlagCreate(TransactionFlagBase):
     transaction_id: int
@@ -143,6 +144,8 @@ class TransactionFlag(TransactionFlagBase):
     id: int
     transaction_id: int
     tenant_id: int
+    resolved_by: Optional[int] = None
+    resolved_at: Optional[datetime] = None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
@@ -195,6 +198,7 @@ class JournalEntryLineBase(BaseModel):
     debit: float = 0
     credit: float = 0
     memo: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
 
 class JournalEntryLineCreate(JournalEntryLineBase):
     pass
@@ -382,6 +386,12 @@ class FirmSettingsBase(BaseModel):
     firm_ein: Optional[str] = None
     logo_path: Optional[str] = None
     fiscal_year_end: Optional[str] = None
+    recurring_high_confidence: float = 0.95
+    recurring_medium_confidence: float = 0.75
+    recurring_auto_confirm: float = 0.90
+    receipt_match_amount_weight: float = 0.40
+    receipt_match_date_weight: float = 0.35
+    receipt_match_description_weight: float = 0.25
     timezone: str = "America/New_York"
     date_format: str = "%m/%d/%Y"
 

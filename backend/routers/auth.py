@@ -92,8 +92,31 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
 
 @router.post("/login", response_model=schemas.TokenWithUser)
-def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
-    user = authenticate_user(db, credentials.username, credentials.password)
+async def login(request: Request, db: Session = Depends(get_db)):
+    """Authenticate with either JSON or form-encoded credentials."""
+    content_type = request.headers.get("content-type", "")
+    try:
+        if "application/json" in content_type:
+            body = await request.json()
+            username = body.get("username")
+            password = body.get("password")
+        else:
+            form = await request.form()
+            username = form.get("username")
+            password = form.get("password")
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Unable to parse login credentials",
+        )
+
+    if not username or not password:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Username and password are required",
+        )
+
+    user = authenticate_user(db, username, password)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Incorrect username or password",

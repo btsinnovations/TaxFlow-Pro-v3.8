@@ -40,6 +40,7 @@ from backend.audit.audit_trail import (
     verify_chain_integrity,
     _get_genesis_hash,
     _compute_event_hash,
+    ACTION_CREATE_TRANSACTION,
     ACTION_CREATE_JOURNAL,
     ACTION_POST_JOURNAL,
     ACTION_LOCK_PERIOD,

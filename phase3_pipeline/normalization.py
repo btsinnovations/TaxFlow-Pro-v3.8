@@ -30,8 +30,6 @@ def normalize_date(date_str: str, statement_year: Optional[int] = None) -> str:
 
     cleaned = str(date_str).strip().replace("\\", "/").replace("-", "/").strip()
 
-<<<<<<< HEAD
-=======
     # European dotted format: DD.MM.YYYY / DD.MM.YY — prioritize day/month ordering
     eu_dot_match = re.match(r"^(\d{1,2})\.(\d{1,2})\.(\d{4}|\d{2})$", cleaned)
     if eu_dot_match:
@@ -53,7 +51,6 @@ def normalize_date(date_str: str, statement_year: Optional[int] = None) -> str:
         except ValueError:
             pass
 
->>>>>>> 588d8c5a4de15c1eb158d8c0e2f7ffb66336b9fd
     # Preferred: dateutil
     try:
         from dateutil import parser

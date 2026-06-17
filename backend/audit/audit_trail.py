@@ -187,10 +187,26 @@ def create_audit_entry(
         raise ValueError(f"Unrecognized audit action: {action}")
 
     now = datetime.now(timezone.utc)
-    timestamp = now.isoformat()
 
     # Resolve previous hash in the chain
     previous_hash = _get_previous_hash(db, client_id)
+
+    # Create the entry first so we can use the persisted created_at timestamp
+    # for hashing. This guarantees create and verify use the exact same value.
+    entry = models.AuditEntry(
+        tenant_id=client_id if client_id is not None else 0,
+        user_id=user_id,
+        action=action,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        created_at=now,
+        details="",
+    )
+    db.add(entry)
+    db.flush()
+    db.refresh(entry)
+
+    timestamp = entry.created_at.isoformat() if entry.created_at else now.isoformat()
 
     # Compute current entry hash
     current_hash = _compute_event_hash(
@@ -219,17 +235,7 @@ def create_audit_entry(
     if new_values is not None:
         details_dict["new_values"] = new_values
 
-    details_json = json.dumps(details_dict, default=_serialize_value)
-
-    entry = models.AuditEntry(
-        tenant_id=client_id if client_id is not None else 0,
-        user_id=user_id,
-        action=action,
-        entity_type=entity_type,
-        entity_id=entity_id,
-        details=details_json,
-    )
-    db.add(entry)
+    entry.details = json.dumps(details_dict, default=_serialize_value)
     db.flush()
 
     logger.debug(

@@ -6,7 +6,7 @@ def test_health_endpoint(client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "ok"
-    assert data["version"] == "3.7.0"
+    assert data["version"] == "3.8.0"
 
 
 def test_api_health_endpoint(client):
@@ -14,7 +14,7 @@ def test_api_health_endpoint(client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "ok"
-    assert data["version"] == "3.7.0"
+    assert data["version"] == "3.8.0"
 
 
 def test_cors_preflight(client):
@@ -150,8 +150,8 @@ def test_tests_runner(auth_client):
     resp = auth_client.post("/api/tests/run")
     assert resp.status_code == 200
     data = resp.json()
-    assert "returncode" in data
-    assert "stdout" in data
+    assert "results" in data
+    assert isinstance(data["results"], list)
 
 
 def test_upload_rejects_non_pdf(auth_client):

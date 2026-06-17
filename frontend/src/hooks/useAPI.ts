@@ -121,7 +121,7 @@ export async function getDashboardStats(): Promise<any> {
   return handleResponse(res, 'Failed to fetch stats');
 }
 
-export async function getTests(): Promise<any[]> {
+export async function getTests(): Promise<any> {
   const res = await fetch(`${API_BASE}/tests/`, {
     headers: authHeaders(),
   });
