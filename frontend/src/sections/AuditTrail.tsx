@@ -39,7 +39,7 @@ export default function AuditTrail() {
   useEffect(() => {
     const loadAudit = async () => {
       try {
-        const data = await getAuditLog(100);
+        const data: any = await getAuditLog(100);
         const events = Array.isArray(data) ? data : data?.events ?? data?.logs ?? [];
         setAuditEvents(events);
       } catch (err) {

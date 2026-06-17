@@ -31,10 +31,12 @@ async function handleResponse(res: Response, fallbackError: string) {
 export async function uploadFile(file: File, clientId: string = 'default'): Promise<any> {
   const formData = new FormData();
   formData.append('file', file);
-  // Backend upload expects account_id, but clientId is used as a fallback label here.
-  formData.append('account_id', clientId);
 
-  const res = await fetch(`${API_BASE}/upload/`, {
+  // Pass the selected client as a query parameter so the backend can resolve
+  // or create a default account for that client.
+  const query = clientId && clientId !== 'default' ? `?client_id=${clientId}` : '';
+
+  const res = await fetch(`${API_BASE}/upload/${query}`, {
     method: 'POST',
     headers: authHeaders(),
     body: formData,
