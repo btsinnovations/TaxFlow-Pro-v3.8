@@ -7,8 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Download, FileText, AlertTriangle } from 'lucide-react';
 import FileDropzone from '../components/FileDropzone';
 import { uploadFile, processFile, downloadResult, getClients } from '../hooks/useAPI';
-import { useToast } from "@/hooks/useToast";
-
 const UploadSection = () => {
   const [clientId, setClientId] = useState('default');
   const [format, setFormat] = useState<'qif' | 'csv' | 'json'>('qif');
@@ -20,8 +18,6 @@ const UploadSection = () => {
   useEffect(() => {
     getClients().then(setClients).catch(() => setClients([])).finally(() => setLoadingClients(false));
   }, []);
-
-  const { addToast } = useToast();
 
   const handleUpload = async (files: File[]) => {
     const newResults: any[] = [];
@@ -66,7 +62,7 @@ const UploadSection = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = filename || `processed_${fileId}.${format === 'excel' ? 'xlsx' : format === 'csv' ? 'csv' : 'qif'}`;
+      a.download = filename || `processed_${fileId}.${format === 'csv' ? 'csv' : 'qif'}`;
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();

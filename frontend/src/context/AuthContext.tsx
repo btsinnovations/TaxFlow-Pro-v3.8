@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import { loginUser, registerUser, logoutUser, getMe } from "@/hooks/useAPI";
 
 interface AuthUser {

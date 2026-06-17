@@ -471,3 +471,72 @@ backend/
 - Implement PostgreSQL Row-Level Security (RLS) when moving to a dedicated production PostgreSQL instance.
 - Consider whether the alias-start matching in `categorizer.py` should be configurable per merchant to avoid over-eager truncation.
 - Add future schema changes as new Alembic migrations rather than editing the baseline migration once it has run in a shared environment.
+
+---
+
+## 15. Registration 500 Error Fix (Post-Release Troubleshooting)
+
+**Date:** 2026-06-17
+
+**Problem:** `POST /api/auth/register` returned HTTP 500 after the frontend email
+field fix was applied. The backend traceback revealed:
+
+```
+sqlite3.OperationalError: table users has no column named role
+```
+
+**Root cause:** The Alembic baseline migration (`d75a7eba9fd0_baseline_schema.py`)
+created a `users` table without the `role` column, while `backend/models.py`
+defines `User.role`. Many other v3.8 model tables and columns were also missing
+from the migration chain.
+
+**Files changed:**
+- `alembic/versions/ca45f68ec9a7_sync_models_with_missing_columns_and_.py` *(new)*
+  — Adds the missing `users.role` column and all v3.8 tables/columns.
+  SQLite-unsupported `ALTER TABLE ADD FOREIGN KEY` operations are skipped.
+- `backend/routers/auth.py` — Wrapped registration in try/except with rollback
+  and a clear 500 error message; added `/auth/logout` endpoint; changed
+  `/auth/login` to accept JSON (`LoginRequest`) and return the user object
+  alongside the token.
+- `backend/schemas.py` — Added `LoginRequest` and `TokenWithUser` schemas.
+- `backend/api.py` — Added startup event `models.Base.metadata.create_all(bind=engine)`
+  as a safety net for SQLite development.
+- `frontend/src/components/LoginModal.tsx` — Added explicit email format validation;
+  removed unused import.
+- `frontend/src/context/AuthContext.tsx` — Fixed React imports for TypeScript build.
+- `frontend/src/context/ToastContext.tsx` — Fixed React imports for TypeScript build.
+- `frontend/src/hooks/useAPI.ts` — Added `authHeaders()` helper and injected the
+  Bearer token into all authenticated API calls; fixed frontend URLs
+  (`/dashboard/stats` → `/dashboard/`, `/audit/` → `/audit/logs`); mapped
+  account/client field names to backend schema (`nickname` → `name`,
+  `account_type` → `type`, `account_number_last4` → `account_number_masked`).
+- `frontend/src/components/AccountModal.tsx` — Mapped UI field names to backend
+  schema when calling `createAccount`.
+- `frontend/src/components/ClientModal.tsx` — Stopped sending unsupported fields
+  to the backend.
+- `frontend/src/sections/ExportFormats.tsx` — Removed unused imports/variables
+  for TypeScript build.
+- `frontend/src/sections/UploadSection.tsx` — Removed unused toast import and
+  fixed unreachable format comparison.
+- `start.sh` — Made the legacy `rm -f backend/api_db.json` line non-fatal;
+  rewrote the bootstrap to be one-click:
+  - Auto-creates `.env` from `.env.example` if missing.
+  - Downloads a standalone Python (Astral `python-build-standalone`) when the
+    system Python lacks `venv` support, so no `sudo apt install` is required.
+  - Downloads a standalone Node.js when `node`/`npm` are not installed, so no
+    system Node.js is required.
+  - Verified on Linux x86_64 with no pre-installed Python venv or Node.
+- `CHANGES.md` — This section.
+
+**Verification:**
+- `POST /api/auth/register` succeeds and returns the created user.
+- `POST /api/auth/login` accepts JSON, returns a valid bearer token **and** the
+  user object.
+- Authenticated endpoints (`/clients/`, `/dashboard/`, `/audit/logs`, `/auth/me`)
+  return data when called with a Bearer token.
+- `/auth/logout` returns success.
+- Duplicate registration returns `400 Username already registered` instead of 500.
+- `users` table now contains the `role` column; total tables increased from 5 to 21.
+- `npm run build` completes without TypeScript errors.
+- `./start.sh` boots backend and frontend from a clean state without requiring
+  system Python venv or Node.js.

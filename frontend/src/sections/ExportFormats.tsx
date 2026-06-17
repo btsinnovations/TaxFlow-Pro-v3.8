@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { FileOutput, Table, Grid3x3, FileText, Braces, FileCheck, Download, AlertCircle } from 'lucide-react';
-import { getExportFormats, downloadResult } from '@/hooks/useAPI';
+import { getExportFormats } from '@/hooks/useAPI';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -69,7 +69,7 @@ export default function ExportFormats() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {formats.map((fmt, i) => {
+            {formats.map((fmt) => {
               const Icon = iconMap[fmt.icon] || FileText;
               const isAvailable = fmt.status === 'Available';
               return (

@@ -16,9 +16,16 @@ class User(UserBase):
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class TokenWithUser(Token):
+    user: User
 
 class ClientBase(BaseModel):
     name: str

@@ -31,6 +31,13 @@ run_migrations()
 
 app = FastAPI(title="TaxFlow Pro", version="3.8.0")
 
+
+@app.on_event("startup")
+async def startup_event():
+    """Ensure all SQLAlchemy model tables exist (safety net for SQLite dev)."""
+    models.Base.metadata.create_all(bind=engine)
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[

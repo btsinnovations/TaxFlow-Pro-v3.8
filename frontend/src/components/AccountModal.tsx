@@ -45,11 +45,10 @@ export default function AccountModal({ isOpen, onClose, onSuccess, clientId, cli
     try {
       await createAccount({
         client_id: selectedClient,
-        nickname,
+        name: nickname,
         institution,
-        account_type: accountType,
-        account_number_last4: last4 || undefined,
-        notes: notes || undefined,
+        type: accountType,
+        account_number_masked: last4 || undefined,
       });
       onSuccess();
       onClose();

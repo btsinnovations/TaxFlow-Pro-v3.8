@@ -71,23 +71,29 @@ def _set_tenant_from_request(request: Optional[Request], db: Session) -> None:
 
 @router.post("/register", response_model=schemas.User)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    if db.query(models.User).filter(models.User.username == user.username).first():
-        raise HTTPException(status_code=400, detail="Username already registered")
-    if db.query(models.User).filter(models.User.email == user.email).first():
-        raise HTTPException(status_code=400, detail="Email already registered")
-    db_user = models.User(
-        username=user.username,
-        email=user.email,
-        hashed_password=get_password_hash(user.password)
-    )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
+    try:
+        if db.query(models.User).filter(models.User.username == user.username).first():
+            raise HTTPException(status_code=400, detail="Username already registered")
+        if db.query(models.User).filter(models.User.email == user.email).first():
+            raise HTTPException(status_code=400, detail="Email already registered")
+        db_user = models.User(
+            username=user.username,
+            email=user.email,
+            hashed_password=get_password_hash(user.password)
+        )
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        return db_user
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
 
-@router.post("/login", response_model=schemas.Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = authenticate_user(db, form_data.username, form_data.password)
+@router.post("/login", response_model=schemas.TokenWithUser)
+def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
+    user = authenticate_user(db, credentials.username, credentials.password)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Incorrect username or password",
@@ -96,7 +102,12 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         data={"sub": user.username},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "token_type": "bearer", "user": user}
+
+@router.post("/logout")
+def logout():
+    """JWT logout is client-side; inform the client the token should be discarded."""
+    return {"detail": "Logged out successfully"}
 
 @router.get("/me", response_model=schemas.User)
 def read_users_me(current_user: models.User = Depends(get_current_user)):

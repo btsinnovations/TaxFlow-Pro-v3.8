@@ -44,9 +44,9 @@ export default function ClientModal({ isOpen, onClose, onSuccess, client }: Clie
     setError('');
     try {
       if (client) {
-        await updateClient(client.id, { name, entity_type: entityType, tax_id: taxId, notes });
+        await updateClient(client.id, { name, tax_id: taxId });
       } else {
-        await createClient({ name, entity_type: entityType, tax_id: taxId, notes });
+        await createClient({ name, tax_id: taxId });
       }
       onSuccess();
       onClose();

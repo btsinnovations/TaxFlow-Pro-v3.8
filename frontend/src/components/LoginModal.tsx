@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, LogIn } from "lucide-react";
+import { X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/useToast";
 
@@ -28,6 +28,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     if (mode === "register" && password !== confirmPassword) {
       setError("Passwords do not match");
       addToast("Passwords do not match", "error");
+      return;
+    }
+
+    if (mode === "register" && !email.includes("@")) {
+      setError("Please enter a valid email");
+      addToast("Please enter a valid email", "error");
       return;
     }
 
