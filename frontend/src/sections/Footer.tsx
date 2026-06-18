@@ -5,7 +5,7 @@ export default function Footer() {
     <footer className="bg-canvas border-t border-divider px-4 md:px-8 py-8 mt-12">
       <div className="max-w-[1440px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="font-serif text-base text-gold">TaxFlow Pro</div>
-        <div className="font-mono text-xs text-text-secondary">v3.5.4</div>
+        <div className="font-mono text-xs text-text-secondary">v3.8</div>
         <div className="flex items-center gap-6">
           {links.map(link => (
             <a

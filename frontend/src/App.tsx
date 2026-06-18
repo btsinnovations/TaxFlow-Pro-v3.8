@@ -31,7 +31,7 @@ export default function App() {
         <ClientProvider>
           <div className="min-h-screen bg-canvas text-text-primary">
             <Navigation />
-            <main>
+            <main className="pt-16">
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/upload" element={<Upload />} />

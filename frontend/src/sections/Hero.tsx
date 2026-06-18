@@ -34,7 +34,7 @@ const Hero = () => {
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#C9A96E]/30 bg-[#C9A96E]/5 mb-8">
           <Shield className="w-4 h-4 text-[#C9A96E]" />
           <span className="text-sm text-[#C9A96E] font-medium tracking-wide uppercase">
-            Financial ETL Pipeline v3.5.4
+            Financial ETL Pipeline v3.8
           </span>
         </div>
 

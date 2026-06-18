@@ -128,10 +128,10 @@ export interface ModelVersion {
 }
 
 export const modelVersions: ModelVersion[] = [
-  { version: 'v3.5.4', accuracy: 94.2, status: 'Production', date: '2026-01-15' },
-  { version: 'v3.5.3', accuracy: 92.8, status: 'Rolled Back', date: '2026-01-14' },
-  { version: 'v3.5.2', accuracy: 93.1, status: 'Deprecated', date: '2026-01-10' },
-  { version: 'v3.5.1', accuracy: 91.7, status: 'Deprecated', date: '2026-01-05' },
+  { version: 'v3.8.0', accuracy: 96.5, status: 'Production', date: '2026-06-18' },
+  { version: 'v3.7.2', accuracy: 94.2, status: 'Rolled Back', date: '2026-05-01' },
+  { version: 'v3.7.0', accuracy: 93.1, status: 'Deprecated', date: '2026-03-15' },
+  { version: 'v3.6.0', accuracy: 91.7, status: 'Deprecated', date: '2026-01-10' },
 ];
 
 // Export Formats
