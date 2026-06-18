@@ -234,7 +234,11 @@ export default function BudgetsPage() {
           </Button>
         </div>
 
-        {loading ? (
+        {!selectedClient ? (
+          <div className="bg-surface border border-divider rounded-lg p-8 text-center">
+            <p className="text-text-secondary font-sans text-sm mb-4">Select a client.</p>
+          </div>
+        ) : loading ? (
           <div className="text-text-secondary font-sans text-sm">Loading budgets...</div>
         ) : error ? (
           <div className="flex items-center gap-2 text-red-400 text-sm bg-red-400/10 p-4 rounded-lg border border-red-400/20">

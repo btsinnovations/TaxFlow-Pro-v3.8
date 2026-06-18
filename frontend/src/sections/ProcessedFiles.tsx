@@ -1,6 +1,7 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Download, FileCheck, Clock, AlertCircle, ChevronDown } from 'lucide-react';
 import { getProcessedFiles, exportStatement, getExportFormats } from '@/hooks/useAPI';
+import { useClient } from '@/context/ClientContext';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -28,6 +29,7 @@ interface ExportFormat {
 }
 
 export default function ProcessedFiles() {
+  const { selectedClient } = useClient();
   const [files, setFiles] = useState<ProcessedFile[]>([]);
   const [exportFormats, setExportFormats] = useState<ExportFormat[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,23 +37,25 @@ export default function ProcessedFiles() {
   const [error, setError] = useState('');
   const sectionRef = useRef<HTMLDivElement>(null);
 
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [fileData, formatData] = await Promise.all([
+        getProcessedFiles(selectedClient?.id),
+        getExportFormats().catch(() => []),
+      ]);
+      setFiles(fileData);
+      setExportFormats(formatData);
+    } catch {
+      setError('Failed to load processed files');
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedClient]);
+
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [fileData, formatData] = await Promise.all([
-          getProcessedFiles(),
-          getExportFormats().catch(() => []),
-        ]);
-        setFiles(fileData);
-        setExportFormats(formatData);
-      } catch {
-        setError('Failed to load processed files');
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
+    loadData();
+  }, [loadData]);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -157,7 +161,7 @@ export default function ProcessedFiles() {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
-                            disabled={file.status !== 'completed'}
+                            disabled={file.status !== 'completed' && file.status !== 'uploaded'}
                             className="flex items-center gap-1.5 font-sans text-xs text-gold border border-gold/30 px-3 py-1.5 rounded hover:bg-gold/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             <Download size={12} className={downloading?.startsWith(`${file.file_id}:`) ? 'animate-spin' : ''} />

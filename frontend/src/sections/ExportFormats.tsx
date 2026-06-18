@@ -71,7 +71,7 @@ export default function ExportFormats() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {formats.map((fmt) => {
               const Icon = iconMap[fmt.icon] || FileText;
-              const isAvailable = fmt.status === 'Available';
+              const isAvailable = fmt.status === 'Available' || fmt.status === 'ready';
               return (
                 <div
                   key={fmt.id}

@@ -25,14 +25,14 @@ def _wrap_tenant(request: Request, db: Session):
 @router.get("/formats")
 def export_formats():
     return [
-        {"id": "csv", "name": "CSV", "description": "Comma-separated values", "icon": "file-spreadsheet", "color": "green", "status": "ready"},
-        {"id": "json", "name": "JSON", "description": "JSON array of transactions", "icon": "file-json", "color": "blue", "status": "ready"},
-        {"id": "qif", "name": "QIF", "description": "Quicken Interchange Format", "icon": "file-text", "color": "purple", "status": "ready"},
-        {"id": "qbo", "name": "QuickBooks Online CSV", "description": "QBO-ready CSV", "icon": "file-spreadsheet", "color": "green", "status": "ready"},
-        {"id": "xero", "name": "Xero CSV", "description": "Xero-compatible CSV", "icon": "file-spreadsheet", "color": "blue", "status": "ready"},
-        {"id": "excel", "name": "Excel", "description": "Microsoft Excel workbook", "icon": "file-spreadsheet", "color": "green", "status": "ready"},
-        {"id": "pdf", "name": "PDF Summary", "description": "PDF reconciliation summary", "icon": "file-text", "color": "red", "status": "ready"},
-        {"id": "parquet", "name": "Parquet", "description": "Apache Parquet for data science", "icon": "file-binary", "color": "orange", "status": "ready"},
+        {"id": "csv", "name": "CSV", "description": "Comma-separated values", "icon": "file-spreadsheet", "color": "green", "status": "Available"},
+        {"id": "json", "name": "JSON", "description": "JSON array of transactions", "icon": "file-json", "color": "blue", "status": "Available"},
+        {"id": "qif", "name": "QIF", "description": "Quicken Interchange Format", "icon": "file-text", "color": "purple", "status": "Available"},
+        {"id": "qbo", "name": "QuickBooks Online CSV", "description": "QBO-ready CSV", "icon": "file-spreadsheet", "color": "green", "status": "Available"},
+        {"id": "xero", "name": "Xero CSV", "description": "Xero-compatible CSV", "icon": "file-spreadsheet", "color": "blue", "status": "Available"},
+        {"id": "excel", "name": "Excel", "description": "Microsoft Excel workbook", "icon": "file-spreadsheet", "color": "green", "status": "Available"},
+        {"id": "pdf", "name": "PDF Summary", "description": "PDF reconciliation summary", "icon": "file-text", "color": "red", "status": "Available"},
+        {"id": "parquet", "name": "Parquet", "description": "Apache Parquet for data science", "icon": "file-binary", "color": "orange", "status": "Available"},
     ]
 
 @router.get("/statement/{statement_id}")

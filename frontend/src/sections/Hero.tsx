@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Link } from 'react-router';
 import { ArrowDown, Shield, FileText, Zap } from 'lucide-react';
 
 const Hero = () => {
@@ -50,13 +51,13 @@ const Hero = () => {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-          <a
-            href="#upload"
+          <Link
+            to="/upload"
             className="inline-flex items-center gap-2 px-8 py-4 bg-[#C9A96E] text-black font-medium rounded-lg hover:bg-[#B8975E] transition-colors"
           >
             <FileText className="w-5 h-5" />
             Upload Statements
-          </a>
+          </Link>
           <a
             href="#dashboard"
             className="inline-flex items-center gap-2 px-8 py-4 border border-white/20 text-white font-medium rounded-lg hover:bg-white/5 transition-colors"

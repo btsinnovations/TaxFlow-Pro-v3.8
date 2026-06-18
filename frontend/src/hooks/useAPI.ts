@@ -188,23 +188,12 @@ export async function deleteClient(clientId: string): Promise<any> {
   return handleResponse(res, 'Failed to delete client');
 }
 
-export async function getProcessedFiles(): Promise<any[]> {
-  const res = await fetch(`${API_BASE}/audit/logs`, {
+export async function getProcessedFiles(clientId?: number): Promise<any[]> {
+  const qs = clientId ? `?client_id=${clientId}` : '';
+  const res = await fetch(`${API_BASE}/upload/processed${qs}`, {
     headers: authHeaders(),
   });
-  const events = await handleResponse(res, 'Failed to fetch processed files');
-  // Filter to processing complete events and extract file info
-  return events
-    .filter((e: any) => e.event_type === 'PROCESSING_COMPLETE' || e.event_type === 'FILE_UPLOAD')
-    .map((e: any) => ({
-      file_id: e.details?.file_id,
-      filename: e.details?.filename || e.description?.match(/from (\S+)/)?.[1] || 'Unknown',
-      institution: e.details?.institution,
-      transaction_count: e.details?.transaction_count,
-      processed_at: e.timestamp,
-      status: e.event_type === 'PROCESSING_COMPLETE' ? 'completed' : 'uploaded',
-    }))
-    .filter((f: any) => f.file_id);
+  return handleResponse(res, 'Failed to fetch processed files');
 }
 
 export async function getAccounts(clientId?: string): Promise<any[]> {

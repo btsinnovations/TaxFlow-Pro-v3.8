@@ -244,7 +244,11 @@ export default function ExchangeRatesPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {loading ? (
+                {!selectedClient ? (
+          <div className="bg-surface border border-divider rounded-lg p-8 text-center">
+            <p className="text-text-secondary font-sans text-sm mb-4">Select a client.</p>
+          </div>
+        ) : loading ? (
                   <div className="text-text-secondary text-sm">Loading rates...</div>
                 ) : rates.length === 0 ? (
                   <p className="text-text-secondary text-sm text-center py-8">No exchange rates configured.</p>

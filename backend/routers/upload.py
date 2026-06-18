@@ -8,7 +8,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -273,6 +273,7 @@ async def upload_statement(
 
     stmt_data = result.get("reconciliation", {})
     meta = result.get("meta", {})
+    detected_institution = result.get("account_info", {}).get("institution")
 
     statement = models.Statement(
         account_id=account.id,
@@ -289,6 +290,11 @@ async def upload_statement(
     db.add(statement)
     db.commit()
     db.refresh(statement)
+
+    # Save detected institution to the account for future reference
+    if detected_institution and detected_institution != "Unknown" and not account.institution:
+        account.institution = detected_institution
+        db.commit()
 
     for tx in result.get("transactions", []):
         tx["description"] = clean_header_bleed(tx.get("description", ""))
@@ -315,6 +321,7 @@ async def upload_statement(
         "variance": float(statement.variance) if statement.variance is not None else None,
         "balanced": statement.is_balanced,
         "template": result.get("template"),
+        "institution": detected_institution or account.institution or "Unknown",
     }
 
 
@@ -493,3 +500,48 @@ def download_statement(
         media_type=media_type,
         headers={"Content-Disposition": f'attachment; filename="statement_{file_id}.{ext}"'},
     )
+
+
+@router.get("/processed")
+def list_processed_files(
+    request: Request,
+    client_id: Optional[int] = Query(None, description="Client ID (tenant)"),
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """List processed statements with institution and transaction counts."""
+    _wrap_tenant(request, db)
+    tenant_id = client_id or current_user.id
+
+    statements = (
+        db.query(models.Statement)
+        .filter(
+            models.Statement.tenant_id == tenant_id,
+            models.Statement.user_id == current_user.id,
+        )
+        .order_by(models.Statement.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+    results = []
+    for stmt in statements:
+        tx_count = (
+            db.query(models.Transaction)
+            .filter(models.Transaction.statement_id == stmt.id)
+            .count()
+        )
+        institution = stmt.account.institution if stmt.account else None
+        results.append({
+            "file_id": str(stmt.id),
+            "filename": stmt.filename,
+            "institution": institution or "Unknown",
+            "transaction_count": tx_count,
+            "processed_at": stmt.created_at.isoformat() if stmt.created_at else None,
+            "status": "completed",
+        })
+
+    return results

@@ -161,7 +161,11 @@ export default function PeriodsPage() {
           </div>
         )}
 
-        {loading ? (
+        {!selectedClient ? (
+          <div className="bg-surface border border-divider rounded-lg p-8 text-center">
+            <p className="text-text-secondary font-sans text-sm mb-4">Select a client.</p>
+          </div>
+        ) : loading ? (
           <div className="text-text-secondary text-sm">Loading periods...</div>
         ) : periods.length === 0 ? (
           <Card className="bg-surface border-divider">
