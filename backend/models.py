@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Numeric, Boolean, DateTime, ForeignKey, Index, Text
+from sqlalchemy import Column, Integer, String, Numeric, Boolean, DateTime, ForeignKey, Index, Text, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -90,6 +90,10 @@ class Transaction(Base):
     archived = Column(Boolean, default=False)
     source_pdf_path = Column(String, nullable=True)
     tax_line = Column(String, nullable=True)
+    split_id = Column(String, nullable=True, index=True)
+    parent_id = Column(String, nullable=True, index=True)
+    memo = Column(Text, nullable=True)
+    graph_edges = Column(JSON, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     statement = relationship("Statement", back_populates="transactions")
@@ -313,6 +317,7 @@ class FirmSettings(Base):
     receipt_match_description_weight = Column(Numeric(3, 2), default=0.25)
     timezone = Column(String, default="America/New_York")
     date_format = Column(String, default="%m/%d/%Y")
+    ml_enabled = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

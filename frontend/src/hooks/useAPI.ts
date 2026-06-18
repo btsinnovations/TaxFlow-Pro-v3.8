@@ -300,3 +300,235 @@ export async function getMe() {
   if (!res.ok) throw new Error("Not authenticated");
   return res.json();
 }
+
+// ===================================================================
+// Tax Summary API
+// ===================================================================
+
+export async function getTaxSummary(year: number): Promise<any> {
+  const res = await fetch(`${API_BASE}/tax/summary/${year}`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch tax summary');
+}
+
+// ===================================================================
+// Transactions API
+// ===================================================================
+
+export async function getTransactions(params: {
+  client_id: number;
+  year?: string;
+  category?: string;
+  confirmed?: boolean;
+  archived?: boolean;
+  search?: string;
+  tx_type?: string;
+  is_manual?: boolean;
+  is_journal?: boolean;
+  skip?: number;
+  limit?: number;
+  order_by?: string;
+  order_dir?: string;
+}): Promise<any[]> {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+  });
+  const res = await fetch(`${API_BASE}/transactions?${qs.toString()}`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch transactions');
+}
+
+export async function getTransactionsSummary(params: {
+  client_id: number;
+  year?: string;
+  category?: string;
+}): Promise<any> {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+  });
+  const res = await fetch(`${API_BASE}/transactions/summary?${qs.toString()}`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch transactions summary');
+}
+
+export async function updateTransaction(txId: number, data: {
+  date?: string;
+  description?: string;
+  amount?: number;
+  tx_type?: string;
+  category?: string;
+  confirmed?: boolean;
+  tax_line?: string;
+  running_balance?: number;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE}/transactions/${txId}`, {
+    method: 'PATCH',
+    headers: { ...authHeaders(true), 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res, 'Failed to update transaction');
+}
+
+export async function archiveTransaction(txId: number): Promise<any> {
+  const res = await fetch(`${API_BASE}/transactions/${txId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to archive transaction');
+}
+
+// ===================================================================
+// Budgets API
+// ===================================================================
+
+export async function getBudgets(client_id: number, year?: number): Promise<any[]> {
+  const qs = new URLSearchParams();
+  qs.set('client_id', String(client_id));
+  if (year !== undefined) qs.set('year', String(year));
+  const res = await fetch(`${API_BASE}/budgets?${qs.toString()}`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch budgets');
+}
+
+export async function getBudget(budgetId: number): Promise<any> {
+  const res = await fetch(`${API_BASE}/budgets/${budgetId}`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch budget');
+}
+
+export async function createBudget(client_id: number, data: {
+  name: string;
+  period_start: string;
+  period_end: string;
+  is_active: boolean;
+  entries: { category: string; amount: number }[];
+}): Promise<any> {
+  const qs = `?client_id=${client_id}`;
+  const res = await fetch(`${API_BASE}/budgets${qs}`, {
+    method: 'POST',
+    headers: { ...authHeaders(true), 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res, 'Failed to create budget');
+}
+
+export async function updateBudget(budgetId: number, data: {
+  name: string;
+  period_start: string;
+  period_end: string;
+  is_active: boolean;
+  entries: { category: string; amount: number }[];
+}): Promise<any> {
+  const res = await fetch(`${API_BASE}/budgets/${budgetId}`, {
+    method: 'PUT',
+    headers: { ...authHeaders(true), 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res, 'Failed to update budget');
+}
+
+export async function deleteBudget(budgetId: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/budgets/${budgetId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to delete budget');
+}
+
+export async function getBudgetVsActual(budgetId: number): Promise<any> {
+  const res = await fetch(`${API_BASE}/budgets/${budgetId}/vs-actual`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch budget vs actual');
+}
+
+// ===================================================================
+// Forecast API
+// ===================================================================
+
+export async function getForecast(client_id: number, months_ahead: number = 12): Promise<any> {
+  const qs = `?client_id=${client_id}&months_ahead=${months_ahead}`;
+  const res = await fetch(`${API_BASE}/forecast${qs}`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch forecast');
+}
+
+// ===================================================================
+// Depreciation API
+// ===================================================================
+
+export async function getDepreciationMethods(): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/depreciation/methods`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch depreciation methods');
+}
+
+export async function getMacrsTables(): Promise<any> {
+  const res = await fetch(`${API_BASE}/depreciation/macrs-tables`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch MACRS tables');
+}
+
+export async function calculateDepreciation(data: {
+  asset_name: string;
+  asset_class: string;
+  cost_basis: number;
+  placed_in_service_date: string;
+  recovery_period: number;
+  method: string;
+  section_179_expense?: number;
+  bonus_depreciation_pct?: number;
+  salvage_value?: number;
+  business_use_pct?: number;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE}/depreciation/calculate`, {
+    method: 'POST',
+    headers: { ...authHeaders(true), 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res, 'Failed to calculate depreciation');
+}
+
+// ===================================================================
+// Reports API
+// ===================================================================
+
+export async function getSignedReports(client_id: number, skip: number = 0, limit: number = 100): Promise<any[]> {
+  const qs = `?client_id=${client_id}&skip=${skip}&limit=${limit}`;
+  const res = await fetch(`${API_BASE}/reports/signed${qs}`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch signed reports');
+}
+
+export async function getSignedReport(reportId: number): Promise<any> {
+  const res = await fetch(`${API_BASE}/reports/signed/${reportId}`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch signed report');
+}
+
+export async function signReport(reportType: string, data: {
+  client_id: number;
+  year?: string;
+  title: string;
+  report_data: object;
+  master_password: string;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE}/reports/${reportType}/sign`, {
+    method: 'POST',
+    headers: { ...authHeaders(true), 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res, 'Failed to sign report');
+}

@@ -119,12 +119,21 @@ def health_api():
 # ------------------------------------------------------------------
 
 @app.get("/api/events")
-async def event_stream():
+async def event_stream(heartbeat: int = 15, count: int = None):
     """Server-Sent Events endpoint for real-time notifications."""
     async def generate():
-        while True:
-            await asyncio.sleep(30)
-            yield f"data: {{'type': 'heartbeat', 'timestamp': '{__import__('datetime').datetime.now().isoformat()}'}}\n\n"
+        sent = 0
+        try:
+            while count is None or sent < count:
+                await asyncio.sleep(max(1, heartbeat))
+                yield f"data: {{'type': 'heartbeat', 'timestamp': '{__import__('datetime').datetime.now().isoformat()}'}}\n\n"
+                sent += 1
+        except asyncio.CancelledError:
+            # Client disconnected; exit cleanly.
+            pass
+        finally:
+            # Defensive cleanup hook for future resources.
+            pass
     return StreamingResponse(generate(), media_type="text/event-stream")
 
 
