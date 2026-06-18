@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models
 from ..rls import is_postgres, set_tenant_id
-from .auth import get_current_user
+from .auth import get_current_user, get_current_user_optional
 from phase3_pipeline.ml_categorizer import MLCategorizer
 
 logger = logging.getLogger(__name__)
@@ -118,14 +118,14 @@ def ml_status(
     request: Request,
     client_id: Optional[int] = Query(None, description="Client ID (tenant)"),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
 ):
     _wrap_tenant(request, db)
     try:
         tenant_id = _resolve_tenant_id(db, current_user, client_id)
         settings = _get_or_create_firm_settings(db, tenant_id)
         ml_enabled_flag = bool(settings.ml_enabled)
-    except HTTPException:
+    except (HTTPException, Exception):
         # No client/tenant available yet; return a safe default.
         ml_enabled_flag = False
 

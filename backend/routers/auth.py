@@ -58,6 +58,24 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         raise credentials_exception
     return user
 
+
+async def get_current_user_optional(
+    db: Session = Depends(get_db),
+    token: Optional[str] = Depends(OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)),
+):
+    """Return the current user if authenticated, None otherwise."""
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            return None
+    except JWTError:
+        return None
+    user = db.query(models.User).filter(models.User.username == username).first()
+    return user
+
 def _set_tenant_from_request(request: Optional[Request], db: Session) -> None:
     """Set RLS tenant context when X-Tenant-ID header is present on PostgreSQL."""
     if not is_postgres() or request is None:

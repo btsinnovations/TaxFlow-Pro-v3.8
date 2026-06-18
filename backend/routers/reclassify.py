@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from ..database import get_db
 from .. import models, schemas
-from .auth import get_current_user
+from .auth import get_current_user, get_current_user_optional
 
 router = APIRouter(tags=["reclassify"])
 
@@ -216,7 +216,7 @@ def bulk_reclassify(
 @router.get("/categories", response_model=List[CategoryResponse])
 def list_categories(
     schedule: Optional[str] = Query(None, description="Filter by schedule (C, E, A, SE)"),
-    current_user: models.User = Depends(get_current_user),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
 ):
     cats = TAX_CATEGORIES
     if schedule:

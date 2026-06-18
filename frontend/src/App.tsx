@@ -23,6 +23,7 @@ import BatchImportPage from './pages/BatchImportPage';
 import ArchivePage from './pages/ArchivePage';
 import ExchangeRatesPage from './pages/ExchangeRatesPage';
 import EngagementsPage from './pages/EngagementsPage';
+import TestSuitePage from './pages/TestSuitePage';
 
 export default function App() {
   return (
@@ -50,6 +51,7 @@ export default function App() {
                 <Route path="/archive" element={<ArchivePage />} />
                 <Route path="/exchange-rates" element={<ExchangeRatesPage />} />
                 <Route path="/engagements" element={<EngagementsPage />} />
+                <Route path="/test-suite" element={<TestSuitePage />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Routes>
             </main>

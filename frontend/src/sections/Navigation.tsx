@@ -47,6 +47,7 @@ const navGroups: NavGroup[] = [
   {
     label: "System",
     links: [
+      { label: "Test Suite", to: "/test-suite" },
       { label: "Settings", to: "/settings" },
     ],
   },
