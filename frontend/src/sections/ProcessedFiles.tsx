@@ -1,13 +1,35 @@
 import { useEffect, useState, useRef } from 'react';
-import { Download, FileCheck, Clock, AlertCircle } from 'lucide-react';
-import { getProcessedFiles, downloadResult } from '@/hooks/useAPI';
+import { Download, FileCheck, Clock, AlertCircle, ChevronDown } from 'lucide-react';
+import { getProcessedFiles, exportStatement, getExportFormats } from '@/hooks/useAPI';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 
+interface ProcessedFile {
+  file_id: string;
+  filename: string;
+  institution?: string;
+  transaction_count?: number;
+  processed_at?: string;
+  status: 'completed' | 'uploaded';
+}
+
+interface ExportFormat {
+  id: string;
+  name: string;
+  description?: string;
+}
+
 export default function ProcessedFiles() {
-  const [files, setFiles] = useState<any[]>([]);
+  const [files, setFiles] = useState<ProcessedFile[]>([]);
+  const [exportFormats, setExportFormats] = useState<ExportFormat[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -16,9 +38,13 @@ export default function ProcessedFiles() {
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await getProcessedFiles();
-        setFiles(data);
-      } catch (err) {
+        const [fileData, formatData] = await Promise.all([
+          getProcessedFiles(),
+          getExportFormats().catch(() => []),
+        ]);
+        setFiles(fileData);
+        setExportFormats(formatData);
+      } catch {
         setError('Failed to load processed files');
       } finally {
         setLoading(false);
@@ -41,14 +67,20 @@ export default function ProcessedFiles() {
     return () => ctx.revert();
   }, [loading, files]);
 
-  const handleDownload = async (fileId: string, format: string = 'qif') => {
-    setDownloading(fileId);
+  const getExtension = (formatId: string) => {
+    if (['qbo', 'xero'].includes(formatId)) return 'csv';
+    if (formatId === 'excel') return 'xlsx';
+    return formatId;
+  };
+
+  const handleDownload = async (fileId: string, format: ExportFormat) => {
+    setDownloading(`${fileId}:${format.id}`);
     try {
-      const blob = await downloadResult(fileId, format);
+      const blob = await exportStatement(fileId, format.id);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `processed_${fileId}.${format}`;
+      a.download = `statement_${fileId}.${getExtension(format.id)}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -122,14 +154,36 @@ export default function ProcessedFiles() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => handleDownload(file.file_id, 'qif')}
-                        disabled={downloading === file.file_id || file.status !== 'completed'}
-                        className="flex items-center gap-1.5 font-sans text-xs text-gold border border-gold/30 px-3 py-1.5 rounded hover:bg-gold/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                      >
-                        <Download size={12} className={downloading === file.file_id ? 'animate-spin' : ''} />
-                        {downloading === file.file_id ? 'Downloading...' : 'QIF'}
-                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            disabled={file.status !== 'completed'}
+                            className="flex items-center gap-1.5 font-sans text-xs text-gold border border-gold/30 px-3 py-1.5 rounded hover:bg-gold/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            <Download size={12} className={downloading?.startsWith(`${file.file_id}:`) ? 'animate-spin' : ''} />
+                            {downloading?.startsWith(`${file.file_id}:`) ? 'Downloading...' : 'Download'}
+                            <ChevronDown size={12} />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-surface border-divider text-text-primary">
+                          {exportFormats.length === 0 && (
+                            <DropdownMenuItem disabled className="text-text-secondary">
+                              No formats available
+                            </DropdownMenuItem>
+                          )}
+                          {exportFormats.map((fmt) => (
+                            <DropdownMenuItem
+                              key={fmt.id}
+                              onClick={() => handleDownload(file.file_id, fmt)}
+                              disabled={downloading === `${file.file_id}:${fmt.id}`}
+                              className="hover:bg-surface-hover focus:bg-surface-hover cursor-pointer"
+                            >
+                              <Download size={12} className="text-gold" />
+                              {fmt.name}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))}

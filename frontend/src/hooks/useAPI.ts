@@ -74,6 +74,14 @@ export async function downloadResult(fileId: string, format: string = 'qif'): Pr
   return res.blob();
 }
 
+export async function exportStatement(statementId: string | number, format: string = 'csv'): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/export/statement/${statementId}?format=${format}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Export failed');
+  return res.blob();
+}
+
 export async function getClients(): Promise<any[]> {
   const res = await fetch(`${API_BASE}/clients/`, {
     headers: authHeaders(),
@@ -151,6 +159,22 @@ export async function toggleML(): Promise<any> {
     headers: authHeaders(),
   });
   return handleResponse(res, 'Failed to toggle ML');
+}
+
+export async function categorizeStatement(statementId: number | string): Promise<any> {
+  const res = await fetch(`${API_BASE}/ml/categorize/${statementId}`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to categorize statement');
+}
+
+export async function getCategories(schedule?: string): Promise<any[]> {
+  const url = schedule ? `${API_BASE}/categories?schedule=${schedule}` : `${API_BASE}/categories`;
+  const res = await fetch(url, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch categories');
 }
 
 export async function getExportFormats(): Promise<any[]> {
