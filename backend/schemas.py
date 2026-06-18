@@ -87,6 +87,10 @@ class Transaction(TransactionBase):
     archived: bool = False
     source_pdf_path: Optional[str] = None
     tax_line: Optional[str] = None
+    split_id: Optional[str] = None
+    parent_id: Optional[str] = None
+    memo: Optional[str] = None
+    graph_edges: Optional[dict] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
@@ -394,6 +398,7 @@ class FirmSettingsBase(BaseModel):
     receipt_match_description_weight: float = 0.25
     timezone: str = "America/New_York"
     date_format: str = "%m/%d/%Y"
+    ml_enabled: bool = False
 
 class FirmSettingsCreate(FirmSettingsBase):
     pass

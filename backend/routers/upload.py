@@ -1,10 +1,12 @@
 import csv
 import io
+import json
+import logging
 import os
 import shutil
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
 from pydantic import BaseModel
@@ -15,6 +17,11 @@ from ..database import get_db
 from ..parsers.generic_pdf import GenericPDFParser
 from ..rls import is_postgres, set_tenant_id
 from .auth import get_current_user
+from phase3_pipeline.models import Transaction as PipelineTransaction
+from phase3_pipeline.pipeline import run as pipeline_run
+from phase3_pipeline.identity import IdentityService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/upload", tags=["upload"])
 UPLOAD_DIR = "uploads"
@@ -152,6 +159,88 @@ def _resolve_account(
     return account
 
 
+def _db_txn_to_pipeline_txn(db_txn: models.Transaction, institution: str, idx: int) -> PipelineTransaction:
+    """Convert a database Transaction row into a phase3_pipeline Transaction."""
+    amount = db_txn.amount or Decimal("0")
+    txn_uid = IdentityService.generate(
+        str(db_txn.date or ""),
+        db_txn.description or "",
+        amount,
+        institution,
+        idx=idx,
+    )
+    return PipelineTransaction(
+        date=str(db_txn.date or ""),
+        description=db_txn.description or "",
+        raw_description=db_txn.description or "",
+        amount=amount,
+        institution=institution,
+        category=db_txn.category or "uncategorized",
+        payee=db_txn.description or "",
+        txn_uid=txn_uid,
+    )
+
+
+def _build_graph_edges(graph) -> List[Dict[str, Any]]:
+    """Serialize graph parent/child relationships to JSON-friendly edges."""
+    edges = []
+    for parent_uid, child_uids in graph.children.items():
+        edges.append({"parent": parent_uid, "children": list(child_uids)})
+    return edges
+
+
+def _persist_pipeline_results(
+    db: Session,
+    statement: models.Statement,
+    graph,
+    graph_edges: List[Dict[str, Any]],
+) -> List[models.Transaction]:
+    """Replace raw statement transactions with the enriched pipeline graph."""
+    # Remove existing raw transactions for this statement.
+    db.query(models.Transaction).filter(
+        models.Transaction.statement_id == statement.id,
+        models.Transaction.tenant_id == statement.tenant_id,
+    ).delete(synchronize_session=False)
+    db.commit()
+    db.expire_all()
+
+    persisted = []
+    for txn in graph.live():
+        amount = txn.amount
+        tx_type = "credit" if amount and amount > 0 else "debit"
+        db_tx = models.Transaction(
+            statement_id=statement.id,
+            tenant_id=statement.tenant_id,
+            client_id=statement.account.client_id if statement.account else None,
+            date=txn.date,
+            description=txn.description,
+            amount=amount,
+            tx_type=tx_type,
+            category=txn.category or "uncategorized",
+            running_balance=None,
+            split_id=txn.split_group_id or txn.txn_uid,
+            parent_id=txn.parent_txn_uid,
+            memo=txn.memo or None,
+            graph_edges=graph_edges,
+        )
+        db.add(db_tx)
+        persisted.append(db_tx)
+
+    db.commit()
+    return persisted
+
+
+def _reconcile_statement(statement: models.Statement, transactions: List[models.Transaction]) -> None:
+    """Recompute statement variance from live transaction amounts."""
+    if statement.closing_balance is None or statement.opening_balance is None:
+        return
+    total = sum((t.amount or Decimal("0")) for t in transactions)
+    expected = statement.closing_balance - statement.opening_balance
+    variance = total - expected
+    statement.variance = variance.quantize(Decimal("0.01"))
+    statement.is_balanced = statement.variance == Decimal("0")
+
+
 @router.post("/")
 async def upload_statement(
     request: Request,
@@ -246,7 +335,7 @@ def process_statement(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    """Return a processing summary for an uploaded statement."""
+    """Run the phase3 pipeline on an uploaded statement and return enriched data."""
     _wrap_tenant(request, db)
     statement = (
         db.query(models.Statement)
@@ -256,7 +345,7 @@ def process_statement(
     if not statement:
         raise HTTPException(status_code=404, detail="Statement not found")
 
-    transactions = (
+    db_transactions = (
         db.query(models.Transaction)
         .filter(
             models.Transaction.statement_id == statement.id,
@@ -265,22 +354,68 @@ def process_statement(
         .all()
     )
 
+    if not db_transactions:
+        raise HTTPException(status_code=422, detail="No transactions found to process")
+
+    institution = statement.account.institution if statement.account else "Unknown"
+    pipeline_txns = [
+        _db_txn_to_pipeline_txn(t, institution, idx)
+        for idx, t in enumerate(db_transactions)
+    ]
+
+    try:
+        logger.info("Running pipeline for statement_id=%s with %d transactions", statement.id, len(pipeline_txns))
+        graph = pipeline_run(pipeline_txns)
+        logger.info("Pipeline completed for statement_id=%s", statement.id)
+    except Exception as exc:
+        logger.exception("Pipeline failed for statement_id=%s: %s", statement.id, exc)
+        raise HTTPException(status_code=422, detail=f"Pipeline processing failed: {str(exc)}")
+
+    graph_edges = _build_graph_edges(graph)
+    enriched_transactions = _persist_pipeline_results(
+        db, statement, graph, graph_edges
+    )
+    _reconcile_statement(statement, enriched_transactions)
+    db.commit()
+    db.refresh(statement)
+
     warnings = []
     if not statement.is_balanced:
         warnings.append(f"Statement is unbalanced (variance: {statement.variance})")
 
     reconciliation_status = "PASS" if statement.is_balanced else "FAIL"
 
+    transaction_data = []
+    for t in enriched_transactions:
+        tx_dict = {
+            "id": t.id,
+            "date": t.date,
+            "description": t.description,
+            "amount": float(t.amount) if t.amount is not None else None,
+            "type": t.tx_type,
+            "category": t.category,
+            "running_balance": float(t.running_balance) if t.running_balance is not None else None,
+            "split_id": t.split_id,
+            "parent_id": t.parent_id,
+            "memo": t.memo,
+            "graph_edges": t.graph_edges or [],
+        }
+        transaction_data.append(tx_dict)
+
     return {
         "success": True,
         "file_id": statement.id,
         "statement_id": statement.id,
-        "transaction_count": len(transactions),
-        "institution": statement.account.institution if statement.account else "Unknown",
-        "reconciliation": {"status": reconciliation_status, "variance": float(statement.variance) if statement.variance is not None else None},
+        "transaction_count": len(enriched_transactions),
+        "institution": institution,
+        "reconciliation": {
+            "status": reconciliation_status,
+            "variance": float(statement.variance) if statement.variance is not None else None,
+        },
         "output_file": str(statement.id),
         "output_format": payload.output_format,
         "warnings": warnings,
+        "transactions": transaction_data,
     }
 
 

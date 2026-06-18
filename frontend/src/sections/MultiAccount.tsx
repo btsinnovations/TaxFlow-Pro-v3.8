@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
-import { Link2, RefreshCw, Trash2, Plus, AlertTriangle, Clock, Building2 } from 'lucide-react';
-import { getAccounts, deleteAccount, syncAccount, getClients } from '@/hooks/useAPI';
+import { Link2, Trash2, Plus, AlertTriangle, Clock, Building2 } from 'lucide-react';
+import { getAccounts, deleteAccount, getClients } from '@/hooks/useAPI';
 import AccountModal from '@/components/AccountModal';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -34,7 +34,6 @@ export default function MultiAccount() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState('');
-  const [syncing, setSyncing] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
 
@@ -68,18 +67,6 @@ export default function MultiAccount() {
     }, sectionRef);
     return () => ctx.revert();
   }, [loading]);
-
-  const handleSync = async (accountId: string) => {
-    setSyncing(accountId);
-    try {
-      await syncAccount(accountId);
-      loadData();
-    } catch (err) {
-      console.error('Sync failed:', err);
-    } finally {
-      setSyncing(null);
-    }
-  };
 
   const handleDelete = async (accountId: string) => {
     try {
@@ -208,14 +195,6 @@ export default function MultiAccount() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleSync(account.id)}
-                        disabled={syncing === account.id}
-                        className="flex items-center gap-1.5 font-sans text-xs text-gold border border-gold/30 px-2.5 py-1 rounded hover:bg-gold/10 transition-colors disabled:opacity-50"
-                      >
-                        <RefreshCw size={12} className={syncing === account.id ? 'animate-spin' : ''} />
-                        {syncing === account.id ? 'Syncing...' : 'Sync'}
-                      </button>
                       <button
                         onClick={() => setDeleteConfirm(account.id)}
                         className="p-1.5 rounded hover:bg-red-500/10 transition-colors"
