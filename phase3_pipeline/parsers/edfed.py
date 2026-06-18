@@ -32,7 +32,8 @@ class EdFedParser(BaseParser):
         collision_map: Dict[tuple, int] = {}
 
         while i < len(lines):
-            line = lines[i].strip()
+            raw_line = lines[i]
+            line = raw_line.strip()
             i += 1
             if not line:
                 continue
@@ -40,6 +41,15 @@ class EdFedParser(BaseParser):
                 in_activity = True
                 continue
             if not in_activity:
+                continue
+            if "CLEARED CHECKS" in line:
+                break
+
+            # Real transaction lines start with a date in the first few columns;
+            # indented continuation lines that happen to contain a date should
+            # not become their own transactions.
+            leading_spaces = len(raw_line) - len(raw_line.lstrip())
+            if leading_spaces > 8:
                 continue
 
             date_match = re.match(r'^(\d{2}/\d{2}/\d{4})\s+(.*)', line)
@@ -50,45 +60,46 @@ class EdFedParser(BaseParser):
             date = normalize_date(date_str)
             rest = date_match.group(2)
 
-            amount = None
-            desc_part = rest
-            amount_match = re.search(r'(-?\d+(?:,\d{3})*\.\d{2})\s+(\d+(?:,\d{3})*\.\d{2})$', rest)
-            if amount_match:
-                amount_str = amount_match.group(1).replace(',', '')
-                try:
-                    raw_amount = Decimal(amount_str)
-                    amount = raw_amount
-                except:
-                    pass
-                desc_part = rest[:amount_match.start()].strip()
-            else:
-                raw_amount = extract_amount_from_line(rest)
-                if raw_amount is not None:
-                    amount = raw_amount
+            # Require both a transaction amount and a trailing balance. This
+            # drops wrapped description lines that happen to contain a date and
+            # a single amount, and also drops the CLEARED CHECKS list.
+            amount_match = re.search(r'(-?\d+(?:,\d{3})*\.\d{2})\s+(-?\d+(?:,\d{3})*\.\d{2})$', rest)
+            if not amount_match:
+                continue
 
-            # Merge subsequent lines (merchant name)
+            amount_str = amount_match.group(1).replace(',', '')
+            try:
+                amount = Decimal(amount_str)
+            except:
+                continue
+            desc_part = rest[:amount_match.start()].strip()
+
+            # Merge subsequent lines (merchant name / detail)
             full_desc = desc_part
             while i < len(lines):
-                next_line = lines[i].strip()
+                next_raw = lines[i]
+                next_line = next_raw.strip()
                 if not next_line:
                     i += 1
                     continue
-                if re.match(r'^\d{2}/\d{2}/\d{4}', next_line):
+                # Stop if the next line is another transaction (date at the
+                # normal left margin, not deeply indented).
+                if re.match(r'^\d{2}/\d{2}/\d{4}', next_line) and (len(next_raw) - len(next_raw.lstrip())) <= 8:
                     break
                 if next_line.startswith(("TYPE:", "ID:", "CO:", "IMPORTANT", "Telephone", "Page", "ACCOUNT ACTIVITY", "SUMMARY")):
                     break
                 if "Date Posted" in next_line:
                     break
+                if any(marker in next_line for marker in ["Annual Percentage Yield", "CLEARED CHECKS", "ACH DEBITS", "ACH CREDITS"]):
+                    break
                 full_desc += " " + next_line
                 i += 1
 
-            if amount is None:
-                amount = extract_amount_from_line(full_desc)
-                if amount is None:
-                    continue
-
-            is_debit = any(k in full_desc for k in ["Withdrawal", "Debit", "Transfer To", "Fee"])
-            amount = normalize_signed_amount(amount, is_debit=is_debit, is_credit=not is_debit)
+            # EdFed's statement encodes direction in the columns: the Debit
+            # Amount column already carries a leading minus sign, while the
+            # Credit Amount column is positive. Trust that sign instead of
+            # guessing from description keywords, so credit vouchers and
+            # refunds are not accidentally inverted.
 
             key = collision_key(date, full_desc, amount)
             idx = collision_map.get(key, 0)

@@ -16,6 +16,40 @@ production-ready state.
 
 ---
 
+## v3.8.1 — EdFed PDF Parser Hardening
+
+### Files changed
+- `backend/routers/upload.py`
+- `phase3_pipeline/parsers/edfed.py`
+- `phase3_pipeline/parsers/cashapp.py`
+
+### Changes
+1. **Institution-aware routing**: EdFed PDFs are now routed directly to the
+   dedicated `EdFedParser` instead of the generic template parser.
+2. **Registry hijack fix**: `CashAppParser.can_handle` now requires genuine Cash
+   App statement headers, preventing it from mis-parsing EdFed statements that
+   merely mention Cash App in transaction descriptions.
+3. **Sign normalization**: The EdFed parser now trusts the signed Debit/Credit
+   columns from the statement, fixing positive withdrawal amounts and correctly
+   handling credit vouchers/refunds.
+4. **Balance regex**: The amount/balance regex now accepts negative running
+   balances (overdraft lines) so no transactions are dropped.
+5. **Section boundaries**: Parsing stops at `CLEARED CHECKS` and skips deeply
+   indented continuation/orphan lines.
+6. **Share Draft 70 balances**: Opening/closing balances are extracted from the
+   Share Draft 70 summary line instead of the first `Beginning Balance` block.
+7. **Category assignment**: Upload-time categorization now uses
+   `PriorityCategorizer` with `categories.yaml` rules; tax-flag overrides are
+   still honored.
+
+### Validation
+- All 24 EdFed debit statement fixtures (users 1 and 11) now reconcile with
+  variance `0.00`.
+- Backend test suite: 52 passed, 2 skipped.
+- Frontend production build succeeds.
+
+---
+
 ## v3.8.0 — Merge Conflict Resolution & Production Integration
 
 ### 15. Merge Conflict Resolution

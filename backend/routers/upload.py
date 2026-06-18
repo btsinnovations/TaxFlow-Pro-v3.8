@@ -3,6 +3,7 @@ import io
 import json
 import logging
 import os
+import re
 import shutil
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
@@ -15,11 +16,16 @@ from sqlalchemy.orm import Session
 from .. import models
 from ..database import get_db
 from ..parsers.generic_pdf import GenericPDFParser
+from ..parsers.institution import detect_institution
 from ..rls import is_postgres, set_tenant_id
 from .auth import get_current_user
 from phase3_pipeline.models import Transaction as PipelineTransaction
 from phase3_pipeline.pipeline import run as pipeline_run
 from phase3_pipeline.identity import IdentityService
+from phase3_pipeline.pdf_parser import pdf_to_transactions
+from phase3_pipeline.parsers.edfed import EdFedParser
+from phase3_pipeline.categorizer import PriorityCategorizer
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +51,7 @@ def standardize_date(date_str: str) -> str:
     date_str = date_str.strip()
     if len(date_str) == 10 and date_str[4] == '-' and date_str[7] == '-':
         return date_str
-    for fmt in ("%m/%d/%Y", "%m/%d/%y"):
+    for fmt in ("%m/%d/%Y", "%m/%d/%y", "%m-%d-%Y", "%m-%d-%y"):
         try:
             dt = datetime.strptime(date_str, fmt)
             return dt.strftime("%Y-%m-%d")
@@ -69,7 +75,8 @@ def clean_header_bleed(desc: str) -> str:
         "SUMMARY", "Beginning Balance", "Ending Balance", "Total Debits/Checks",
         "Total Credits/Deposits", "Dividends Earned", "ACCOUNT  FOR",
         "Share Draft", "Summary", "IMPORTANT", "ABOUT YOUR ACCOUNT",
-        "Telephone", "Page", "www.EdFed.org",
+        "Telephone", "Page", "www.EdFed.org", "Annual Percentage Yield",
+        "CLEARED CHECKS", "Date Check", "ACH DEBITS", "ACH CREDITS",
     ]
     for frag in fragments:
         idx = desc.find(frag)
@@ -249,6 +256,108 @@ def _reconcile_statement(statement: models.Statement, transactions: List[models.
     statement.is_balanced = statement.variance == Decimal("0")
 
 
+def _parse_statement_pdf(file_path: str) -> Dict[str, Any]:
+    """Parse a PDF statement, using the institution-specific phase3 plugin when available."""
+    # Always run the generic parser first for account metadata and reconciliation.
+    generic_parser = GenericPDFParser(file_path)
+    generic_result = generic_parser.parse()
+
+    # Detect institution from raw text so we can choose a better parser for EdFed.
+    pages_text = generic_parser.extract_text()
+    full_text = "\n".join(pages_text)
+    institution = detect_institution(full_text)
+
+    if institution != "EdFed":
+        return generic_result
+
+    # EdFed: use the dedicated phase3 plugin parser which understands the
+    # Date-Posted / Debit / Credit / Balance layout and multi-line descriptions.
+    # Bypass the plugin registry so a higher-priority Cash-App-like parser
+    # cannot accidentally hijack EdFed statements that mention Cash App.
+    raw_text = "\n".join(pages_text)
+    edfed_parser = EdFedParser()
+    plugin_txns = edfed_parser.parse(raw_text)
+    transactions = []
+    for t in plugin_txns:
+        amount = float(t.amount)
+        desc = clean_header_bleed(t.description)
+        transactions.append({
+            "date": standardize_date(t.date),
+            "description": desc,
+            "amount": amount,
+            "type": "credit" if amount > 0 else "debit",
+            "tax_flag": _detect_tax_flag(desc),
+            "balance": None,
+        })
+
+    # For EdFed the generic parser often grabs the Prime Share balances first.
+    # Pull the Share Draft 70 balances directly from the summary table.
+    opening, closing = _extract_edfed_balances(full_text)
+    if opening is None or closing is None:
+        reconciliation = generic_result.get("reconciliation", {}) or {}
+        opening = reconciliation.get("opening_balance")
+        closing = reconciliation.get("closing_balance")
+
+    tx_sum = sum(t["amount"] for t in transactions if t["amount"] is not None)
+    variance = None
+    balanced = None
+    if opening is not None and closing is not None:
+        variance = round(closing - opening - tx_sum, 2)
+        balanced = variance == 0.0
+
+    account_info = generic_result.get("account_info", {}) or {}
+    account_info["institution"] = "EdFed"
+    meta = generic_result.get("meta", {}) or {}
+
+    return {
+        "template": "edfed_plugin",
+        "account_info": account_info,
+        "transactions": transactions,
+        "reconciliation": {
+            "opening_balance": opening,
+            "closing_balance": closing,
+            "transaction_sum": round(tx_sum, 2),
+            "variance": variance,
+            "balanced": balanced,
+        },
+        "meta": meta,
+    }
+
+
+def _detect_tax_flag(description: str) -> Optional[str]:
+    """Mirror GenericPDFParser tax_flag rules for use with plugin parsers."""
+    desc = description.upper()
+    flags = {
+        "income": [r"TREAS\s*310", r"DFAS", r"PAYROLL", r"DIRECT\s*DEPOSIT", r"SALARY"],
+        "business": [r"SQ\s*\*", r"PAYPAL", r"STRIPE", r"VENMO"],
+        "medical": [r"HOSPITAL", r"CLINIC", r"PHARMACY", r"DR\.", r"DENTAL"],
+        "charity": [r"DONATION", r"UNITED\s*WAY"],
+        "education": [r"TUITION", r"UNIVERSITY"],
+        "tax": [r"IRS", r"TAX\s*PAYMENT"],
+        "interest": [r"INTEREST\s*EARNED", r"DIVIDEND"],
+        "penalty": [r"OVERDRAFT", r"LATE\s*FEE", r"PENALTY", r"COURTESY\s*PAY"],
+    }
+    for flag, patterns in flags.items():
+        if any(re.search(p, desc) for p in patterns):
+            return flag
+    return None
+
+
+def _extract_edfed_balances(text: str):
+    """Extract Share Draft 70 beginning/ending balances from an EdFed statement."""
+    # Look for the summary table line: SHARE DRAFT 70    6,405.91    364.17
+    m = re.search(
+        r"SHARE\s+DRAFT\s+70\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})",
+        text, re.IGNORECASE,
+    )
+    if m:
+        try:
+            return float(m.group(1).replace(",", "")), float(m.group(2).replace(",", ""))
+        except ValueError:
+            pass
+    return None, None
+
+
 @router.post("/")
 async def upload_statement(
     request: Request,
@@ -270,12 +379,7 @@ async def upload_statement(
         shutil.copyfileobj(file.file, buffer)
 
     try:
-        parser = GenericPDFParser(file_path)
-        result = parser.parse()
-        if hasattr(result, "model_dump"):
-            result = result.model_dump()
-        elif hasattr(result, "dict"):
-            result = result.dict()
+        result = _parse_statement_pdf(file_path)
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Parse error: {str(e)}")
 
@@ -318,13 +422,18 @@ async def upload_statement(
         "penalty": "Bank Fee",
     }
 
+    categorizer = PriorityCategorizer("categories.yaml")
+
     for tx in result.get("transactions", []):
         tx["description"] = clean_header_bleed(tx.get("description", ""))
         amount_dec = to_decimal(tx.get("amount"))
         tx_type = "credit" if amount_dec and amount_dec > 0 else "debit"
-        # Map tax_flag → category so exports and QIF get meaningful categories
+        # Prefer tax_flag overrides, otherwise use the priority categorizer
+        # which understands merchant aliases and categories.yaml rules.
         flag = tx.get("tax_flag")
-        category = tax_flag_category.get(flag, "Uncategorized")
+        category = tax_flag_category.get(flag)
+        if not category:
+            category = categorizer.categorize(tx.get("description", ""))
 
         db_tx = models.Transaction(
             statement_id=statement.id,

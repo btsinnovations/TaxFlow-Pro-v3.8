@@ -18,7 +18,20 @@ class CashAppParser(BaseParser):
 
     def can_handle(self, text: str) -> bool:
         text_lower = text.lower()
-        return "cash app" in text_lower and any(
+        # Require genuine Cash App statement markers, not merely "Cash App"
+        # mentions inside another bank's transaction descriptions.
+        is_cash_app_statement = any(
+            m in text_lower
+            for m in [
+                "cash app investing",
+                "cash app bank",
+                "cash app taxes",
+                "square cash",
+                "statement period",
+                "beginning balance",
+            ]
+        )
+        return "cash app" in text_lower and is_cash_app_statement and any(
             m in text_lower for m in ["to ", "from ", "cash app payment", "cash app card"]
         )
 
