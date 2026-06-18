@@ -310,17 +310,33 @@ class GenericPDFParser:
             return {"error": "Failed to extract text", "transactions": [], "account_info": {}}
 
         full_text = "\n".join(pages_text)
+
+        # Detect institution from raw text — this works independently of templates
+        # and runs BEFORE template matching so we always have an institution name.
+        detected_institution = detect_institution(full_text)
+
         self.detect_template(full_text)
         if not self.template:
-            return {"error": "No matching template", "transactions": [], "account_info": {}}
+            # Even if no template matches, we still detected the institution.
+            # Return the info so the caller can record it.
+            return {
+                "error": "No matching template",
+                "transactions": [],
+                "account_info": {"institution": detected_institution},
+            }
 
         opening = self._extract_balance(full_text, r"(?:opening|beginning|start|previous)\s+balance")
         closing = self._extract_balance(full_text, r"(?:closing|ending|end|current|new)\s+balance")
+
+        # Prefer the text-based detection over the template name — it's more accurate
+        # for credit unions and regional banks that share templates.
+        institution = detected_institution if detected_institution != "unknown" else self.template.get("institutions", [None])[0]
+
         self.account_info = {
             "opening_balance": opening,
             "closing_balance": closing,
             "template_name": self.template.get("name", "unknown"),
-            "institution": self.template.get("institutions", [None])[0],
+            "institution": institution,
         }
 
         all_transactions: List[Dict[str, Any]] = []
@@ -420,6 +436,19 @@ class GenericPDFParser:
 
     def to_qif(self) -> str:
         lines = ["!Type:Bank"]
+
+        # Map tax_flag values to QIF-compatible category names
+        category_map = {
+            "income": "Income:Deposit",
+            "business": "Business Income",
+            "medical": "Medical:Dental",
+            "charity": "Charity",
+            "education": "Education:Tuition",
+            "tax": "Tax:Federal",
+            "interest": "Income:Interest",
+            "penalty": "Bank Fee",
+        }
+
         for tx in self.transactions:
             date_raw = tx.get("date", "")
             try:
@@ -428,9 +457,18 @@ class GenericPDFParser:
                 date = date_raw
             amount = tx.get("amount", 0) or 0
             desc = tx.get("description", "")
+            tax_flag = tx.get("tax_flag")
+
             lines.append(f"D{date}")
             lines.append(f"T{amount:.2f}")
             lines.append(f"P{desc}")
+
+            # Add category line if tax_flag is set
+            if tax_flag and tax_flag in category_map:
+                lines.append(f"L{category_map[tax_flag]}")
+            elif tx.get("category"):
+                lines.append(f"L{tx['category']}")
+
             lines.append("^")
         return "\n".join(lines)
 

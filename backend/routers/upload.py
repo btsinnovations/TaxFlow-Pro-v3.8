@@ -296,10 +296,26 @@ async def upload_statement(
         account.institution = detected_institution
         db.commit()
 
+    # Map parser tax_flag values to readable category names for the database.
+    tax_flag_category = {
+        "income": "Income",
+        "business": "Business Income",
+        "medical": "Medical",
+        "charity": "Charity",
+        "education": "Education",
+        "tax": "Tax Payment",
+        "interest": "Interest Income",
+        "penalty": "Bank Fee",
+    }
+
     for tx in result.get("transactions", []):
         tx["description"] = clean_header_bleed(tx.get("description", ""))
         amount_dec = to_decimal(tx.get("amount"))
         tx_type = "credit" if amount_dec and amount_dec > 0 else "debit"
+        # Map tax_flag → category so exports and QIF get meaningful categories
+        flag = tx.get("tax_flag")
+        category = tax_flag_category.get(flag, "Uncategorized")
+
         db_tx = models.Transaction(
             statement_id=statement.id,
             tenant_id=statement.tenant_id,
@@ -307,6 +323,7 @@ async def upload_statement(
             description=tx.get("description"),
             amount=amount_dec,
             tx_type=tx_type,
+            category=category,
             running_balance=to_decimal(tx.get("running_balance")),
         )
         db.add(db_tx)
