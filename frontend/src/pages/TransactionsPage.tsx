@@ -132,18 +132,19 @@ export default function TransactionsPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   useEffect(() => {
+    if (loading) return;
     const ctx = gsap.context(() => {
       gsap.fromTo(
         sectionRef.current,
-        { opacity: 0, y: 30 },
+        { y: 30 },
         {
-          opacity: 1, y: 0, duration: 0.5, ease: 'power3.out',
+          y: 0, duration: 0.5, ease: 'power3.out',
           scrollTrigger: { trigger: sectionRef.current, start: 'top 80%', toggleActions: 'play none none none' },
         }
       );
     }, sectionRef);
     return () => ctx.revert();
-  }, [loading, transactions]);
+  }, [loading]);
 
   const formatCurrency = (v: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Math.abs(v));
@@ -225,7 +226,7 @@ export default function TransactionsPage() {
 
   return (
     <section className="bg-canvas px-4 md:px-8 py-8">
-      <div ref={sectionRef} className="max-w-[1440px] mx-auto">
+      <div ref={sectionRef} className="max-w-[1440px] mx-auto" style={{ opacity: 1 }}>
         {/* Header */}
         <div className="mb-6">
           <h1 className="font-serif text-3xl md:text-4xl text-text-primary flex items-center gap-3">

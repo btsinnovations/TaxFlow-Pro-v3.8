@@ -237,6 +237,7 @@ def export_statement(request: Request,
         for t in transactions:
             lines.append(f"D{t.date}")
             lines.append(f"P{t.description}")
+            lines.append(f"M{t.memo or t.description or ''}")
             lines.append(f"T{t.amount}")
             lines.append(f"L{t.category}")
             lines.append("^")

@@ -48,7 +48,7 @@ export default function ArchivePage() {
   }, []);
 
   const handleArchive = async () => {
-    if (!selectedClient) { setLoading(false); return; }
+    if (!selectedClient) { setError('Please select a client'); return; }
     setArchiving(true);
     setError('');
     try {

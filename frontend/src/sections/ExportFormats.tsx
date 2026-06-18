@@ -1,5 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
-import { FileOutput, Table, Grid3x3, FileText, Braces, FileCheck, Download, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router';
+import {
+  FileOutput, FileSpreadsheet, FileText, Braces, FileCheck,
+  Download, AlertCircle,
+} from 'lucide-react';
 import { getExportFormats } from '@/hooks/useAPI';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -8,11 +12,14 @@ gsap.registerPlugin(ScrollTrigger);
 
 const iconMap: Record<string, React.ElementType> = {
   FileOutput,
-  Table,
-  Grid3x3,
+  FileSpreadsheet,
   FileText,
   Braces,
   FileCheck,
+  'file-spreadsheet': FileSpreadsheet,
+  'file-json': Braces,
+  'file-text': FileText,
+  'file-binary': FileText,
 };
 
 export default function ExportFormats() {
@@ -20,6 +27,7 @@ export default function ExportFormats() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const sectionRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const load = async () => {
@@ -101,9 +109,12 @@ export default function ExportFormats() {
                     {fmt.description}
                   </p>
                   {isAvailable && (
-                    <button className="flex items-center gap-1.5 font-sans text-xs text-gold border border-gold/30 px-3 py-1.5 rounded hover:bg-gold/10 transition-colors">
+                    <button
+                      onClick={() => navigate('/processed-files')}
+                      className="flex items-center gap-1.5 font-sans text-xs text-gold border border-gold/30 px-3 py-1.5 rounded hover:bg-gold/10 transition-colors"
+                    >
                       <Download size={12} />
-                      Available
+                      Download
                     </button>
                   )}
                 </div>

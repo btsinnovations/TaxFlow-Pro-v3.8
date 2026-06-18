@@ -177,6 +177,7 @@ def _db_txn_to_pipeline_txn(db_txn: models.Transaction, institution: str, idx: i
         institution=institution,
         category=db_txn.category or "uncategorized",
         payee=db_txn.description or "",
+        memo=db_txn.memo or "",
         txn_uid=txn_uid,
     )
 
@@ -292,7 +293,9 @@ async def upload_statement(
     db.refresh(statement)
 
     # Save detected institution to the account for future reference
-    if detected_institution and detected_institution != "Unknown" and not account.institution:
+    if detected_institution and detected_institution != "Unknown" and (
+        not account.institution or account.institution == "Unknown"
+    ):
         account.institution = detected_institution
         db.commit()
 
@@ -503,6 +506,7 @@ def download_statement(
         for t in transactions:
             lines.append(f"D{t.date}")
             lines.append(f"P{t.description}")
+            lines.append(f"M{t.memo or t.description or ''}")
             lines.append(f"T{float(t.amount) if t.amount is not None else 0}")
             lines.append(f"L{t.category or ''}")
             lines.append("^")

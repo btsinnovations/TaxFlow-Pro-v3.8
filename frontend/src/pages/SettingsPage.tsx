@@ -54,7 +54,7 @@ export default function SettingsPage() {
   const [error, setError] = useState('');
 
   const fetchSettings = useCallback(async () => {
-    if (!selectedClient) { setLoading(false); return; }
+    if (!selectedClient) { setSettingsLoading(false); return; }
     setSettingsLoading(true);
     try {
       const data = await getSettings(selectedClient.id);
@@ -67,7 +67,7 @@ export default function SettingsPage() {
   }, [selectedClient]);
 
   const fetchThresholds = useCallback(async () => {
-    if (!selectedClient) { setLoading(false); return; }
+    if (!selectedClient) { setThresholdsLoading(false); return; }
     setThresholdsLoading(true);
     try {
       const data = await getThresholds(selectedClient.id);
@@ -99,7 +99,7 @@ export default function SettingsPage() {
   }, []);
 
   const handleSaveSettings = async () => {
-    if (!selectedClient) { setLoading(false); return; }
+    if (!selectedClient) { setError('Please select a client'); return; }
     setSaving(true);
     try {
       const data = await updateSettings(selectedClient.id, {
@@ -136,7 +136,7 @@ export default function SettingsPage() {
   };
 
   const handleSaveThresholds = async () => {
-    if (!selectedClient) { setLoading(false); return; }
+    if (!selectedClient) { setError('Please select a client'); return; }
     if (thresholds.high_confidence < thresholds.medium_confidence) {
       toast({ title: 'Invalid thresholds', description: 'High confidence must be >= Medium confidence.', variant: 'destructive' });
       return;
