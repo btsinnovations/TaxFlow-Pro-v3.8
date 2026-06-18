@@ -194,3 +194,81 @@ def test_upload_pdf_parser_returns_meta(client):
         assert result["meta"]["period_end"] == "2025-01-31"
     finally:
         os.unlink(tmp_path)
+
+
+def test_ml_toggle_changes_state(auth_client):
+    c = auth_client
+    resp = c.get("/api/ml/status")
+    assert resp.status_code == 200
+    initial = resp.json()
+    assert "ml_enabled_flag" in initial
+
+    resp = c.post("/api/ml/toggle")
+    assert resp.status_code == 200
+    toggled = resp.json()
+    assert toggled["enabled"] is not initial["ml_enabled_flag"]
+
+    resp = c.get("/api/ml/status")
+    assert resp.status_code == 200
+    assert resp.json()["ml_enabled_flag"] == toggled["enabled"]
+
+
+def test_sse_endpoint_returns_stream(client):
+    resp = client.get(
+        "/api/events?heartbeat=1&count=1",
+        headers={"Accept": "text/event-stream"},
+        timeout=10,
+    )
+    assert resp.status_code == 200
+    assert "text/event-stream" in resp.headers.get("content-type", "")
+    assert "heartbeat" in resp.text
+
+
+def test_upload_process_enriches_transactions(auth_client):
+    c = auth_client
+    import tempfile
+    from fpdf import FPDF
+
+    class StmtPDF(FPDF):
+        def header(self):
+            self.set_font("Helvetica", "B", 12)
+            self.cell(0, 10, "Big Bank Statement", ln=True)
+            self.cell(0, 10, "Statement Period: 01/01/2025 to 01/31/2025", ln=True)
+            self.cell(0, 10, "Opening Balance: $0.00", ln=True)
+            self.cell(0, 10, "Closing Balance: $-80.00", ln=True)
+
+    pdf = StmtPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(0, 10, "01/15/2025 WALMART Cash Back $20.00 $-80.00", ln=True)
+    pdf.cell(0, 10, "01/20/2025 Salary Deposit $100.00 $20.00", ln=True)
+
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+        pdf.output(tmp.name)
+        tmp_path = tmp.name
+
+    try:
+        with open(tmp_path, "rb") as f:
+            resp = c.post(
+                "/api/upload/",
+                files={"file": ("statement.pdf", f, "application/pdf")},
+            )
+        assert resp.status_code == 200, resp.text
+        file_id = resp.json()["file_id"]
+
+        resp = c.post("/api/upload/process", json={
+            "file_id": file_id,
+            "output_format": "json",
+        })
+        assert resp.status_code == 200, resp.text
+        data = resp.json()
+        assert data["success"] is True
+        assert data["transaction_count"] >= 1
+        assert "transactions" in data
+        tx_fields = {k for tx in data["transactions"] for k in tx.keys()}
+        assert "split_id" in tx_fields
+        assert "parent_id" in tx_fields
+        assert "memo" in tx_fields
+        assert "graph_edges" in tx_fields
+    finally:
+        os.unlink(tmp_path)
