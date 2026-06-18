@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Building, Plus, Trash2, Download, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Building, Plus, Trash2, Download, AlertCircle } from 'lucide-react';
 import {
   getBankConnections, createBankConnection, deleteBankConnection, fetchBankTransactions,
   getAccounts,

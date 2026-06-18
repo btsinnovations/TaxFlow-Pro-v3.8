@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import {
-  ArrowLeftRight, Search, ChevronLeft, ChevronRight, Pencil, Check, X,
-  AlertCircle, Archive, FileText, Tag, Filter, RefreshCw,
+  ArrowLeftRight, Search, Pencil, Check, X,
+  AlertCircle, Archive, FileText, Tag, RefreshCw,
 } from 'lucide-react';
 import {
   getTransactions, getTransactionsSummary, updateTransaction,

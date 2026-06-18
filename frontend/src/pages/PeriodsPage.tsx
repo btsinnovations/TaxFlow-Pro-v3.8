@@ -3,7 +3,7 @@ import { CalendarClock, Plus, Lock, Unlock, AlertCircle, AlertTriangle, CheckCir
 import { getPeriods, createPeriod, lockPeriod, unlockPeriod } from '@/hooks/useAPI';
 import { useClient } from '@/context/ClientContext';
 import { useToast } from '@/hooks/useToast';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

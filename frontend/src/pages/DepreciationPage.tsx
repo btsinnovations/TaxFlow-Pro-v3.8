@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Calculator, AlertCircle, ChevronRight, FileText, Table2 } from 'lucide-react';
 import { calculateDepreciation, getDepreciationMethods, getMacrsTables } from '@/hooks/useAPI';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

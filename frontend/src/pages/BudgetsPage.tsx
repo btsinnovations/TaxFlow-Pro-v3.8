@@ -323,7 +323,7 @@ export default function BudgetsPage() {
                           <CartesianGrid strokeDasharray="3 3" stroke="var(--border-divider)" />
                           <XAxis dataKey="category" tick={{ fontSize: 11 }} />
                           <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
-                          <ChartTooltip content={<ChartTooltipContent formatter={(v: number) => formatCurrency(v)} />} />
+                          <ChartTooltip content={<ChartTooltipContent formatter={(v: any) => formatCurrency(Number(v))} />} />
                           <ChartLegend content={<ChartLegendContent />} />
                           <Bar dataKey="budgeted" fill="var(--color-budgeted)" radius={[4, 4, 0, 0]} />
                           <Bar dataKey="actual" fill="var(--color-actual)" radius={[4, 4, 0, 0]} />

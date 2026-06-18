@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import {
-  Coins, Plus, ArrowRightLeft, Search, AlertCircle, Upload,
+  Coins, Plus, ArrowRightLeft, AlertCircle, Upload,
 } from 'lucide-react';
 import {
   getExchangeRates, createExchangeRate, convertCurrency, importExchangeRates,

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Archive, RotateCcw, AlertCircle, Shield } from 'lucide-react';
 import { archiveYear, restoreYear } from '@/hooks/useAPI';
 import { useClient } from '@/context/ClientContext';

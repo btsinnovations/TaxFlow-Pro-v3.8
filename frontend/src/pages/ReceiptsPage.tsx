@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import {
   ReceiptText, Upload, Trash2, Search, Link, AlertCircle,
-  FileText, Eye, X,
+  FileText, Eye,
 } from 'lucide-react';
 import {
-  uploadReceipt, getReceipts, deleteReceipt, matchReceipt, getReceipt,
+  uploadReceipt, getReceipts, deleteReceipt, matchReceipt,
 } from '@/hooks/useAPI';
 import { useClient } from '@/context/ClientContext';
 import { useToast } from '@/hooks/useToast';
@@ -321,7 +321,7 @@ export default function ReceiptsPage() {
             <div className="py-8 text-center text-text-secondary text-sm">Finding matching transactions...</div>
           ) : matches.length > 0 ? (
             <div className="space-y-3 py-2">
-              {matches.map((m, i) => (
+              {matches.map((m) => (
                 <div key={m.transaction_id} className="bg-canvas rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-mono text-sm text-text-primary">Transaction #{m.transaction_id}</span>

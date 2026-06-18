@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Settings, Save, Upload, AlertCircle, Shield, Image } from 'lucide-react';
+import { Settings, Save, AlertCircle, Shield, Image } from 'lucide-react';
 import {
   getSettings, updateSettings, uploadLogo, getThresholds, updateThresholds,
 } from '@/hooks/useAPI';
@@ -340,7 +340,7 @@ export default function SettingsPage() {
                     {thresholds.high_confidence < thresholds.medium_confidence && (
                       <div className="flex items-center gap-2 text-red-400 text-sm bg-red-400/10 p-3 rounded-lg border border-red-400/20">
                         <AlertCircle size={14} />
-                        High confidence must be >= Medium confidence
+                        High confidence must be {'>= '}Medium confidence
                       </div>
                     )}
                   </div>

@@ -9,10 +9,17 @@ export interface Toast {
   duration?: number;
 }
 
+export interface ToastOptions {
+  title: string;
+  description?: string;
+  variant?: "default" | "destructive" | "success" | "warning" | "info";
+}
+
 interface ToastContextType {
   toasts: Toast[];
   addToast: (message: string, type: ToastType, duration?: number) => void;
   removeToast: (id: string) => void;
+  toast: (options: ToastOptions) => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -40,8 +47,22 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  const toast = useCallback((options: ToastOptions) => {
+    const message = options.description
+      ? `${options.title}: ${options.description}`
+      : options.title;
+    const typeMap: Record<string, ToastType> = {
+      default: "info",
+      destructive: "error",
+      success: "success",
+      warning: "warning",
+      info: "info",
+    };
+    addToast(message, typeMap[options.variant || "default"] || "info");
+  }, [addToast]);
+
   return (
-    <ToastContext.Provider value={{ toasts, addToast, removeToast }}>
+    <ToastContext.Provider value={{ toasts, addToast, removeToast, toast }}>
       {children}
     </ToastContext.Provider>
   );

@@ -1,14 +1,13 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import {
   BookOpen, Plus, Trash2, Send, AlertCircle, CheckCircle, XCircle,
-  AlertTriangle,
 } from 'lucide-react';
 import {
   getJournalEntries, createJournalEntry, deleteJournalEntry, postJournalEntry,
 } from '@/hooks/useAPI';
 import { useClient } from '@/context/ClientContext';
 import { useToast } from '@/hooks/useToast';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -226,7 +225,6 @@ export default function JournalEntriesPage() {
             {entries.map(entry => {
               const balanced = isBalanced(entry.lines);
               const total = totalDebits(entry.lines);
-              const isPosted = entry.lines.some(l => l.debit === 0 && l.credit === 0);
               return (
                 <Card key={entry.id} className="bg-surface border-divider">
                   <CardContent className="p-4">

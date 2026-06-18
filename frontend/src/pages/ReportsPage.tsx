@@ -89,11 +89,6 @@ export default function ReportsPage() {
     }
   };
 
-  const formatDate = (d: string) => {
-    try { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); }
-    catch { return d; }
-  };
-
   const formatDateTime = (d: string) => {
     try { return new Date(d).toLocaleString('en-US'); }
     catch { return d; }

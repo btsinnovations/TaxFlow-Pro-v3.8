@@ -26,7 +26,7 @@ interface TaxSummary {
 const CURRENT_YEAR = new Date().getFullYear();
 
 export default function TaxSummaryPage() {
-  const { selectedClient } = useClient();
+  useClient();
   const [year, setYear] = useState(CURRENT_YEAR);
   const [summary, setSummary] = useState<TaxSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -185,7 +185,7 @@ export default function TaxSummaryPage() {
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border-divider)" />
                         <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                         <YAxis tick={{ fontSize: 12 }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
-                        <ChartTooltip content={<ChartTooltipContent formatter={(v: number) => formatCurrency(v)} />} />
+                        <ChartTooltip content={<ChartTooltipContent formatter={(v: any) => formatCurrency(Number(v))} />} />
                         <ChartLegend content={<ChartLegendContent />} />
                         <Bar dataKey="value" radius={[4, 4, 0, 0]} />
                       </BarChart>

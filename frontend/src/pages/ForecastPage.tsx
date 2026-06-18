@@ -12,7 +12,7 @@ import {
   ChartLegendContent,
 } from '@/components/ui/chart';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
+  Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
   Area, AreaChart,
 } from 'recharts';
 import gsap from 'gsap';
@@ -187,7 +187,7 @@ export default function ForecastPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border-divider)" />
                       <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                       <YAxis tick={{ fontSize: 12 }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
-                      <ChartTooltip content={<ChartTooltipContent formatter={(v: number) => formatCurrency(v)} />} />
+                      <ChartTooltip content={<ChartTooltipContent formatter={(v: any) => formatCurrency(Number(v))} />} />
                       <ChartLegend content={<ChartLegendContent />} />
                       <Area type="monotone" dataKey="income" stroke="var(--color-income)" fill="var(--color-income)" fillOpacity={0.15} strokeWidth={2} />
                       <Area type="monotone" dataKey="expenses" stroke="var(--color-expenses)" fill="var(--color-expenses)" fillOpacity={0.15} strokeWidth={2} />

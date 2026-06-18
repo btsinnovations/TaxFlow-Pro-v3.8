@@ -1,11 +1,11 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Package, Upload, AlertCircle, RefreshCw, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
-import { createBatchImport, listBatchJobs, getBatchJobStatus } from '@/hooks/useAPI';
+import { createBatchImport, listBatchJobs } from '@/hooks/useAPI';
 import { useClient } from '@/context/ClientContext';
 import { useToast } from '@/hooks/useToast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
