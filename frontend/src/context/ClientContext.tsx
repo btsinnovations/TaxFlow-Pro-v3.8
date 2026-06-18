@@ -52,11 +52,11 @@ export function ClientProvider({ children }: { children: ReactNode }) {
         const match = data.find((c: Client) => c.id === id);
         if (match) {
           setSelectedClientState(match);
-        } else if (data.length > 0 && !selectedClient) {
+        } else if (data.length > 0) {
           setSelectedClientState(data[0]);
           localStorage.setItem(STORAGE_KEY, String(data[0].id));
         }
-      } else if (data.length > 0 && !selectedClient) {
+      } else if (data.length > 0) {
         setSelectedClientState(data[0]);
         localStorage.setItem(STORAGE_KEY, String(data[0].id));
       }
@@ -65,11 +65,12 @@ export function ClientProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedClient]);
+  }, []);
 
+  // Load clients once on mount
   useEffect(() => {
     refreshClients();
-  }, [refreshClients]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <ClientContext.Provider

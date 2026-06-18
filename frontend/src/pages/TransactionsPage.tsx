@@ -91,7 +91,10 @@ export default function TransactionsPage() {
   const [categoryDialogValue, setCategoryDialogValue] = useState('');
 
   const fetchData = useCallback(async () => {
-    if (!selectedClient) return;
+    if (!selectedClient) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError('');
     try {

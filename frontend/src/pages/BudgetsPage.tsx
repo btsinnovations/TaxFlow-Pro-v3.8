@@ -93,7 +93,7 @@ export default function BudgetsPage() {
   const [categories, setCategories] = useState<string[]>([]);
 
   const fetchData = useCallback(async () => {
-    if (!selectedClient) return;
+    if (!selectedClient) { setLoading(false); return; }
     setLoading(true);
     setError('');
     try {

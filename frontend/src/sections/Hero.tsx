@@ -68,7 +68,7 @@ const Hero = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left max-w-3xl mx-auto">
           <div className="p-4 rounded-lg border border-white/10 bg-white/[0.02]">
-            <div className="text-[#C9A96E] text-2xl font-serif mb-1">5+</div>
+            <div className="text-[#C9A96E] text-2xl font-serif mb-1">7</div>
             <div className="text-white/50 text-sm">Bank Parsers</div>
           </div>
           <div className="p-4 rounded-lg border border-white/10 bg-white/[0.02]">

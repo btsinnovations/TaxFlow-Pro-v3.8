@@ -44,7 +44,7 @@ export default function BatchImportPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const fetchData = useCallback(async () => {
-    if (!selectedClient) return;
+    if (!selectedClient) { setLoading(false); return; }
     setLoading(true);
     try {
       const data = await listBatchJobs(selectedClient.id);

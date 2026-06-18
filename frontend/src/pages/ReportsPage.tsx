@@ -47,7 +47,7 @@ export default function ReportsPage() {
   const [detailLoading, setDetailLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
-    if (!selectedClient) return;
+    if (!selectedClient) { setLoading(false); return; }
     setLoading(true);
     setError('');
     try {

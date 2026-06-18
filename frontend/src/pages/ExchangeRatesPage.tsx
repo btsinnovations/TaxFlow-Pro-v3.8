@@ -67,7 +67,7 @@ export default function ExchangeRatesPage() {
   const [bulkLoading, setBulkLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
-    if (!selectedClient) return;
+    if (!selectedClient) { setLoading(false); return; }
     setLoading(true);
     try {
       const data = await getExchangeRates(selectedClient.id, { limit: 200 });

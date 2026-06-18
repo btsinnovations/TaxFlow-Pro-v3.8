@@ -48,7 +48,7 @@ export default function ArchivePage() {
   }, []);
 
   const handleArchive = async () => {
-    if (!selectedClient) return;
+    if (!selectedClient) { setLoading(false); return; }
     setArchiving(true);
     setError('');
     try {

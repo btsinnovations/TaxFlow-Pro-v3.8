@@ -48,7 +48,7 @@ export default function ForecastPage() {
   const [monthsAhead, setMonthsAhead] = useState(12);
 
   const fetchData = useCallback(async () => {
-    if (!selectedClient) return;
+    if (!selectedClient) { setLoading(false); return; }
     setLoading(true);
     setError('');
     try {

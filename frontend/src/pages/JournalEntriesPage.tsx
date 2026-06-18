@@ -64,7 +64,7 @@ export default function JournalEntriesPage() {
   const [posting, setPosting] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
-    if (!selectedClient) return;
+    if (!selectedClient) { setLoading(false); return; }
     setLoading(true);
     try {
       const data = await getJournalEntries(selectedClient.id, 0, 100, postedOnly);

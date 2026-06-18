@@ -68,7 +68,7 @@ export default function ReceiptsPage() {
   const [matchLoading, setMatchLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
-    if (!selectedClient) return;
+    if (!selectedClient) { setLoading(false); return; }
     setLoading(true);
     try {
       const data = await getReceipts(selectedClient.id);
@@ -137,7 +137,7 @@ export default function ReceiptsPage() {
   };
 
   const handleMatch = async (receipt: Receipt) => {
-    if (!selectedClient) return;
+    if (!selectedClient) { setLoading(false); return; }
     setMatchLoading(true);
     try {
       const results = await matchReceipt(receipt.id, selectedClient.id);

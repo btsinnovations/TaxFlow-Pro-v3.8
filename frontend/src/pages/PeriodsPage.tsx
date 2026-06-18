@@ -51,7 +51,7 @@ export default function PeriodsPage() {
   const [lockWarning, setLockWarning] = useState('');
 
   const fetchData = useCallback(async () => {
-    if (!selectedClient) return;
+    if (!selectedClient) { setLoading(false); return; }
     setLoading(true);
     try {
       const data = await getPeriods(selectedClient.id, year);
