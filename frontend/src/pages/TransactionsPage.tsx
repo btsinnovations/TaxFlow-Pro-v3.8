@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   ArrowLeftRight, Search, Pencil, Check, X,
   AlertCircle, Archive, FileText, Tag, RefreshCw,
@@ -22,10 +22,6 @@ import {
   Pagination, PaginationContent, PaginationItem, PaginationLink,
   PaginationNext, PaginationPrevious,
 } from '@/components/ui/pagination';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-gsap.registerPlugin(ScrollTrigger);
 
 interface Transaction {
   id: number;
@@ -58,7 +54,6 @@ const PAGE_SIZE = 25;
 export default function TransactionsPage() {
   const { selectedClient } = useClient();
   const { toast } = useToast();
-  const sectionRef = useRef<HTMLDivElement>(null);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -130,21 +125,6 @@ export default function TransactionsPage() {
   }, [selectedClient, year, categoryFilter, search, txTypeFilter, confirmedFilter, showArchived, page]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-
-  useEffect(() => {
-    if (loading) return;
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        sectionRef.current,
-        { y: 30 },
-        {
-          y: 0, duration: 0.5, ease: 'power3.out',
-          scrollTrigger: { trigger: sectionRef.current, start: 'top 80%', toggleActions: 'play none none none' },
-        }
-      );
-    }, sectionRef);
-    return () => ctx.revert();
-  }, [loading]);
 
   const formatCurrency = (v: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Math.abs(v));
@@ -226,7 +206,7 @@ export default function TransactionsPage() {
 
   return (
     <section className="bg-canvas px-4 md:px-8 py-8">
-      <div ref={sectionRef} className="max-w-[1440px] mx-auto" style={{ opacity: 1 }}>
+      <div className="max-w-[1440px] mx-auto">
         {/* Header */}
         <div className="mb-6">
           <h1 className="font-serif text-3xl md:text-4xl text-text-primary flex items-center gap-3">

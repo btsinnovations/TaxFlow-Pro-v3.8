@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, AlertCircle, BarChart3 } from 'lucide-react';
 import { getForecast } from '@/hooks/useAPI';
 import { useClient } from '@/context/ClientContext';
@@ -15,10 +15,6 @@ import {
   Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
   Area, AreaChart,
 } from 'recharts';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-gsap.registerPlugin(ScrollTrigger);
 
 interface ForecastEntry {
   month: string;
@@ -40,7 +36,6 @@ interface ForecastData {
 
 export default function ForecastPage() {
   const { selectedClient } = useClient();
-  const sectionRef = useRef<HTMLDivElement>(null);
 
   const [forecast, setForecast] = useState<ForecastData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,20 +58,6 @@ export default function ForecastPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        sectionRef.current,
-        { opacity: 0, y: 30 },
-        {
-          opacity: 1, y: 0, duration: 0.5, ease: 'power3.out',
-          scrollTrigger: { trigger: sectionRef.current, start: 'top 80%', toggleActions: 'play none none none' },
-        }
-      );
-    }, sectionRef);
-    return () => ctx.revert();
-  }, [loading, forecast]);
-
   const formatCurrency = (v: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Math.abs(v));
 
@@ -95,7 +76,7 @@ export default function ForecastPage() {
 
   return (
     <section className="bg-canvas px-4 md:px-8 py-8">
-      <div ref={sectionRef} className="max-w-[1440px] mx-auto">
+      <div className="max-w-[1440px] mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
           <div>

@@ -62,7 +62,14 @@ def clean_header_bleed(desc: str) -> str:
         "Navy Federal", "P.O. Box", "Credit Union", "Statement of Account",
         "Account Summary", "Account Number:", "Statement Period:",
         "JPMorgan Chase", "Chase Total Checking", "Chase Bank",
-        "Date      Description", "Withdrawal      Deposit"
+        "Date      Description", "Withdrawal      Deposit",
+        # EdFed-specific header/footer bleed
+        "September", "Activity from", "Member Number:", "Total Reward Points:",
+        "Points Expiring:", "PO Box", "RETURN SERVICE REQUESTED", "STATEMENTS",
+        "SUMMARY", "Beginning Balance", "Ending Balance", "Total Debits/Checks",
+        "Total Credits/Deposits", "Dividends Earned", "ACCOUNT  FOR",
+        "Share Draft", "Summary", "IMPORTANT", "ABOUT YOUR ACCOUNT",
+        "Telephone", "Page", "www.EdFed.org",
     ]
     for frag in fragments:
         idx = desc.find(frag)
@@ -212,7 +219,7 @@ def _persist_pipeline_results(
         db_tx = models.Transaction(
             statement_id=statement.id,
             tenant_id=statement.tenant_id,
-            client_id=statement.account.client_id if statement.account else None,
+            client_id=(statement.account.client_id if statement.account else None) or statement.tenant_id,
             date=txn.date,
             description=txn.description,
             amount=amount,
@@ -322,6 +329,7 @@ async def upload_statement(
         db_tx = models.Transaction(
             statement_id=statement.id,
             tenant_id=statement.tenant_id,
+            client_id=statement.account.client_id if statement.account else statement.tenant_id,
             date=standardize_date(tx.get("date")),
             description=tx.get("description"),
             amount=amount_dec,

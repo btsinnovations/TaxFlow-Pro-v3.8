@@ -63,7 +63,7 @@ def _avg_monthly_from_history(db: Session, client_id: int, months_back: int = 6)
     txs = (
         db.query(models.Transaction)
         .filter(
-            models.Transaction.client_id == client_id,
+            models.Transaction.tenant_id == client_id,
             models.Transaction.date >= start_str,
             models.Transaction.date <= end_str,
             models.Transaction.archived == False,
