@@ -108,22 +108,6 @@ export async function getAuditLog(limit: number = 50): Promise<any[]> {
   return handleResponse(res, 'Failed to fetch audit log');
 }
 
-export async function getTaxRules(): Promise<any[]> {
-  const res = await fetch(`${API_BASE}/tax/`, {
-    headers: authHeaders(),
-  });
-  return handleResponse(res, 'Failed to fetch tax rules');
-}
-
-export async function updateTaxRule(ruleId: string, data: any): Promise<any> {
-  const res = await fetch(`${API_BASE}/tax/${ruleId}`, {
-    method: 'PATCH',
-    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  return handleResponse(res, 'Failed to update tax rule');
-}
-
 export async function getDashboardStats(): Promise<any> {
   const res = await fetch(`${API_BASE}/dashboard/`, {
     headers: authHeaders(),
@@ -252,14 +236,6 @@ export async function deleteAccount(accountId: string): Promise<any> {
     headers: authHeaders(),
   });
   return handleResponse(res, 'Failed to delete account');
-}
-
-export async function syncAccount(accountId: string): Promise<any> {
-  const res = await fetch(`${API_BASE}/accounts/${accountId}/sync`, {
-    method: 'POST',
-    headers: authHeaders(),
-  });
-  return handleResponse(res, 'Failed to sync account');
 }
 
 // Auth API functions
@@ -531,4 +507,431 @@ export async function signReport(reportType: string, data: {
     body: JSON.stringify(data),
   });
   return handleResponse(res, 'Failed to sign report');
+}
+
+// ===================================================================
+// Archive API
+// ===================================================================
+
+export async function archiveYear(client_id: number, year: number): Promise<any> {
+  const res = await fetch(`${API_BASE}/clients/${client_id}/archive-year?year=${year}`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to archive year');
+}
+
+export async function restoreYear(client_id: number, year: number, master_password: string): Promise<any> {
+  const formData = new FormData();
+  formData.append('master_password', master_password);
+  const res = await fetch(`${API_BASE}/clients/${client_id}/restore-year?year=${year}`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: formData,
+  });
+  return handleResponse(res, 'Failed to restore year');
+}
+
+// ===================================================================
+// Receipts API
+// ===================================================================
+
+export async function uploadReceipt(client_id: number, file: File, opts?: {
+  transaction_id?: number;
+  vendor?: string;
+  amount?: number;
+  receipt_date?: string;
+}): Promise<any> {
+  const formData = new FormData();
+  formData.append('client_id', String(client_id));
+  formData.append('file', file);
+  if (opts?.transaction_id) formData.append('transaction_id', String(opts.transaction_id));
+  if (opts?.vendor) formData.append('vendor', opts.vendor);
+  if (opts?.amount !== undefined) formData.append('amount', String(opts.amount));
+  if (opts?.receipt_date) formData.append('receipt_date', opts.receipt_date);
+  const res = await fetch(`${API_BASE}/receipts/upload`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: formData,
+  });
+  return handleResponse(res, 'Failed to upload receipt');
+}
+
+export async function getReceipts(client_id: number): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/receipts?client_id=${client_id}`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch receipts');
+}
+
+export async function getReceipt(receiptId: number): Promise<any> {
+  const res = await fetch(`${API_BASE}/receipts/${receiptId}`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch receipt');
+}
+
+export async function deleteReceipt(receiptId: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/receipts/${receiptId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to delete receipt');
+}
+
+export async function matchReceipt(receiptId: number, client_id: number, top_n: number = 5): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/receipts/${receiptId}/match?client_id=${client_id}&top_n=${top_n}`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to match receipt');
+}
+
+// ===================================================================
+// Journal Entries API
+// ===================================================================
+
+export async function getJournalEntries(client_id: number, skip: number = 0, limit: number = 100, posted_only: boolean = false): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/journal-entries/?client_id=${client_id}&skip=${skip}&limit=${limit}&posted_only=${posted_only}`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch journal entries');
+}
+
+export async function getJournalEntry(je_id: number): Promise<any> {
+  const res = await fetch(`${API_BASE}/journal-entries/${je_id}`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch journal entry');
+}
+
+export async function createJournalEntry(client_id: number, data: {
+  entry_number: string;
+  entry_date: string;
+  memo: string;
+  source: string;
+  lines: { account_code: string; account_name: string; debit: number; credit: number; memo?: string }[];
+}): Promise<any> {
+  const res = await fetch(`${API_BASE}/journal-entries/?client_id=${client_id}`, {
+    method: 'POST',
+    headers: { ...authHeaders(true), 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res, 'Failed to create journal entry');
+}
+
+export async function postJournalEntry(je_id: number): Promise<any> {
+  const res = await fetch(`${API_BASE}/journal-entries/${je_id}/post`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to post journal entry');
+}
+
+export async function deleteJournalEntry(je_id: number): Promise<any> {
+  const res = await fetch(`${API_BASE}/journal-entries/${je_id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to delete journal entry');
+}
+
+// ===================================================================
+// Settings API
+// ===================================================================
+
+export async function getSettings(client_id: number): Promise<any> {
+  const res = await fetch(`${API_BASE}/settings?client_id=${client_id}`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch settings');
+}
+
+export async function updateSettings(client_id: number, data: {
+  firm_name?: string;
+  firm_address?: string;
+  firm_phone?: string;
+  firm_email?: string;
+  firm_ein?: string;
+  fiscal_year_end?: string;
+  timezone?: string;
+  date_format?: string;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE}/settings?client_id=${client_id}`, {
+    method: 'PUT',
+    headers: { ...authHeaders(true), 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res, 'Failed to update settings');
+}
+
+export async function uploadLogo(client_id: number, file: File): Promise<any> {
+  const formData = new FormData();
+  formData.append('client_id', String(client_id));
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE}/settings/logo/upload?client_id=${client_id}`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: formData,
+  });
+  return handleResponse(res, 'Failed to upload logo');
+}
+
+export async function getThresholds(client_id: number): Promise<any> {
+  const res = await fetch(`${API_BASE}/settings/recurring-thresholds?client_id=${client_id}`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch thresholds');
+}
+
+export async function updateThresholds(client_id: number, data: {
+  high_confidence: number;
+  medium_confidence: number;
+  auto_confirm: number;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE}/settings/recurring-thresholds?client_id=${client_id}`, {
+    method: 'PUT',
+    headers: { ...authHeaders(true), 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res, 'Failed to update thresholds');
+}
+
+// ===================================================================
+// Bank Connections API
+// ===================================================================
+
+export async function getBankConnections(): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/bank-connections`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch bank connections');
+}
+
+export async function createBankConnection(data: {
+  account_id: number;
+  institution_name: string;
+  connection_type?: string;
+  ofx_username: string;
+  ofx_password: string;
+  ofx_url?: string;
+  ofx_org?: string;
+  ofx_fid?: string;
+  routing_number?: string;
+  account_number?: string;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE}/bank-connections`, {
+    method: 'POST',
+    headers: { ...authHeaders(true), 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res, 'Failed to create bank connection');
+}
+
+export async function fetchBankTransactions(connectionId: number): Promise<any> {
+  const res = await fetch(`${API_BASE}/bank-connections/${connectionId}/fetch`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch bank transactions');
+}
+
+export async function deleteBankConnection(connectionId: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/bank-connections/${connectionId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to delete bank connection');
+}
+
+// ===================================================================
+// Batch Import API
+// ===================================================================
+
+export async function createBatchImport(client_id: number, file: File): Promise<any> {
+  const formData = new FormData();
+  formData.append('client_id', String(client_id));
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE}/batch-import`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: formData,
+  });
+  return handleResponse(res, 'Failed to create batch import');
+}
+
+export async function getBatchJobStatus(job_id: number): Promise<any> {
+  const res = await fetch(`${API_BASE}/batch-import/${job_id}/status`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch job status');
+}
+
+export async function listBatchJobs(client_id: number, skip: number = 0, limit: number = 50): Promise<any> {
+  const res = await fetch(`${API_BASE}/batch-import/jobs?client_id=${client_id}&skip=${skip}&limit=${limit}`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to list batch jobs');
+}
+
+// ===================================================================
+// Exchange Rates API
+// ===================================================================
+
+export async function getExchangeRates(client_id: number, filters?: {
+  from_currency?: string;
+  to_currency?: string;
+  rate_date?: string;
+  source?: string;
+  skip?: number;
+  limit?: number;
+}): Promise<any[]> {
+  const qs = new URLSearchParams();
+  qs.set('client_id', String(client_id));
+  if (filters?.from_currency) qs.set('from_currency', filters.from_currency);
+  if (filters?.to_currency) qs.set('to_currency', filters.to_currency);
+  if (filters?.rate_date) qs.set('rate_date', filters.rate_date);
+  if (filters?.source) qs.set('source', filters.source);
+  if (filters?.skip !== undefined) qs.set('skip', String(filters.skip));
+  if (filters?.limit !== undefined) qs.set('limit', String(filters.limit));
+  const res = await fetch(`${API_BASE}/exchange-rates?${qs.toString()}`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch exchange rates');
+}
+
+export async function createExchangeRate(client_id: number, data: {
+  from_currency: string;
+  to_currency: string;
+  rate: number;
+  rate_date: string;
+  source?: string;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE}/exchange-rates?client_id=${client_id}`, {
+    method: 'POST',
+    headers: { ...authHeaders(true), 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res, 'Failed to create exchange rate');
+}
+
+export async function importExchangeRates(client_id: number, rates: {
+  from_currency: string;
+  to_currency: string;
+  rate: number;
+  rate_date: string;
+  source?: string;
+}[]): Promise<any> {
+  const res = await fetch(`${API_BASE}/exchange-rates/import?client_id=${client_id}`, {
+    method: 'POST',
+    headers: { ...authHeaders(true), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rates }),
+  });
+  return handleResponse(res, 'Failed to import exchange rates');
+}
+
+export async function convertCurrency(client_id: number, params: {
+  from_currency: string;
+  to_currency: string;
+  amount: number;
+  rate_date?: string;
+}): Promise<any> {
+  const qs = new URLSearchParams();
+  qs.set('client_id', String(client_id));
+  qs.set('from_currency', params.from_currency);
+  qs.set('to_currency', params.to_currency);
+  qs.set('amount', String(params.amount));
+  if (params.rate_date) qs.set('rate_date', params.rate_date);
+  const res = await fetch(`${API_BASE}/exchange-rates/convert?${qs.toString()}`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to convert currency');
+}
+
+// ===================================================================
+// Engagements API
+// ===================================================================
+
+export async function getEngagementTemplates(): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/engagements/templates`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch engagement templates');
+}
+
+export async function getEngagementTemplate(template_type: string): Promise<any> {
+  const res = await fetch(`${API_BASE}/engagements/templates/${template_type}`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch engagement template');
+}
+
+export async function createEngagementFromTemplate(data: {
+  template_type: string;
+  client_id: number;
+  engagement_name?: string;
+  due_date?: string;
+  custom_fee?: number;
+  notes?: string;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE}/engagements/from-template`, {
+    method: 'POST',
+    headers: { ...authHeaders(true), 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res, 'Failed to create engagement from template');
+}
+
+// ===================================================================
+// Periods API
+// ===================================================================
+
+export async function getPeriods(client_id: number, year?: string, skip: number = 0, limit: number = 100): Promise<any[]> {
+  const qs = new URLSearchParams();
+  qs.set('client_id', String(client_id));
+  if (year) qs.set('year', year);
+  qs.set('skip', String(skip));
+  qs.set('limit', String(limit));
+  const res = await fetch(`${API_BASE}/periods/?${qs.toString()}`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to fetch periods');
+}
+
+export async function createPeriod(client_id: number, data: {
+  name: string;
+  start_date: string;
+  end_date: string;
+  status?: string;
+  is_locked?: boolean;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE}/periods/?client_id=${client_id}`, {
+    method: 'POST',
+    headers: { ...authHeaders(true), 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res, 'Failed to create period');
+}
+
+export async function lockPeriod(period_id: number): Promise<any> {
+  const res = await fetch(`${API_BASE}/periods/${period_id}/lock`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to lock period');
+}
+
+export async function unlockPeriod(period_id: number): Promise<any> {
+  const res = await fetch(`${API_BASE}/periods/${period_id}/unlock`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to unlock period');
+}
+
+export async function checkDateLocked(client_id: number, date: string): Promise<any> {
+  const res = await fetch(`${API_BASE}/periods/check?client_id=${client_id}&date=${date}`, {
+    headers: authHeaders(),
+  });
+  return handleResponse(res, 'Failed to check date lock status');
 }
