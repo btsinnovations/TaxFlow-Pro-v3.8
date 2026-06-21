@@ -1,4 +1,4 @@
-# TaxFlow Pro v3.7
+# TaxFlow Pro v3.9
 
 Local-first, offline-capable financial document processing for individuals and small businesses.
 

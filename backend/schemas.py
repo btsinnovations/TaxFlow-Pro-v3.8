@@ -8,10 +8,18 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    keyfile_path: Optional[str] = None
+
+class LocalLogin(BaseModel):
+    username: str
+    password: str
+    keyfile_path: Optional[str] = None
 
 class User(UserBase):
     id: int
     is_active: bool
+    encryption_salt: Optional[str] = None
+    keyfile_path: Optional[str] = None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 

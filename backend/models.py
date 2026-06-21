@@ -9,6 +9,8 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
+    encryption_salt = Column(String, nullable=True)
+    keyfile_path = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())
     clients = relationship("Client", back_populates="owner")

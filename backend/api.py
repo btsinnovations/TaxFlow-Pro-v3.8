@@ -4,6 +4,7 @@ from .database import engine
 from . import models  # noqa: F401 - ensure models are registered
 from .routers import upload, clients, accounts, audit, tax, ml, export, tests, dashboard, auth
 from .rls import is_postgres
+from .local import settings as local_settings
 from alembic.config import Config
 from alembic import command
 import os
@@ -20,7 +21,7 @@ def run_migrations():
 
 run_migrations()
 
-app = FastAPI(title="TaxFlow Pro", version="3.7.0")
+app = FastAPI(title="TaxFlow Pro", version="3.9.1")
 
 app.add_middleware(
     CORSMiddleware,
@@ -69,8 +70,20 @@ app.include_router(tests.router, prefix="/api")
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "3.7.0", "pipeline": "TaxFlow Pro"}
+    return {
+        "status": "ok",
+        "version": "3.9.1",
+        "pipeline": "TaxFlow Pro",
+        "runtime_mode": local_settings.RUNTIME_MODE,
+        "offline": local_settings.is_offline(),
+    }
 
 @app.get("/api/health")
 def health_api():
-    return {"status": "ok", "version": "3.7.0", "pipeline": "TaxFlow Pro"}
+    return {
+        "status": "ok",
+        "version": "3.9.1",
+        "pipeline": "TaxFlow Pro",
+        "runtime_mode": local_settings.RUNTIME_MODE,
+        "offline": local_settings.is_offline(),
+    }

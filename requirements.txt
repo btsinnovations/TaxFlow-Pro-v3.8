@@ -21,3 +21,4 @@ pyarrow>=14.0.0
 alembic>=1.13.0
 psycopg2-binary>=2.9.9
 python-dotenv>=1.0.0
+cryptography>=42.0.0

@@ -12,6 +12,16 @@ DATABASE_URL = os.environ.get(
     "sqlite:///./taxflow.db"
 )
 
+
+def _sqlite_wal_pragma(dbapi_conn, connection_record):
+    """Enable WAL mode and normal synchronous writes for SQLite."""
+    cursor = dbapi_conn.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
+
 if DATABASE_URL.startswith("postgresql://"):
     engine = create_engine(
         DATABASE_URL,
@@ -32,6 +42,8 @@ else:
         pool_pre_ping=True,
     )
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    from sqlalchemy import event
+    event.listen(engine, "connect", _sqlite_wal_pragma)
 
 Base = declarative_base()
 

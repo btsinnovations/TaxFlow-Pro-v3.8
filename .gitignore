@@ -29,3 +29,6 @@ Thumbs.db
 node_modules/
 frontend/node_modules/
 package-lock.json
+
+.local_secret
+
