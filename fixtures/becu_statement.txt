@@ -1,0 +1,18 @@
+BECU
+Boeing Employees' Credit Union
+Member Share Savings / Member Advantage Checking
+Statement Period: 01/01/2025 to 01/31/2025
+
+Transaction Date  Description                             Withdrawal    Deposit     Balance
+01/02/2025      Starting Balance                                                    $1,250.00
+01/05/2025      Grocery Store                           $45.00                  $1,205.00
+01/08/2025      Direct Deposit                                              $500.00 $1,705.00
+01/12/2025      Gas Station                             $32.50                  $1,672.50
+01/15/2025      BECU Online Transfer                    $100.00                 $1,572.50
+01/20/2025      Salary Deposit                                              $1,200.00 $2,772.50
+01/25/2025      Utility Payment                         $89.00                  $2,683.50
+01/28/2025      Coffee Shop                             $6.25                   $2,677.25
+01/31/2025      Interest Earned                                             $0.75   $2,678.00
+
+Ending Balance: $2,678.00
+800-233-2328 | becu.org | Federally Insured by NCUA
