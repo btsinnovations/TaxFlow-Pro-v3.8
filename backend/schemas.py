@@ -1,3 +1,4 @@
+from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Optional, List
 from datetime import datetime, date
@@ -271,3 +272,154 @@ class Statement(StatementBase):
 
 class AccountWithStatements(Account):
     statements: List[Statement] = []
+
+
+# v3.10 COA schemas
+class COAAccountType(str, Enum):
+    asset = "Asset"
+    liability = "Liability"
+    equity = "Equity"
+    revenue = "Revenue"
+    expense = "Expense"
+
+
+class COAAccountBase(BaseModel):
+    number: str
+    name: str
+    type: COAAccountType
+    parent_id: Optional[int] = None
+    is_active: bool = True
+
+
+class COAAccountCreate(COAAccountBase): pass
+
+
+class COAAccountUpdate(BaseModel):
+    number: Optional[str] = None
+    name: Optional[str] = None
+    type: Optional[COAAccountType] = None
+    parent_id: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+class COAAccount(COAAccountBase):
+    id: int
+    tenant_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class COAAccountTree(COAAccount):
+    children: List["COAAccountTree"] = []
+
+
+# v3.10 profile roles
+class ProfileRole(str, Enum):
+    admin = "admin"
+    accountant = "accountant"
+    bookkeeper = "bookkeeper"
+    viewer = "viewer"
+
+
+class ProfileMembershipCreate(BaseModel):
+    user_id: int
+    role: ProfileRole
+
+
+class ProfileMembershipUpdate(BaseModel):
+    role: ProfileRole
+
+
+class ProfileMembershipOut(BaseModel):
+    id: int
+    user_id: int
+    profile_id: int
+    role: ProfileRole
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+# v3.10 register / splits
+class TransactionSplitBase(BaseModel):
+    category: Optional[str] = None
+    account_id: Optional[int] = None
+    tax_line_item: Optional[str] = None
+    amount: float
+    memo: Optional[str] = None
+
+
+class TransactionCreate(BaseModel):
+    date: date
+    description: str
+    amount: float
+    account_id: int
+    payee: Optional[str] = None
+    memo: Optional[str] = None
+    splits: Optional[List[TransactionSplitBase]] = None
+
+
+class TransactionOut(BaseModel):
+    id: int
+    date: date
+    description: str
+    amount: float
+    account_id: int
+    payee: Optional[str] = None
+    memo: Optional[str] = None
+    running_balance: Optional[float] = None
+    splits: List[TransactionSplitBase] = []
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BulkTransactionDelete(BaseModel):
+    transaction_ids: List[int]
+
+
+# v3.10 recurring rules
+class RecurrenceFrequency(str, Enum):
+    daily = "daily"
+    weekly = "weekly"
+    bi_weekly = "bi_weekly"
+    monthly = "monthly"
+    quarterly = "quarterly"
+    yearly = "yearly"
+    custom = "custom"
+
+
+class RecurringRuleBase(BaseModel):
+    account_id: int
+    description: str
+    amount: float
+    frequency: RecurrenceFrequency
+    start_date: date
+    end_date: Optional[date] = None
+    count: Optional[int] = None
+    custom_days: Optional[int] = None
+    splits: Optional[List[TransactionSplitBase]] = None
+
+
+class RecurringRuleCreate(RecurringRuleBase): pass
+
+
+class RecurringRuleUpdate(BaseModel):
+    account_id: Optional[int] = None
+    description: Optional[str] = None
+    amount: Optional[float] = None
+    frequency: Optional[RecurrenceFrequency] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    count: Optional[int] = None
+    custom_days: Optional[int] = None
+    splits: Optional[List[TransactionSplitBase]] = None
+    is_active: Optional[bool] = None
+
+
+class RecurringRule(RecurringRuleBase):
+    id: int
+    tenant_id: int
+    is_active: bool
+    last_generated_at: Optional[datetime] = None
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)

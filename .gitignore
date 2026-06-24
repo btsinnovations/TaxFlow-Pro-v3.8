@@ -1,3 +1,19 @@
+*.db
+*.db-shm
+*.db-wal
+test_taxflow.db
+.local_secret
+uploads/
+backups/
+data/input/*
+data/output/*
+!data/input/.gitkeep
+!data/output/.gitkeep
+logs/*
+!logs/.gitkeep
+memory/
+.env
+.env.local
 __pycache__/
 *.pyc
 *.pyo
@@ -13,17 +29,6 @@ build/
 .pytest_cache/
 .coverage
 htmlcov/
-taxflow.db
-test_taxflow.db
-*.db
-.local_secret
-uploads/
-data/input/*
-data/output/*
-!data/input/.gitkeep
-!data/output/.gitkeep
-logs/*
-!logs/.gitkeep
 .DS_Store
 Thumbs.db
 *.log
@@ -32,3 +37,11 @@ node_modules/
 frontend/node_modules/
 package-lock.json
 backend/alembic/versions/__pycache__/
+# Temp / patch scripts
+patch*.py
+.task*.py
+test_pg_conn.py
+append_keyfile_tests.py
+# Regression logs
+*.txt
+full_regression*.xml
