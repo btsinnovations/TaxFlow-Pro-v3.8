@@ -42,6 +42,21 @@ patch*.py
 .task*.py
 test_pg_conn.py
 append_keyfile_tests.py
-# Regression logs
-*.txt
-full_regression*.xml
+# Regression logs (specific files only; do not ignore requirements*.txt / version.txt)
+regression_output.txt
+regression_log.txt
+full_regression*.txt
+first_failure.txt
+second_failure.txt
+backup_restore_log*.txt
+recovery_log.txt
+audit_*.txt
+conftest_smoke*.txt
+targeted_log.txt
+targeted_revert_log.txt
+revert_api_log.txt
+test_api_log.txt
+full_regression.xml
+tanstack_install.txt
+npm_install.txt
+collect_check.txt
