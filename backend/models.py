@@ -1,0 +1,361 @@
+from datetime import date, datetime, timezone
+from sqlalchemy import Column, Integer, String, Numeric, Boolean, DateTime, Date, ForeignKey, Index
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+from .database import Base
+
+class AuditEntry(Base):
+    __tablename__ = "audit_entries"
+    id = Column(Integer, primary_key=True, index=True)
+    occurred_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    actor_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    action = Column(String, nullable=False)
+    resource_type = Column(String, nullable=False)
+    resource_id = Column(Integer, nullable=True)
+    description = Column(String, nullable=True)
+    details = Column(String, default="{}")
+    previous_hash = Column(String(64), default="0" * 64)
+    entry_hash = Column(String(64), nullable=False)
+    chain_hash = Column(String(64), nullable=True)
+    signature = Column(String, nullable=True)
+
+    __table_args__ = (
+        Index("ix_audit_entries_actor_id", "actor_id"),
+        Index("ix_audit_entries_resource", "resource_type", "resource_id"),
+    )
+
+    actor = relationship("User", back_populates="audit_entries")
+
+    def details_dict(self):
+        import json
+        try:
+            return json.loads(self.details or "{}")
+        except json.JSONDecodeError:
+            return {}
+
+
+class RevokedToken(Base):
+    __tablename__ = "revoked_tokens"
+    id = Column(Integer, primary_key=True, index=True)
+    jti = Column(String, unique=True, index=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    token_type = Column(String, default="access")
+    expires_at = Column(DateTime, nullable=True)
+    revoked_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        Index("ix_revoked_tokens_user_id", "user_id"),
+    )
+
+    user = relationship("User", back_populates="revoked_tokens")
+
+class RefreshToken(Base):
+    __tablename__ = "refresh_tokens"
+    id = Column(Integer, primary_key=True, index=True)
+    token_hash = Column(String(64), unique=True, index=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    family_id = Column(String(64), nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    revoked_at = Column(DateTime, nullable=True)
+    replaced_by_token_hash = Column(String(64), nullable=True)
+    client_hash = Column(String(64), nullable=True)
+
+    __table_args__ = (
+        Index("ix_refresh_tokens_user_id", "user_id"),
+    )
+
+    user = relationship("User", back_populates="refresh_tokens")
+
+class Session(Base):
+    __tablename__ = "sessions"
+    id = Column(Integer, primary_key=True, index=True)
+    token_hash = Column(String(64), unique=True, index=True, nullable=False)
+    token_jti = Column(String, index=True, nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    revoked_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    last_seen_at = Column(DateTime, nullable=True)
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+
+    __table_args__ = (
+        Index("ix_sessions_user_id", "user_id"),
+    )
+
+    user = relationship("User", back_populates="sessions")
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    encryption_salt = Column(String, nullable=True)
+    keyfile_path = Column(String, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+    clients = relationship("Client", back_populates="owner")
+    accounts = relationship("Account", back_populates="owner")
+    assets = relationship("DepreciationAsset", back_populates="owner")
+    journals = relationship("Journal", back_populates="owner")
+    periods = relationship("Period", back_populates="owner")
+    audit_entries = relationship("AuditEntry", back_populates="actor")
+    revoked_tokens = relationship("RevokedToken", back_populates="user")
+    refresh_tokens = relationship("RefreshToken", back_populates="user")
+    sessions = relationship("Session", back_populates="user")
+    trained_models = relationship("TrainedModel", back_populates="owner")
+
+
+class Client(Base):
+    __tablename__ = "clients"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    email = Column(String)
+    tax_id = Column(String)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+    owner = relationship("User", back_populates="clients")
+    accounts = relationship("Account", foreign_keys="Account.client_id", back_populates="client")
+
+class Account(Base):
+    __tablename__ = "accounts"
+    __table_args__ = (
+        Index("ix_accounts_tenant_id", "tenant_id"),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String)
+    institution = Column(String)
+    account_number_masked = Column(String)
+    type = Column(String, default="checking")
+    client_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+    owner = relationship("User", back_populates="accounts")
+    client = relationship("Client", foreign_keys=[client_id], back_populates="accounts")
+    statements = relationship("Statement", back_populates="account")
+
+class Statement(Base):
+    __tablename__ = "statements"
+    __table_args__ = (
+        Index("ix_statements_tenant_id", "tenant_id"),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    filename = Column(String)
+    period_start = Column(Date)
+    period_end = Column(Date)
+    opening_balance = Column(Numeric(12, 2))
+    closing_balance = Column(Numeric(12, 2))
+    variance = Column(Numeric(12, 2))
+    is_balanced = Column(Boolean)
+    created_at = Column(DateTime, server_default=func.now())
+    account = relationship("Account", back_populates="statements")
+    transactions = relationship("Transaction", back_populates="statement")
+
+class DepreciationAsset(Base):
+    __tablename__ = "depreciation_assets"
+    __table_args__ = (
+        Index("ix_depreciation_assets_tenant_id", "tenant_id"),
+        Index("ix_depreciation_assets_user_id", "user_id"),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String, nullable=False)
+    asset_class = Column(String, nullable=False)
+    cost_basis = Column(Numeric(14, 2), nullable=False)
+    placed_in_service_date = Column(Date, nullable=False)
+    recovery_period_years = Column(Integer, nullable=False)
+    method = Column(String, nullable=False, default="MACRS-GDS")
+    convention = Column(String, nullable=False, default="HY")
+    section_179 = Column(Numeric(14, 2), nullable=False, default=0)
+    bonus_depreciation = Column(Numeric(14, 2), nullable=False, default=0)
+    salvage_value = Column(Numeric(14, 2), nullable=False, default=0)
+    created_at = Column(DateTime, server_default=func.now())
+    owner = relationship("User", back_populates="assets")
+
+
+class Journal(Base):
+    __tablename__ = "journals"
+    __table_args__ = (
+        Index("ix_journals_tenant_id", "tenant_id"),
+        Index("ix_journals_user_id", "user_id"),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    date = Column(Date, nullable=False)
+    memo = Column(String, nullable=False)
+    amount = Column(Numeric(12, 2), nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+    owner = relationship("User", back_populates="journals")
+
+
+class Period(Base):
+    __tablename__ = "periods"
+    __table_args__ = (
+        Index("ix_periods_tenant_id", "tenant_id"),
+        Index("ix_periods_user_id", "user_id"),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String, nullable=False)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+    owner = relationship("User", back_populates="periods")
+
+
+class GLAccount(Base):
+    __tablename__ = "gl_accounts"
+    __table_args__ = (
+        Index("ix_gl_accounts_tenant_id", "tenant_id"),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    code = Column(String, nullable=False)
+    name = Column(String, nullable=False)
+    account_type = Column(String, nullable=False, default="expense")
+    created_at = Column(DateTime, server_default=func.now())
+
+    owner = relationship("User")
+    categorization_rules = relationship("CategorizationRule", back_populates="gl_account")
+    transactions = relationship("Transaction", back_populates="gl_account")
+
+
+class CategorizationRule(Base):
+    __tablename__ = "categorization_rules"
+    __table_args__ = (
+        Index("ix_categorization_rules_tenant_id", "tenant_id"),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String, nullable=False)
+    pattern = Column(String, nullable=False)
+    gl_account_id = Column(Integer, ForeignKey("gl_accounts.id", ondelete="CASCADE"), nullable=False)
+    priority = Column(Integer, default=0)
+    enabled = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    gl_account = relationship("GLAccount", back_populates="categorization_rules")
+
+
+class GeneralLedgerEntry(Base):
+    __tablename__ = "general_ledger_entries"
+    __table_args__ = (
+        Index("ix_general_ledger_entries_tenant_id", "tenant_id"),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    transaction_id = Column(Integer, ForeignKey("transactions.id", ondelete="CASCADE"), nullable=True)
+    date = Column(Date, nullable=False)
+    description = Column(String)
+    debit_account_id = Column(Integer, ForeignKey("gl_accounts.id", ondelete="SET NULL"), nullable=True)
+    credit_account_id = Column(Integer, ForeignKey("gl_accounts.id", ondelete="SET NULL"), nullable=True)
+    amount = Column(Numeric(12, 2), nullable=False)
+    memo = Column(String)
+    workpaper_ref = Column(String, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    transaction = relationship("Transaction", back_populates="ledger_entries")
+    flags = relationship("Flag", back_populates="journal_entry")
+
+
+class Flag(Base):
+    __tablename__ = "flags"
+    __table_args__ = (
+        Index("ix_flags_tenant_id", "tenant_id"),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    transaction_id = Column(Integer, ForeignKey("transactions.id", ondelete="CASCADE"), nullable=True)
+    journal_entry_id = Column(Integer, ForeignKey("general_ledger_entries.id", ondelete="CASCADE"), nullable=True)
+    note = Column(String, nullable=False)
+    created_by = Column(String, nullable=False)
+    resolved = Column(Boolean, default=False)
+    resolved_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    transaction = relationship("Transaction", back_populates="flags")
+    journal_entry = relationship("GeneralLedgerEntry", back_populates="flags")
+
+
+class Transaction(Base):
+    __tablename__ = "transactions"
+    __table_args__ = (
+        Index("ix_transactions_tenant_id", "tenant_id"),
+        Index("ix_transactions_txn_uid", "tenant_id", "user_id", "txn_uid", unique=True),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    statement_id = Column(Integer, ForeignKey("statements.id", ondelete="CASCADE"), nullable=False)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    gl_account_id = Column(Integer, ForeignKey("gl_accounts.id", ondelete="SET NULL"), nullable=True)
+    date = Column(Date)
+    description = Column(String)
+    amount = Column(Numeric(12, 2))
+    tx_type = Column(String)
+    category = Column(String, default="uncategorized")
+    running_balance = Column(Numeric(12, 2), nullable=True)
+    workpaper_ref = Column(String, nullable=True)
+    txn_uid = Column(String, nullable=True)
+    import_source = Column(String, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    statement = relationship("Statement", back_populates="transactions")
+    gl_account = relationship("GLAccount", back_populates="transactions")
+    ledger_entries = relationship("GeneralLedgerEntry", back_populates="transaction")
+    flags = relationship("Flag", back_populates="transaction")
+
+    def __repr__(self):
+        return f"<Transaction(id={self.id}, date={self.date}, amount={self.amount})>"
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "date": self.date.isoformat() if self.date else None,
+            "description": self.description,
+            "amount": float(self.amount) if self.amount is not None else None,
+            "tx_type": self.tx_type,
+            "category": self.category,
+            "running_balance": float(self.running_balance) if self.running_balance is not None else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "statement_id": self.statement_id,
+            "tenant_id": self.tenant_id,
+            "gl_account_id": self.gl_account_id,
+            "workpaper_ref": self.workpaper_ref,
+            "txn_uid": self.txn_uid,
+            "import_source": self.import_source,
+        }
+
+
+class TrainedModel(Base):
+    __tablename__ = "trained_models"
+    __table_args__ = (
+        Index("ix_trained_models_user_id", "user_id"),
+        Index("ix_trained_models_tenant_id", "tenant_id"),
+        Index("ix_trained_models_is_active", "is_active"),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    version = Column(Integer, nullable=False, default=1)
+    model_path = Column(String, nullable=False)
+    model_sha256 = Column(String(64), nullable=False)
+    accuracy = Column(Numeric(5, 4), nullable=True)
+    f1_macro = Column(Numeric(5, 4), nullable=True)
+    support = Column(Integer, nullable=True)
+    classes = Column(String, nullable=True)
+    trained_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    is_active = Column(Boolean, default=True)
+
+    owner = relationship("User", back_populates="trained_models")

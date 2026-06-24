@@ -1,0 +1,16 @@
+{
+  "name": "Fiserv DNA",
+  "institutions": ["Ally Bank","Ally","Discover Bank","Discover","DCU","Digital Federal Credit Union","First Technology","First Technology Federal Credit Union","Logix","Logix Federal Credit Union","Connexus","Connexus Credit Union","Synchrony Bank","Synchrony","Marcus","Goldman Sachs Bank USA","Goldman Sachs","CIT Bank","EverBank","HSBC USA","HSBC Bank USA","Popular Bank","Popular","East West Bank","Kinecta","Kinecta Federal Credit Union"],
+  "date_format": "MM/DD/YYYY",
+  "amount_columns": ["single"],
+  "amount_format": "negative_for_debits",
+  "summary_box": "top_right",
+  "opening_balance_label": "Beginning Balance",
+  "closing_balance_label": "Ending Balance",
+  "regex_patterns": {
+    "header": "Ally Bank|Discover Bank|Digital Federal Credit Union|First Technology Federal Credit Union|Logix Federal Credit Union|Connexus Credit Union|Synchrony Bank|Goldman Sachs Bank USA|Marcus|CIT Bank|EverBank|HSBC Bank USA|Popular Bank|East West Bank|Kinecta Federal Credit Union",
+    "transaction": "(\\d{2}/\\d{2}/\\d{2,4})\\s+(.+?)\\s+(-?[\\(\\)\\$\\d,]+\\.\\d{2})(?:\\s+([\\(\\)\\$\\d,]+\\.\\d{2}))?(?:\\s+([\\(\\)\\$\\d,]+\\.\\d{2}))?",
+    "clean_pdf": true
+  },
+  "notes": "Fiserv DNA / Signature platform. Single amount column (negative for debits, parentheses for negatives)."
+}

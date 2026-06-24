@@ -1,0 +1,12 @@
+[project]
+name = "taxflow-pro-private"
+version = "3.9.2"
+description = "Local-first tax and accounting pipeline (private, not published)"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = []
+
+[tool.setuptools]
+py-modules = []

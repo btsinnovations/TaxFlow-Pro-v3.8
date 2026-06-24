@@ -1,0 +1,490 @@
+# categories.yaml – Full merchant aliases and broad categorization rules
+
+# Alias matching configuration
+#   mode: "strict"  -> match from start of description and truncate trailing
+#                     store/location tokens (default).
+#   mode: "substring" -> replace anywhere in the description, no truncation.
+alias_matching:
+  default_mode: strict
+  overrides:
+    # Example: keep PAYPAL aliases as substring matches so "PAYPAL *XYZ" and
+    # "XYZ PAYPAL" both normalize correctly.
+    PAYPAL: substring
+    SQUARE: substring
+    GOOGLE: substring
+
+merchant_aliases:
+  # --- Existing Aliases (from previous version) ---
+  'ATT MOBILITY': 'AT&T'
+  'WAL-MART': 'WALMART'
+  'WM SUPERCENTER': 'WALMART'
+  'AMZN': 'AMAZON'
+  'SQ': 'SQUARE'
+  'TST*': 'RESTAURANT'
+  'PAYPAL *': 'PAYPAL'
+  'PP*': 'PAYPAL'
+  'GOOGLE *': 'GOOGLE'
+  'APPLE COM BILL': 'APPLE'
+  'SP *': 'SHOPIFY'
+  'UBER *EATS': 'UBEREATS'
+  'UBER *TRIP': 'UBER'
+  'DD *DOORDASH': 'DOORDASH'
+  'AIRBNB *': 'AIRBNB'
+  'AMZN Mktp': 'AMAZON'
+  'AMAZON MARKETPLACE': 'AMAZON'
+  'AMZN Digital': 'AMAZON'
+  'PRIME VIDEO': 'AMAZON PRIME'
+  'APPLE.COM/BILL': 'APPLE'
+  'NINTENDO OF AMERICA': 'NINTENDO'
+  'VZWRLSS': 'VERIZON'
+  'COMCAST CABLE COMM': 'COMCAST'
+  'TARGET T-': 'TARGET'
+  'HOME DEPOT #': 'HOME DEPOT'
+  'CVS/PHARMACY': 'CVS'
+  'WALGREENS #': 'WALGREENS'
+  'STARBUCKS STORE': 'STARBUCKS'
+  'CHICK-FIL-A #': 'CHICK-FIL-A'
+  "MCDONALD'S F": 'MCDONALDS'
+  'PANERA BREAD #': 'PANERA'
+  'SQ *': 'SQUARE'
+  'PAYPAL INST XFER': 'PAYPAL'
+  'PAYPAL TRANSFER': 'PAYPAL'
+  'VENMO PAYMENT': 'VENMO'
+  'VENMO CASHOUT': 'VENMO'
+  'CASH APP*': 'CASH APP'
+  'ZELLE PAYMENT': 'ZELLE'
+  'STRIPE *': 'STRIPE'
+  'AMZN MKTP': 'AMAZON'
+  'AMZN MKTP US': 'AMAZON'
+  'AMAZON MKTPLACE': 'AMAZON'
+  'AMZN PRIME': 'AMAZON PRIME'
+  'AMZN MUSIC': 'AMAZON MUSIC'
+  'APL* ITUNES': 'APPLE'
+  'APL*APPLE.COM': 'APPLE'
+  'APPLE CASH': 'APPLE'
+  'APPLECARD PAYMENT': 'APPLE CARD'
+  'GOOGLE PLAY': 'GOOGLE'
+  'GOOGLE *TEMP HOLD': 'GOOGLE'
+  'YOUTUBE PREMIUM': 'YOUTUBE'
+  'GOOGLE STORAGE': 'GOOGLE'
+  'WALMART.COM': 'WALMART'
+  'WALMART GROCERY': 'WALMART'
+  'WM NEIGHBORHOOD': 'WALMART'
+  'WM SUPERCENTER #': 'WALMART'
+  'TARGET.COM': 'TARGET'
+  'TARGET ONLINE': 'TARGET'
+  'KROGER #': 'KROGER'
+  'PUBLIX #': 'PUBLIX'
+  'ALDI INC': 'ALDI'
+  'WHOLEFDS': 'WHOLE FOODS'
+  'SHELL OIL': 'SHELL'
+  'CHEVRON #': 'CHEVRON'
+  'EXXONMOBIL': 'EXXON'
+  'CIRCLE K STORE': 'CIRCLE K'
+  'STARBUCKS APP': 'STARBUCKS'
+  'SUBWAY #': 'SUBWAY'
+  'DOMINOS #': 'DOMINOS'
+  'PIZZA HUT #': 'PIZZA HUT'
+  'GRUBHUB *': 'GRUBHUB'
+  'POSTMATES *': 'POSTMATES'
+  'HILTON GARDEN INN': 'HILTON'
+  'MARRIOTT *': 'MARRIOTT'
+  'DELTA AIR': 'DELTA'
+  'SOUTHWEST AIR': 'SOUTHWEST'
+  'T-MOBILE AUTOPAY': 'T-MOBILE'
+  'ATT*BILL PAYMENT': 'AT&T'
+  'GEICO DIRECT': 'GEICO'
+  'PROGRESSIVE INS': 'PROGRESSIVE'
+  'COSTCO WHSE': 'COSTCO'
+  'SAMSCLUB': "SAM'S CLUB"
+  'CVS HEALTH': 'CVS'
+  'WALGREENS STORE': 'WALGREENS'
+  'LOWES #': "LOWE'S"
+  'ACE HARDWARE #': 'ACE HARDWARE'
+  'USPS PO': 'USPS'
+  'UPS STORE': 'UPS'
+  'FEDEX OFFICE': 'FEDEX'
+  'NETFLIX.COM': 'NETFLIX'
+  'SPOTIFY USA': 'SPOTIFY'
+  'DISNEYPLUS': 'DISNEY+'
+  'HULU LLC': 'HULU'
+  'PLANET FITNESS CLUB': 'PLANET FITNESS'
+  'PF CLUB FEES': 'PLANET FITNESS'
+  'TOSTADAS*': 'RESTAURANT'
+  'CLOVER *': 'CLOVER MERCHANT'
+  'TOAST TAB': 'RESTAURANT'
+  'TOAST TAKEOUT': 'RESTAURANT'
+  'SPOTHERO': 'PARKING'
+  'PARKMOBILE': 'PARKING'
+  'APLPAY': 'APPLE PAY'
+  'GOOGLEPAY': 'GOOGLE PAY'
+  'SAMSUNG PAY': 'SAMSUNG PAY'
+
+  # --- New Aliases from user (no duplicates) ---
+  'LYFT *': 'LYFT'
+  'UBER TRIP': 'UBER'
+  'DOORDASH*': 'DOORDASH'
+  'INSTACART *': 'INSTACART'
+  'EBAY *': 'EBAY'
+  'ETSY *': 'ETSY'
+  'POSHMARK *': 'POSHMARK'
+  'MERCARI': 'MERCARI'
+  'DEPOP *': 'DEPOP'
+  'SHEIN': 'SHEIN'
+  'TEMU *': 'TEMU'
+  'ALIEXPRESS': 'ALIEXPRESS'
+  'WISH *': 'WISH'
+  'TJ MAXX': 'TJ MAXX'
+  'MARSHALLS #': 'MARSHALLS'
+  'ROSS STORES': 'ROSS'
+  'DOLLAR TREE': 'DOLLAR TREE'
+  'FAMILY DOLLAR': 'FAMILY DOLLAR'
+  'DOLLAR GENERAL': 'DOLLAR GENERAL'
+  'BIG LOTS': 'BIG LOTS'
+  'KOHLS #': "KOHL'S"
+  'MACYS': "MACY'S"
+  'JCPENNEY': "JCPENNEY"
+  'BESTBUY': 'BEST BUY'
+  'BEST BUY *': 'BEST BUY'
+  'MICROSOFT *': 'MICROSOFT'
+  'XBOX *': 'XBOX'
+  'SONY *': 'SONY'
+  'PLAYSTATION': 'PLAYSTATION'
+  'STEAM *': 'STEAM'
+  'EPIC GAMES': 'EPIC GAMES'
+  'ROBLOX': 'ROBLOX'
+  'DISCORD *': 'DISCORD'
+  'TWITCH *': 'TWITCH'
+  'PARAMOUNT+': 'PARAMOUNT+'
+  'PEACOCK *': 'PEACOCK'
+  'MAX *': 'MAX'
+  'APPLE TV': 'APPLE TV'
+  'AUDIBLE *': 'AUDIBLE'
+  'KINDLE *': 'AMAZON'
+  'AMAZON AUDIBLE': 'AUDIBLE'
+  'VERIZON WIRELESS': 'VERIZON'
+  'T-MOBILE *': 'T-MOBILE'
+  'SPRINT *': 'SPRINT'
+  'XFINITY': 'XFINITY'
+  'SPECTRUM': 'SPECTRUM'
+  'OPTIMUM': 'OPTIMUM'
+  'DISH NETWORK': 'DISH'
+  'DIRECTV *': 'DIRECTV'
+  'STATE FARM': 'STATE FARM'
+  'ALLSTATE': 'ALLSTATE'
+  'USAA *': 'USAA'
+  'AAA *': 'AAA'
+  'AMERICAN AIR': 'AMERICAN AIRLINES'
+  'UNITED *': 'UNITED AIRLINES'
+  'JETBLUE *': 'JETBLUE'
+  'ALASKA AIR': 'ALASKA AIRLINES'
+  'SPIRIT *': 'SPIRIT AIRLINES'
+  'FRONTIER *': 'FRONTIER AIRLINES'
+  'HYATT *': 'HYATT'
+  'IHG *': 'IHG'
+  'WYNDHAM': 'WYNDHAM'
+  'AIRBNB INC': 'AIRBNB'
+  'VRBO *': 'VRBO'
+  'EXPEDIA *': 'EXPEDIA'
+  'BOOKING.COM': 'BOOKING.COM'
+  'KAYAK *': 'KAYAK'
+  'CHEVRON EXTRA': 'CHEVRON'
+  'BP *': 'BP'
+  'MOBIL': 'MOBIL'
+  '7-ELEVEN': '7-ELEVEN'
+  'QUIKTRIP': 'QT'
+  'WEGMANS #': 'WEGMANS'
+  'TRADER JOE': "TRADER JOE'S"
+  'SPROUTS': 'SPROUTS'
+  'SAFeway': 'SAFEWAY'
+  'RALPHS': 'RALPHS'
+  'VONS': 'VONS'
+  'HEB *': 'H-E-B'
+  'MEIJER': 'MEIJER'
+  'WINN DIXIE': 'WINN DIXIE'
+  'FOOD LION': 'FOOD LION'
+  'ULTA *': 'ULTA'
+  'SEPHORA': 'SEPHORA'
+  'DICKSSPORTING': "DICK'S SPORTING GOODS"
+  'ACADEMY SPORTS': 'ACADEMY SPORTS'
+  'PETCO': 'PETCO'
+  'PETS MART': 'PETSMART'
+  'CHEwy *': 'CHEWY'
+  'BARKBOX *': 'BARKBOX'
+  'ANYTIME FITNESS': 'ANYTIME FITNESS'
+  'EQUINOX *': 'EQUINOX'
+  'YMCA *': 'YMCA'
+  '24 HR FITNESS': '24 HOUR FITNESS'
+  'LA FITNESS': 'LA FITNESS'
+  'USPS.COM': 'USPS'
+  'AMTRAK': 'AMTRAK'
+  'GREYHOUND': 'GREYHOUND'
+  'LYFT RIDE': 'LYFT'
+  'VENMO *': 'VENMO'
+  'CASHAPP *': 'CASH APP'
+  'APPLE PAYMENT': 'APPLE'
+
+rules:
+  # ---------- Banking & Cash ----------
+  - pattern: '(?i)(atm withdrawal|cash withdrawal|cash wd|atm cash)'
+    category: 'Cash:Withdrawal'
+    priority: 95
+  - pattern: '(?i)(atm deposit|cash deposit|branch deposit)'
+    category: 'Cash:Deposit'
+    priority: 95
+  - pattern: '(?i)(check #|check payment|draft check)'
+    category: 'Banking:Check'
+    priority: 90
+  - pattern: '(?i)(wire transfer|domestic wire|international wire|swift)'
+    category: 'Transfer:Wire'
+    priority: 90
+
+  # ---------- Income Sources ----------
+  - pattern: '(?i)(social security|ssa treas|ssi payment)'
+    category: 'Income:Government Benefits'
+    priority: 100
+  - pattern: '(?i)(unemployment|state unemployment|ui benefit)'
+    category: 'Income:Unemployment'
+    priority: 100
+  - pattern: '(?i)(veterans affairs|va benefit)'
+    category: 'Income:Veteran Benefits'
+    priority: 100
+  - pattern: '(?i)(irs|us treasury|tax refund)'
+    category: 'Income:Tax Refund'
+    priority: 100
+  - pattern: '(?i)(payroll|direct deposit|salary|wages)'
+    category: 'Income:Salary'
+    priority: 95
+  - pattern: '(?i)(cash app.*cash out|venmo.*cashout|zelle credit|paypal.*transfer)'
+    category: 'Income:P2P Received'
+    priority: 96
+  - pattern: '(?i)(alimony)'
+    category: 'Income:Alimony'
+    priority: 95
+  - pattern: '(?i)(rental income|tenant payment)'
+    category: 'Income:Rental'
+    priority: 95
+  - pattern: '(?i)(dividend|interest|capital gain|distribution)'
+    category: 'Income:Investment'
+    priority: 95
+  - pattern: '(?i)(stripe|square|upwork|fiverr|patreon)'
+    category: 'Income:Gig/Freelance'
+    priority: 90
+  - pattern: '(?i)(refund|reimbursement|rebate)'
+    category: 'Income:Refund'
+    priority: 85
+
+  # ---------- Credit Cards & Loans ----------
+  - pattern: '(?i)(credit card payment|visa payment|mastercard payment|amex payment|discover payment)'
+    category: 'Debt:Credit Card Payment'
+    priority: 100
+  - pattern: '(?i)(mortgage payment|rocket mortgage|guild mortgage|freedom mortgage)'
+    category: 'Bills:Mortgage'
+    priority: 100
+  - pattern: '(?i)(loan payment|auto loan|personal loan|lendingclub|sofi|upstart)'
+    category: 'Debt:Loan Payment'
+    priority: 95
+  - pattern: '(?i)(student loan|navient|nelnet|mohela|sallie mae|aidvantage)'
+    category: 'Debt:Student Loan'
+    priority: 95
+
+  # ---------- Investments & Crypto ----------
+  - pattern: '(?i)(fidelity|vanguard|charles schwab|etrade|e\*trade|robinhood|interactive brokers)'
+    category: 'Investment:Contribution'
+    priority: 95
+  - pattern: '(?i)(401k|403b|roth ira|traditional ira|retirement contribution)'
+    category: 'Investment:Retirement'
+    priority: 95
+  - pattern: '(?i)(coinbase|kraken|binance|gemini|crypto\.com)'
+    category: 'Investment:Cryptocurrency'
+    priority: 95
+  - pattern: '(?i)(brokerage transfer|investment transfer|securities purchase)'
+    category: 'Investment:Transfer'
+    priority: 90
+
+  # ---------- Bills & Utilities ----------
+  - pattern: '(?i)(electric|power|edison|duke|georgia power|con ed)'
+    category: 'Bills:Electricity'
+    priority: 100
+  - pattern: '(?i)(water|sewer|waste|trash|sanitation|utility bill)'
+    category: 'Bills:Water/Sewer'
+    priority: 100
+  - pattern: '(?i)(gas|natural gas|heating)'
+    category: 'Bills:Gas'
+    priority: 100
+  - pattern: '(?i)(internet|broadband|wi[- ]?fi|spectrum|comcast|xfinity|at[&t]?.*(internet|fiber|u-verse))'
+    category: 'Bills:Internet'
+    priority: 100
+  - pattern: '(?i)(phone|mobile|verizon|t[- ]?mobile|sprint|at[&t]?.*(wireless|mobility)|mint mobile)'
+    category: 'Bills:Phone'
+    priority: 100
+  - pattern: '(?i)(rent)'
+    category: 'Bills:Housing'
+    priority: 95
+  - pattern: '(?i)(hoa|homeowners association)'
+    category: 'Bills:HOA'
+    priority: 95
+  - pattern: '(?i)(property tax|county tax collector)'
+    category: 'Bills:Property Tax'
+    priority: 95
+
+  # ---------- Housing & Home ----------
+  - pattern: '(?i)(plumber|plumbing|electrician|hvac|heating and cooling)'
+    category: 'Home:Maintenance'
+    priority: 90
+  - pattern: '(?i)(landscaping|lawn care|trugreen|yard service)'
+    category: 'Home:Lawn Care'
+    priority: 85
+  - pattern: '(?i)(home depot|lowe''s|ace hardware|home improvement|furniture|ikea)'
+    category: 'Home:Improvement'
+    priority: 80
+
+  # ---------- Auto & Transportation ----------
+  - pattern: '(?i)(geico|progressive|state farm auto|allstate auto)'
+    category: 'Transportation:Auto Insurance'
+    priority: 100
+  - pattern: '(?i)(dmv|tag renewal|vehicle registration)'
+    category: 'Transportation:Registration'
+    priority: 90
+  - pattern: '(?i)(gasoline|chevron|shell|exxon|bp|marathon|speedway|costco gas)'
+    category: 'Transportation:Fuel'
+    priority: 90
+  - pattern: '(?i)(repair|auto parts|advance auto|autozone|o''reilly|tire|oil change)'
+    category: 'Transportation:Auto Repair'
+    priority: 90
+  - pattern: '(?i)(parking|toll|ezpass|sunpass|fastrak)'
+    category: 'Transportation:Tolls/Parking'
+    priority: 85
+  - pattern: '(?i)(uber|lyft|taxi|ride share)'
+    category: 'Transportation:Rideshare'
+    priority: 85
+  - pattern: '(?i)(car wash|detail)'
+    category: 'Transportation:Car Wash'
+    priority: 85
+
+  # ---------- Software & SaaS ----------
+  - pattern: '(?i)(github|gitlab|digitalocean|aws|amazon web services|linode)'
+    category: 'Software:Cloud Services'
+    priority: 100
+  - pattern: '(?i)(microsoft 365|office 365|adobe|dropbox|notion|zoom|canva|chatgpt|openai)'
+    category: 'Software:SaaS'
+    priority: 95
+
+  # ---------- Business & Professional ----------
+  - pattern: '(?i)(facebook ads|google ads|linkedin ads)'
+    category: 'Business:Advertising'
+    priority: 95
+  - pattern: '(?i)(attorney|law office|legalzoom)'
+    category: 'Professional:Legal'
+    priority: 90
+  - pattern: '(?i)(accountant|cpa|bookkeeping|tax preparer)'
+    category: 'Professional:Accounting'
+    priority: 90
+  - pattern: '(?i)(office depot|staples|quill)'
+    category: 'Business:Office Supplies'
+    priority: 90
+  - pattern: '(?i)(fedex|ups|usps|pirateship)'
+    category: 'Business:Shipping'
+    priority: 90
+
+  # ---------- Travel ----------
+  - pattern: '(?i)(airline|delta|united|american airlines|southwest|jetblue|frontier|spirit|expedia)'
+    category: 'Travel:Flights'
+    priority: 90
+  - pattern: '(?i)(hotel|motel|airbnb|vrbo|marriott|hilton|hyatt|holiday inn)'
+    category: 'Travel:Lodging'
+    priority: 90
+  - pattern: '(?i)(hertz|enterprise|budget|avis|national car rental)'
+    category: 'Travel:Car Rental'
+    priority: 90
+
+  # ---------- Child & Family ----------
+  - pattern: '(?i)(child support)'
+    category: 'Family:Child Support'
+    priority: 95
+  - pattern: '(?i)(daycare|childcare|nanny|babysitter|preschool)'
+    category: 'Bills:Childcare'
+    priority: 90
+  - pattern: '(?i)(summer camp|after school|youth program)'
+    category: 'Family:Activities'
+    priority: 85
+
+  # ---------- Food & Dining ----------
+  - pattern: '(?i)(grocery|kroger|safeway|publix|wegmans|whole foods|aldi|trader joe|walmart.*grocery|target.*grocery)'
+    category: 'Food:Groceries'
+    priority: 90
+  - pattern: '(?i)(restaurant|cafe|bistro|grill|starbucks|dunkin|panera|chipotle|mcdonald|burger king|wendy|taco bell|domino|pizza hut|papa john|subway|dining)'
+    category: 'Food:Dining Out'
+    priority: 90
+  - pattern: '(?i)(delivery|doordash|ubereats|grubhub|postmates)'
+    category: 'Food:Delivery'
+    priority: 90
+  - pattern: '(?i)(liquor|beer|wine|alcohol|brewery)'
+    category: 'Food:Alcohol'
+    priority: 80
+
+  # ---------- Entertainment & Subscriptions ----------
+  - pattern: '(?i)(spotify|apple music|pandora|tidal)'
+    category: 'Entertainment:Music'
+    priority: 95
+  - pattern: '(?i)(netflix|hulu|max|disney\+|paramount\+|peacock|amazon prime)'
+    category: 'Entertainment:Streaming'
+    priority: 95
+  - pattern: '(?i)(movie|cinema|theater|amc|regal)'
+    category: 'Entertainment:Movies'
+    priority: 80
+  - pattern: '(?i)(concert|show|ticket|eventbrite|ticketmaster)'
+    category: 'Entertainment:Events'
+    priority: 80
+  - pattern: '(?i)(game|video game|xbox|playstation|nintendo|steam|gaming)'
+    category: 'Entertainment:Gaming'
+    priority: 80
+
+  # ---------- Shopping & Digital Marketplaces ----------
+  - pattern: '(?i)(etsy|ebay|mercari|poshmark)'
+    category: 'Shopping:Marketplace'
+    priority: 85
+  - pattern: '(?i)(clothing|apparel|nike|adidas|gap|old navy|h&m|zara|macy''s|kohl''s)'
+    category: 'Shopping:Clothing'
+    priority: 85
+  - pattern: '(?i)(electronics|computer|phone|gadget|apple store|best buy|micro center)'
+    category: 'Shopping:Electronics'
+    priority: 85
+  - pattern: '(?i)(walmart|target|costco|sam''s club|bj''s|amazon)'
+    category: 'Shopping:General'
+    priority: 80
+
+  # ---------- Health & Personal Care ----------
+  - pattern: '(?i)(pharmacy|cvs|walgreens|rite aid|prescription)'
+    category: 'Health:Pharmacy'
+    priority: 85
+  - pattern: '(?i)(doctor|clinic|hospital|dental|vision|medical|healthcare)'
+    category: 'Health:Medical'
+    priority: 85
+  - pattern: '(?i)(petco|petsmart|chewy|veterinarian|vet clinic)'
+    category: 'Shopping:Pets'
+    priority: 85
+
+  # ---------- General Insurance ----------
+  - pattern: '(?i)(insurance|state farm|farmers|liberty mutual)'
+    category: 'Bills:Insurance'
+    priority: 80
+
+  # ---------- Transfers & Fees ----------
+  - pattern: '(?i)(venmo|cash app|zelle|cashapp)'
+    category: 'Transfer:P2P'
+    priority: 85
+  - pattern: '(?i)(fee|service charge|maintenance fee|atm fee|overdraft|late fee)'
+    category: 'Fees:Bank'
+    priority: 90
+  - pattern: '(?i)(interest charge|finance charge)'
+    category: 'Fees:Interest'
+    priority: 90
+  - pattern: '(?i)(transfer to|transfer from|internal transfer)'
+    category: 'Transfer:Internal'
+    priority: 70
+
+  # ---------- Catch-all ----------
+  - pattern: '.*'
+    category: 'Other:Uncategorized'
+    priority: 1

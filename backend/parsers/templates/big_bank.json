@@ -1,0 +1,14 @@
+{
+  "name": "Big Bank Custom",
+  "institutions": ["Chase","Bank of America","Wells Fargo","Citibank","Capital One","U.S. Bank","Truist","PNC Bank","TD Bank","Citizens Bank","Fifth Third","Regions Bank","KeyBank","M&T Bank","Huntington","Santander","BMO Harris","Commerce Bank","Frost Bank","Synovus","Webster Bank","Associated Bank","BOKF","EverBank","CIT Bank","Zions Bank","Valley National","South State","First Horizon","Old National","Comerica","Texas Capital","UMB Bank","First Interstate"],
+  "date_format": "MM/DD/YYYY",
+  "amount_columns": ["withdrawals","deposits"],
+  "summary_box": "top_right",
+  "opening_balance_label": "Beginning Balance",
+  "closing_balance_label": "Ending Balance",
+  "regex_patterns": {
+    "header": "JPMorgan Chase Bank|Chase Total Checking|Bank of America|Wells Fargo|Citibank|Capital One|U\\.S\\. Bank|Truist|PNC Bank|TD Bank|Citizens Bank|Fifth Third|Regions Bank|KeyBank|M&T Bank|Huntington|Santander|BMO Harris|Commerce Bank|Frost Bank|Synovus|Webster Bank|Associated Bank|BOKF|EverBank|CIT Bank|Zions Bank|Valley National|South State|First Horizon|Old National|Comerica|Texas Capital|UMB Bank|First Interstate",
+    "transaction": "(\\d{2}/\\d{2}/\\d{2,4})\\s+(.+?)\\s+([\\(\\)\\$\\-]?[\\d,]+\\.\\d{2})(?:\\s+([\\(\\)\\$\\-]?[\\d,]+\\.\\d{2}))?(?:\\s+([\\(\\)\\$\\-]?[\\d,]+\\.\\d{2}))?"
+  },
+  "notes": "Big banks use split Withdrawals/Deposits columns or single Amount with parentheses for negatives."
+}

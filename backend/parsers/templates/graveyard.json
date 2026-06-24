@@ -1,0 +1,39 @@
+{
+  "name": "graveyard",
+  "institutions": [
+    "First Republic Bank",
+    "Silicon Valley Bank",
+    "Signature Bank",
+    "Washington Mutual"
+  ],
+  "regex_patterns": {
+    "header": "(First Republic Bank|Silicon Valley Bank|Signature Bank|Washington Mutual)",
+    "transaction": [
+      "^(?P<date>\\d{2}/\\d{2}/\\d{4})\\s+(?P<description>.{10,40})\\s+(?P<withdrawal>[\\d,]+\\.\\d{2})?\\s+(?P<deposit>[\\d,]+\\.\\d{2})?\\s+(?P<balance>[\\d,]+\\.\\d{2})$",
+      "^(?P<date>\\d{2}/\\d{2}/\\d{4})\\s+(?P<description>.+?)\\s+(?P<amount>-?[\\d,]+\\.\\d{2})\\s+(?P<balance>[\\d,]+\\.\\d{2})$"
+    ]
+  },
+  "amount_columns": {
+    "single_column": false,
+    "debit_negative": false,
+    "split_withdrawal_deposit": true
+  },
+  "date_format": "%m/%d/%Y",
+  "currency_symbol": "$",
+  "page_break_indicators": [
+    "continued",
+    "continued on next line",
+    "page",
+    "page break"
+  ],
+  "balance_labels": {
+    "opening": "Opening Balance",
+    "closing": "Closing Balance"
+  },
+  "tax_flag_rules": {
+    "income": ["PAYROLL", "ACH DEPOSIT", "WIRE IN", "DIVIDEND", "INTEREST EARNED"],
+    "business_expense": ["AWS", "AMAZON WEB SERVICES", "GUSTO", "ONLINE BILL PAY"],
+    "transfer": ["WIRE OUT", "ONLINE TRANSFER", "ZELLE"],
+    "penalty": ["MONTHLY SERVICE FEE", "ACCOUNT ANALYSIS", "OVERDRAFT"]
+  }
+}

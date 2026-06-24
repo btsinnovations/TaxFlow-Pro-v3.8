@@ -1,0 +1,32 @@
+[
+  {
+    "selector": "backend/tests/test_ml_pipeline.py",
+    "status": "failed",
+    "returncode": 4,
+    "stdout": "\nno tests ran in 0.01s\n",
+    "stderr": "ERROR: file or directory not found: backend/tests/test_ml_pipeline.py\n\n",
+    "duration_seconds": 1.57,
+    "task": "TASK-038.9",
+    "timestamp": "2026-06-23T14:44:05.450251+00:00"
+  },
+  {
+    "selector": "backend/tests/test_ml_pipeline.py",
+    "status": "passed",
+    "returncode": 0,
+    "stdout": ".........                                                                [100%]\n============================== warnings summary ===============================\n..\\..\\..\\..\\..\\AppData\\Roaming\\Python\\Python314\\site-packages\\fastapi\\testclient.py:1\n  C:\\Users\\James Clawd\\AppData\\Roaming\\Python\\Python314\\site-packages\\fastapi\\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n..\\..\\..\\..\\..\\AppData\\Roaming\\Python\\Python314\\site-packages\\alembic\\config.py:612\n..\\..\\..\\..\\..\\AppData\\Roaming\\Python\\Python314\\site-packages\\alembic\\config.py:612\n  C:\\Users\\James Clawd\\AppData\\Roaming\\Python\\Python314\\site-packages\\alembic\\config.py:612: DeprecationWarning: No path_separator found in configuration; falling back to legacy splitting on spaces, commas, and colons for prepend_sys_path.  Consider adding path_separator=os to Alembic config.\n    util.warn_deprecated(\n\nbackend\\api.py:54\n  C:\\Users\\James Clawd\\.openclaw\\workspace\\projects\\TaxFlow-Pro\\TaxFlow-Pro-v3.9\\backend\\api.py:54: UserWarning: C:\\Users\\James Clawd\\.openclaw\\workspace\\projects\\TaxFlow-Pro\\TaxFlow-Pro-v3.9\\.local_secret permissions should be restricted to the current user on Windows.\n    warnings.warn(\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n9 passed, 4 warnings in 3.94s\n",
+    "stderr": "",
+    "duration_seconds": 18.9,
+    "task": "TASK-038.9",
+    "timestamp": "2026-06-23T14:46:20.533010+00:00"
+  },
+  {
+    "selector": "backend/tests/test_crypto.py backend/tests/test_local_first.py",
+    "status": "passed",
+    "returncode": 0,
+    "stdout": "......................................                                   [100%]\n============================== warnings summary ===============================\n..\\..\\..\\..\\..\\AppData\\Roaming\\Python\\Python314\\site-packages\\fastapi\\testclient.py:1\n  C:\\Users\\James Clawd\\AppData\\Roaming\\Python\\Python314\\site-packages\\fastapi\\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n..\\..\\..\\..\\..\\AppData\\Roaming\\Python\\Python314\\site-packages\\alembic\\config.py:612\n..\\..\\..\\..\\..\\AppData\\Roaming\\Python\\Python314\\site-packages\\alembic\\config.py:612\n  C:\\Users\\James Clawd\\AppData\\Roaming\\Python\\Python314\\site-packages\\alembic\\config.py:612: DeprecationWarning: No path_separator found in configuration; falling back to legacy splitting on spaces, commas, and colons for prepend_sys_path.  Consider adding path_separator=os to Alembic config.\n    util.warn_deprecated(\n\nbackend\\api.py:54\n  C:\\Users\\James Clawd\\.openclaw\\workspace\\projects\\TaxFlow-Pro\\TaxFlow-Pro-v3.9\\backend\\api.py:54: UserWarning: C:\\Users\\James Clawd\\.openclaw\\workspace\\projects\\TaxFlow-Pro\\TaxFlow-Pro-v3.9\\.local_secret permissions should be restricted to the current user on Windows.\n    warnings.warn(\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n38 passed, 4 warnings in 8.64s\n",
+    "stderr": "",
+    "duration_seconds": 20.04,
+    "task": "TASK-038.13",
+    "timestamp": "2026-06-23T17:21:57.043761+00:00"
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "accuracy": 0.3333333333333333,
+  "f1_macro": 0.25,
+  "support": 13,
+  "classes": [
+    "Auto & Transport",
+    "Food & Dining",
+    "Income",
+    "Shopping"
+  ],
+  "model_path": "C:\\Users\\James Clawd\\.openclaw\\workspace\\projects\\TaxFlow-Pro\\TaxFlow-Pro-v3.9\\ml\\local_model.pkl",
+  "model_sha256": "18854193c24d25bede38ba0b546e33efe3e49bad1fdf0222568660dd6d7efc49",
+  "vectorizer_sha256": "14b63d2c36c8513a2278cadb868825aa6d94ba5f1b0fcb602261c0920b1c73f4",
+  "trained_at": "2026-06-23T23:46:12.241810Z",
+  "version": 1
+}

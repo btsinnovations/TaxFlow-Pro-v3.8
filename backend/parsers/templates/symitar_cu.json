@@ -1,0 +1,16 @@
+{
+  "name": "Symitar Credit Union",
+  "institutions": ["Navy Federal","Golden 1","SchoolsFirst","RBFCU","SSFCU","MACU","Suncoast","Star One","Alaska USA","SDCCU","Patelco","Lake Michigan","Desert Financial","OnPoint","Redstone","Ent","VyStar","Travis","UNFCU","Tropical","Consumers","Summit","Veridian","First Community","Landmark","Affinity","Hudson Valley","Kemba","Commonwealth","Inova","A+ FCU","Chartway","Wings Financial","Idaho Central","Vibrant","Orange County","America First","BECU","Alliant","PenFed","SECU","Service CU","GTE Financial"],
+  "date_format": "MM/DD/YYYY",
+  "amount_columns": ["withdrawals","deposits"],
+  "summary_box": "top_right",
+  "opening_balance_label": "Beginning Balance",
+  "closing_balance_label": "Ending Balance",
+  "terminology": {"checking":"Share Draft","savings":"Share","interest":"Dividend","overdraft":"Courtesy Pay"},
+  "regex_patterns": {
+    "header": "Navy Federal Credit Union|Golden 1 Credit Union|SchoolsFirst FCU|Randolph-Brooks Federal Credit Union|Security Service Federal Credit Union|Mountain America Credit Union|Suncoast Credit Union|Star One Credit Union|Alaska USA Federal Credit Union|San Diego County Credit Union|Patelco Credit Union|Lake Michigan Credit Union|Desert Financial Credit Union|OnPoint Community Credit Union|Redstone Federal Credit Union|Ent Credit Union|VyStar Credit Union|Travis Credit Union|United Nations Federal Credit Union|Tropical Financial Credit Union|Consumers Credit Union|Summit Credit Union|Veridian Credit Union|First Community Credit Union|Landmark Credit Union|Affinity Federal Credit Union|Hudson Valley Credit Union|Kemba Credit Union|Commonwealth Credit Union|Inova Federal Credit Union|A\\+ Federal Credit Union|Chartway Federal Credit Union|Wings Financial Credit Union|Idaho Central Credit Union|Vibrant Credit Union|Orange County's Credit Union|America First Credit Union|Boeing Employees Credit Union|Alliant Credit Union|Pentagon Federal Credit Union|State Employees' Credit Union|Service Credit Union|GTE Financial Credit Union|Federal Credit Union|Credit Union|FCU|Share Draft|Share Account",
+    "transaction": "(\\d{2}/\\d{2}/\\d{2,4})\\s+(.+?)\\s+([\\(\\)\\$\\-]?[\\d,]+\\.\\d{2})(?:\\s+([\\(\\)\\$\\-]?[\\d,]+\\.\\d{2}))?(?:\\s+([\\(\\)\\$\\-]?[\\d,]+\\.\\d{2}))?",
+    "ach_codes": "DFAS|TREAS 310|BAH|BAS|AK PERM FUND|VA BENEFITS"
+  },
+  "notes": "Symitar (Episys) core platform. Covers 70% of US credit unions."
+}

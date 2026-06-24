@@ -1,0 +1,10 @@
+alias_matching:
+  default_mode: strict
+  overrides:
+    PAYPAL: substring
+
+merchant_aliases:
+  'WAL-MART': 'WALMART'
+  'AMZN': 'AMAZON'
+  'PAYPAL *': 'PAYPAL'
+  'PAYPAL': 'PAYPAL'
