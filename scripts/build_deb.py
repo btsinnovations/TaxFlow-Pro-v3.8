@@ -37,10 +37,17 @@ def _run(cmd: list[str], cwd: Path | None = None) -> None:
 
 
 def build_frontend() -> None:
+    """Always rebuild the frontend from source so packaged bundles ship current code."""
     frontend = PROJECT_ROOT / "frontend"
     node_modules = frontend / "node_modules"
-    if not node_modules.exists():
-        _run(["npm", "install"], cwd=frontend)
+    if node_modules.exists():
+        print("Cleaning frontend node_modules for reproducible build...")
+        shutil.rmtree(node_modules)
+    _run(["npm", "install"], cwd=frontend)
+    dist_dir = frontend / "dist"
+    if dist_dir.exists():
+        print("Cleaning frontend/dist for fresh build...")
+        shutil.rmtree(dist_dir)
     _run(["npm", "run", "build"], cwd=frontend)
 
 
