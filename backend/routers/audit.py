@@ -24,6 +24,35 @@ def _wrap_tenant(request: Request, db: Session, current_user: models.User):
     set_tenant_id(db, resolve_user_tenant_id(current_user))
 
 
+@router.get("/")
+def get_audit_root(
+    request: Request,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Minimal audit log listing for the v3.10 packaged UI."""
+    _wrap_tenant(request, db, current_user)
+    entries = db.query(models.AuditEntry).filter(
+        models.AuditEntry.actor_id == current_user.id
+    ).order_by(models.AuditEntry.id.desc()).offset(skip).limit(limit).all()
+    return _redact_audit_entries([
+        {
+            "id": e.id,
+            "timestamp": e.created_at.isoformat() if e.created_at else None,
+            "severity": e.details_dict().get("severity", "INFO"),
+            "event_type": e.action,
+            "client_id": e.resource_id,
+            "description": e.description,
+            "user": current_user.username,
+            "session_id": e.session_id,
+            "details": e.details_dict(),
+        }
+        for e in entries
+    ])
+
+
 @router.get("/logs", response_model=List[schemas.AuditEntryOut])
 def get_logs(
     request: Request,

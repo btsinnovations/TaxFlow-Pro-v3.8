@@ -18,6 +18,26 @@ def _wrap_tenant(request: Request, db: Session, current_user: models.User):
         return
     set_tenant_id(db, resolve_user_tenant_id(current_user))
 
+@router.get("/stats")
+def get_dashboard_stats(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Minimal dashboard stats for the v3.10 packaged UI."""
+    _wrap_tenant(request, db, current_user)
+    total_clients = db.query(models.Client).filter(models.Client.user_id == current_user.id).count()
+    total_accounts = db.query(models.Account).filter(models.Account.user_id == current_user.id).count()
+    return {
+        "total_documents": 0,
+        "total_clients": total_clients,
+        "total_transactions": 0,
+        "total_volume": 0.0,
+        "pipeline_status": "Ready",
+        "ml_status": "Ready",
+    }
+
+
 @router.get("/")
 def get_dashboard(request: Request,
                   db: Session = Depends(get_db),
