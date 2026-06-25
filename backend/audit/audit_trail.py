@@ -46,6 +46,7 @@ class AuditResource(str, Enum):
     FLAG = "flag"
     GENERAL_LEDGER_ENTRY = "general_ledger_entry"
     EXPORT = "export"
+    RECURRING_RULE = "recurring_rule"
 
 
 _GENESIS_HASH = "0" * 64

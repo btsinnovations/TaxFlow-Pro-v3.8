@@ -1,0 +1,258 @@
+"""Tests for the v3.11.02 Profile Roles & Memberships module."""
+from __future__ import annotations
+
+import base64
+import secrets
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+
+from backend import models
+from backend.local.roles import Role, has_role, set_role, remove_role, Membership, list_user_profiles
+from backend.routers.auth import get_password_hash
+
+
+_TEST_PASSWORD = "T4xFl0…2026"
+
+
+def _create_user(db: Session, username: str) -> models.User:
+    user = models.User(
+        username=username,
+        email=f"{username}@example.com",
+        hashed_password=get_password_hash(_TEST_PASSWORD),
+        is_active=True,
+        encryption_salt=base64.b64encode(secrets.token_bytes(16)).decode("ascii"),
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def _create_client(db: Session, owner: models.User, name: str) -> models.Client:
+    client = models.Client(name=name, email=f"{name}@example.com", user_id=owner.id)
+    db.add(client)
+    db.commit()
+    db.refresh(client)
+    return client
+
+
+def _login_client(client: TestClient, username: str) -> TestClient:
+    """Return a new TestClient authenticated as ``username``."""
+    from backend.tests.conftest import _TEST_PASSWORD
+
+    resp = client.post("/api/auth/login", data={"username": username, "password": _TEST_PASSWORD})
+    assert resp.status_code == 200, resp.text
+    token = resp.json()["access_token"]
+    authed = TestClient(client.app)
+    authed.headers.update({"Authorization": f"Bearer {token}"})
+    return authed
+
+
+# ---------------------------------------------------------------------------
+# Unit tests for role helpers
+# ---------------------------------------------------------------------------
+
+
+def test_role_ordering():
+    assert Role.viewer < Role.bookkeeper < Role.admin < Role.owner
+    assert Role.owner >= Role.admin
+
+
+def test_has_role_implicit_owner(db: Session):
+    owner = _create_user(db, "owner1")
+    profile = _create_client(db, owner, "client1")
+    assert has_role(db, owner.id, profile.id, Role.viewer)
+    assert has_role(db, owner.id, profile.id, "owner")
+
+
+def test_has_role_explicit_membership(db: Session):
+    owner = _create_user(db, "owner2")
+    viewer = _create_user(db, "viewer2")
+    profile = _create_client(db, owner, "client2")
+
+    set_role(db, viewer.id, profile.id, Role.viewer, actor_user_id=owner.id)
+    assert has_role(db, viewer.id, profile.id, Role.viewer)
+    assert not has_role(db, viewer.id, profile.id, Role.admin)
+
+
+def test_set_role_requires_owner_actor(db: Session):
+    owner = _create_user(db, "owner3")
+    viewer = _create_user(db, "viewer3")
+    profile = _create_client(db, owner, "client3")
+
+    with pytest.raises(ValueError, match="Only profile owners can manage memberships"):
+        set_role(db, owner.id, profile.id, Role.viewer, actor_user_id=viewer.id)
+
+
+def test_cannot_demote_last_owner(db: Session):
+    owner = _create_user(db, "owner4")
+    profile = _create_client(db, owner, "client4")
+    # Make owner explicit owner via membership.
+    set_role(db, owner.id, profile.id, Role.owner, actor_user_id=owner.id)
+
+    with pytest.raises(ValueError, match="Cannot demote the last owner"):
+        set_role(db, owner.id, profile.id, Role.admin, actor_user_id=owner.id)
+
+
+def test_remove_role(db: Session):
+    owner = _create_user(db, "owner5")
+    viewer = _create_user(db, "viewer5")
+    profile = _create_client(db, owner, "client5")
+
+    set_role(db, viewer.id, profile.id, Role.viewer, actor_user_id=owner.id)
+    assert db.query(Membership).filter_by(user_id=viewer.id, profile_id=profile.id).first()
+
+    remove_role(db, viewer.id, profile.id, actor_user_id=owner.id)
+    assert db.query(Membership).filter_by(user_id=viewer.id, profile_id=profile.id).first() is None
+
+
+def test_list_user_profiles(db: Session):
+    owner = _create_user(db, "owner6")
+    member = _create_user(db, "member6")
+    other = _create_user(db, "other6")
+
+    owned = _create_client(db, owner, "owned")
+    shared = _create_client(db, other, "shared")
+    set_role(db, owner.id, shared.id, Role.admin, actor_user_id=other.id)
+    set_role(db, member.id, shared.id, Role.bookkeeper, actor_user_id=other.id)
+
+    owner_profiles = list_user_profiles(db, owner.id)
+    assert {p.id for p in owner_profiles} == {owned.id, shared.id}
+    member_profiles = list_user_profiles(db, member.id)
+    assert {p.id for p in member_profiles} == {shared.id}
+
+
+# ---------------------------------------------------------------------------
+# API integration tests
+# ---------------------------------------------------------------------------
+
+
+def test_list_profiles_for_current_user(auth_client: TestClient, db: Session):
+    # auth_client fixture creates testuser.  Create a second user + client so we
+    # can verify visibility filtering.
+    from backend.auth_rate_limit import reset_attempts
+
+    other = _create_user(db, "other")
+    reset_attempts(other.username)
+
+    profile = _create_client(db, other, "Hidden Profile")
+    set_role(db, other.id, profile.id, Role.owner, actor_user_id=other.id)
+
+    # Current user should see only profiles they own or are members of.
+    resp = auth_client.get("/api/profiles")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert all(p["user_id"] != other.id for p in data)
+
+
+def test_add_and_list_members(auth_client: TestClient, db: Session):
+    from backend.auth_rate_limit import reset_attempts
+
+    me = db.query(models.User).filter(models.User.username == "testuser").first()
+    profile = _create_client(db, me, "Shared")
+
+    member = _create_user(db, "member_api")
+    reset_attempts(member.username)
+
+    resp = auth_client.post(f"/api/profiles/{profile.id}/members", json={
+        "user_id": member.id,
+        "role": "bookkeeper",
+    })
+    assert resp.status_code == 200
+    assert resp.json()["role"] == "bookkeeper"
+
+    resp = auth_client.get(f"/api/profiles/{profile.id}/members")
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+
+def test_update_member_role(auth_client: TestClient, db: Session):
+    me = db.query(models.User).filter(models.User.username == "testuser").first()
+    profile = _create_client(db, me, "Update Me")
+    member = _create_user(db, "member_update")
+
+    auth_client.post(f"/api/profiles/{profile.id}/members", json={
+        "user_id": member.id,
+        "role": "viewer",
+    })
+
+    resp = auth_client.patch(f"/api/profiles/{profile.id}/members/{member.id}", json={
+        "role": "admin",
+    })
+    assert resp.status_code == 200
+    assert resp.json()["role"] == "admin"
+
+
+def test_remove_member(auth_client: TestClient, db: Session):
+    me = db.query(models.User).filter(models.User.username == "testuser").first()
+    profile = _create_client(db, me, "Remove Me")
+    member = _create_user(db, "member_remove")
+
+    auth_client.post(f"/api/profiles/{profile.id}/members", json={
+        "user_id": member.id,
+        "role": "viewer",
+    })
+
+    resp = auth_client.delete(f"/api/profiles/{profile.id}/members/{member.id}")
+    assert resp.status_code == 200
+
+    resp = auth_client.get(f"/api/profiles/{profile.id}/members")
+    assert resp.status_code == 200
+    assert not any(m["user_id"] == member.id for m in resp.json())
+
+
+def test_admin_cannot_promote_to_owner_without_ownership(auth_client: TestClient, db: Session):
+    from backend.auth_rate_limit import reset_attempts
+
+    me = db.query(models.User).filter(models.User.username == "testuser").first()
+    profile = _create_client(db, me, "Promote Test")
+
+    # Create an admin member who is not owner.
+    admin_user = _create_user(db, "admin_promote")
+    reset_attempts(admin_user.username)
+    set_role(db, admin_user.id, profile.id, Role.admin, actor_user_id=me.id)
+
+    admin_client = _login_client(auth_client, "admin_promote")
+
+    # An admin (non-owner) invites a new user.
+    new_user = _create_user(db, "promote_target")
+    resp = admin_client.post(f"/api/profiles/{profile.id}/members", json={
+        "user_id": new_user.id,
+        "role": "owner",
+    })
+    assert resp.status_code == 403
+
+
+def test_non_admin_cannot_add_members(auth_client: TestClient, db: Session):
+    from backend.auth_rate_limit import reset_attempts
+
+    me = db.query(models.User).filter(models.User.username == "testuser").first()
+    profile = _create_client(db, me, "Viewer Tries Invite")
+    viewer = _create_user(db, "viewer_invite")
+    reset_attempts(viewer.username)
+    set_role(db, viewer.id, profile.id, Role.viewer, actor_user_id=me.id)
+
+    viewer_client = _login_client(auth_client, "viewer_invite")
+    target = _create_user(db, "target_invite")
+    resp = viewer_client.post(f"/api/profiles/{profile.id}/members", json={
+        "user_id": target.id,
+        "role": "viewer",
+    })
+    assert resp.status_code == 403
+
+
+def test_role_hierarchy_allows_viewer_to_view_profile(auth_client: TestClient, db: Session):
+    from backend.auth_rate_limit import reset_attempts
+
+    me = db.query(models.User).filter(models.User.username == "testuser").first()
+    profile = _create_client(db, me, "Viewable")
+    viewer = _create_user(db, "viewer_view")
+    reset_attempts(viewer.username)
+    set_role(db, viewer.id, profile.id, Role.viewer, actor_user_id=me.id)
+
+    viewer_client = _login_client(auth_client, "viewer_view")
+    resp = viewer_client.get(f"/api/profiles/{profile.id}")
+    assert resp.status_code == 200
+    assert resp.json()["id"] == profile.id

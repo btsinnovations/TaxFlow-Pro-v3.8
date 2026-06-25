@@ -106,6 +106,22 @@ class User(Base):
     refresh_tokens = relationship("RefreshToken", back_populates="user")
     sessions = relationship("Session", back_populates="user")
     trained_models = relationship("TrainedModel", back_populates="owner")
+    memberships = relationship("ProfileMembership", back_populates="user", cascade="all, delete-orphan")
+
+
+class ProfileMembership(Base):
+    __tablename__ = "profile_memberships"
+    __table_args__ = (
+        Index("ix_profile_memberships_profile_id", "profile_id"),
+        Index("ix_profile_memberships_user_id", "user_id"),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    profile_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    role = Column(String, nullable=False, default="viewer")
+    created_at = Column(DateTime, server_default=func.now())
+    profile = relationship("Client", back_populates="memberships")
+    user = relationship("User", back_populates="memberships")
 
 
 class Client(Base):
@@ -118,6 +134,8 @@ class Client(Base):
     created_at = Column(DateTime, server_default=func.now())
     owner = relationship("User", back_populates="clients")
     accounts = relationship("Account", foreign_keys="Account.client_id", back_populates="client")
+    memberships = relationship("ProfileMembership", back_populates="profile", cascade="all, delete-orphan")
+
 
 class Account(Base):
     __tablename__ = "accounts"
@@ -136,6 +154,7 @@ class Account(Base):
     owner = relationship("User", back_populates="accounts")
     client = relationship("Client", foreign_keys=[client_id], back_populates="accounts")
     statements = relationship("Statement", back_populates="account")
+
 
 class Statement(Base):
     __tablename__ = "statements"
@@ -156,6 +175,7 @@ class Statement(Base):
     created_at = Column(DateTime, server_default=func.now())
     account = relationship("Account", back_populates="statements")
     transactions = relationship("Transaction", back_populates="statement")
+
 
 class DepreciationAsset(Base):
     __tablename__ = "depreciation_assets"
@@ -223,6 +243,7 @@ class GLAccount(Base):
     code = Column(String, nullable=False)
     name = Column(String, nullable=False)
     account_type = Column(String, nullable=False, default="expense")
+    is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())
 
     owner = relationship("User")
@@ -336,6 +357,186 @@ class Transaction(Base):
             "txn_uid": self.txn_uid,
             "import_source": self.import_source,
         }
+
+
+class Invoice(Base):
+    __tablename__ = "invoices"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    contact_name = Column(String, nullable=False)
+    invoice_number = Column(String, nullable=False)
+    issue_date = Column(Date, nullable=False)
+    due_date = Column(Date, nullable=False)
+    total = Column(Numeric(12, 2), nullable=False, default=0)
+    amount_paid = Column(Numeric(12, 2), nullable=False, default=0)
+    status = Column(String, nullable=False, default="open")
+    is_bill = Column(Boolean, default=False)
+    created_at = Column(DateTime, server_default=func.now())
+    line_items = relationship("InvoiceLineItem", back_populates="invoice", cascade="all, delete-orphan")
+    payments = relationship("Payment", back_populates="invoice", cascade="all, delete-orphan")
+
+
+class InvoiceLineItem(Base):
+    __tablename__ = "invoice_line_items"
+    id = Column(Integer, primary_key=True, index=True)
+    invoice_id = Column(Integer, ForeignKey("invoices.id", ondelete="CASCADE"), nullable=False)
+    description = Column(String, nullable=False)
+    qty = Column(Numeric(12, 4), nullable=False, default=1)
+    rate = Column(Numeric(12, 4), nullable=False, default=0)
+    amount = Column(Numeric(12, 2), nullable=False, default=0)
+    invoice = relationship("Invoice", back_populates="line_items")
+
+
+class Payment(Base):
+    __tablename__ = "payments"
+    id = Column(Integer, primary_key=True, index=True)
+    invoice_id = Column(Integer, ForeignKey("invoices.id", ondelete="CASCADE"), nullable=False)
+    date = Column(Date, nullable=False)
+    amount = Column(Numeric(12, 2), nullable=False)
+    method = Column(String, nullable=False, default="manual")
+    created_at = Column(DateTime, server_default=func.now())
+    invoice = relationship("Invoice", back_populates="payments")
+
+
+class LoanSchedule(Base):
+    __tablename__ = "loan_schedules"
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    original_principal = Column(Numeric(14, 2), nullable=False)
+    rate = Column(Numeric(6, 4), nullable=False)
+    term_months = Column(Integer, nullable=False)
+    start_date = Column(Date, nullable=False)
+    payment_amount = Column(Numeric(12, 2), nullable=False)
+    schedule_json = Column(String, default="[]")
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class InvestmentLot(Base):
+    __tablename__ = "investment_lots"
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    symbol = Column(String, nullable=False)
+    shares = Column(Numeric(14, 6), nullable=False)
+    cost_basis = Column(Numeric(14, 4), nullable=False)
+    acquisition_date = Column(Date, nullable=False)
+    sale_date = Column(Date, nullable=True)
+    sale_proceeds = Column(Numeric(14, 4), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class InventoryItem(Base):
+    __tablename__ = "inventory_items"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    sku = Column(String, nullable=False)
+    name = Column(String, nullable=False)
+    cogs_account_id = Column(Integer, ForeignKey("gl_accounts.id", ondelete="SET NULL"), nullable=True)
+    income_account_id = Column(Integer, ForeignKey("gl_accounts.id", ondelete="SET NULL"), nullable=True)
+    asset_account_id = Column(Integer, ForeignKey("gl_accounts.id", ondelete="SET NULL"), nullable=True)
+    valuation_method = Column(String, nullable=False, default="average")
+    qty_on_hand = Column(Numeric(12, 4), nullable=False, default=0)
+    unit_cost = Column(Numeric(12, 4), nullable=False, default=0)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class InventoryTransaction(Base):
+    __tablename__ = "inventory_transactions"
+    id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, ForeignKey("inventory_items.id", ondelete="CASCADE"), nullable=False)
+    qty = Column(Numeric(12, 4), nullable=False)
+    unit_cost = Column(Numeric(12, 4), nullable=False)
+    total_cost = Column(Numeric(12, 2), nullable=False)
+    type = Column(String, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class FXRate(Base):
+    __tablename__ = "fx_rates"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    from_currency = Column(String, nullable=False)
+    to_currency = Column(String, nullable=False)
+    rate = Column(Numeric(18, 8), nullable=False)
+    effective_date = Column(Date, nullable=False)
+    source = Column(String, nullable=False, default="manual")
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class ReconciliationImport(Base):
+    __tablename__ = "reconciliation_imports"
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    import_date = Column(Date, nullable=False)
+    statement_date = Column(Date, nullable=True)
+    statement_balance = Column(Numeric(12, 2), nullable=False)
+    filename = Column(String, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class ReconciliationMatch(Base):
+    __tablename__ = "reconciliation_matches"
+    id = Column(Integer, primary_key=True, index=True)
+    import_id = Column(Integer, ForeignKey("reconciliation_imports.id", ondelete="CASCADE"), nullable=False)
+    ledger_tx_id = Column(Integer, ForeignKey("transactions.id", ondelete="CASCADE"), nullable=True)
+    statement_tx_id = Column(String, nullable=True)
+    match_type = Column(String, nullable=False, default="auto")
+    status = Column(String, nullable=False, default="matched")
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class BudgetLine(Base):
+    __tablename__ = "budget_lines"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    account_id = Column(Integer, ForeignKey("gl_accounts.id", ondelete="CASCADE"), nullable=False)
+    period = Column(String, nullable=False)
+    budget_amount = Column(Numeric(12, 2), nullable=False, default=0)
+    actual_amount = Column(Numeric(12, 2), nullable=False, default=0)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class TaxLineMapping(Base):
+    __tablename__ = "tax_line_mappings"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    coa_account_id = Column(Integer, ForeignKey("gl_accounts.id", ondelete="CASCADE"), nullable=False)
+    form = Column(String, nullable=False)
+    line = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class RecurringRule(Base):
+    __tablename__ = "recurring_rules"
+    __table_args__ = (
+        Index("ix_recurring_rules_tenant_id", "tenant_id"),
+        Index("ix_recurring_rules_account_id", "account_id"),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    amount = Column(Numeric(12, 2), nullable=False, default=0)
+    description = Column(String, nullable=False, default="")
+    frequency = Column(String, nullable=False, default="monthly")
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=True)
+    count = Column(Integer, nullable=True)
+    splits_json = Column(String, default="[]")
+    next_date = Column(Date, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
 
 
 class TrainedModel(Base):

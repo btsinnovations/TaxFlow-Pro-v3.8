@@ -238,6 +238,32 @@ class FlagResolve(BaseModel):
 class WorkpaperRefUpdate(BaseModel):
     workpaper_ref: Optional[str] = None
 
+
+# Alias the imported date class so Pydantic field names do not shadow the
+# annotation when ``from __future__ import annotations`` is active.
+Date = date
+
+
+class TransactionDirectUpdate(BaseModel):
+    description: Optional[str] = None
+    amount: Optional[float] = None
+    date: Optional[Date] = None
+    category: Optional[str] = None
+    gl_account_id: Optional[int] = None
+
+
+class TransactionDirectCreate(BaseModel):
+    date: Date
+    description: str
+    amount: float
+    account_id: int
+    tx_type: str = "debit"
+    category: Optional[str] = "uncategorized"
+    gl_account_id: Optional[int] = None
+    payee: Optional[str] = None
+    memo: Optional[str] = None
+
+
 class GLAccountBase(BaseModel):
     code: str
     name: str
@@ -276,11 +302,11 @@ class AccountWithStatements(Account):
 
 # v3.10 COA schemas
 class COAAccountType(str, Enum):
-    asset = "Asset"
-    liability = "Liability"
-    equity = "Equity"
-    revenue = "Revenue"
-    expense = "Expense"
+    asset = "asset"
+    liability = "liability"
+    equity = "equity"
+    income = "income"
+    expense = "expense"
 
 
 class COAAccountBase(BaseModel):
@@ -314,10 +340,10 @@ class COAAccountTree(COAAccount):
     children: List["COAAccountTree"] = []
 
 
-# v3.10 profile roles
+# v3.11.02 profile roles (extends v3.10; owner added per v3.11 spec)
 class ProfileRole(str, Enum):
+    owner = "owner"
     admin = "admin"
-    accountant = "accountant"
     bookkeeper = "bookkeeper"
     viewer = "viewer"
 
@@ -399,6 +425,16 @@ class RecurringRuleBase(BaseModel):
     custom_days: Optional[int] = None
     splits: Optional[List[TransactionSplitBase]] = None
 
+    @field_validator("frequency", mode="before")
+    @classmethod
+    def _allow_scaffold_frequencies(cls, value):
+        if isinstance(value, str):
+            allowed = {m.value for m in RecurrenceFrequency}
+            if value.lower().strip() not in allowed:
+                raise ValueError(f"frequency must be one of: {', '.join(sorted(allowed))}")
+            return value.lower().strip()
+        return value
+
 
 class RecurringRuleCreate(RecurringRuleBase): pass
 
@@ -414,6 +450,16 @@ class RecurringRuleUpdate(BaseModel):
     custom_days: Optional[int] = None
     splits: Optional[List[TransactionSplitBase]] = None
     is_active: Optional[bool] = None
+
+    @field_validator("frequency", mode="before")
+    @classmethod
+    def _allow_scaffold_frequencies(cls, value):
+        if isinstance(value, str):
+            allowed = {m.value for m in RecurrenceFrequency}
+            if value.lower().strip() not in allowed:
+                raise ValueError(f"frequency must be one of: {', '.join(sorted(allowed))}")
+            return value.lower().strip()
+        return value
 
 
 class RecurringRule(RecurringRuleBase):

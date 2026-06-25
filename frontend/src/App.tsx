@@ -27,6 +27,8 @@ import {
   BudgetForecast,
   InvoicingAPAR,
 } from "@/components/v3.11";
+import Register from "@/components/register/Register";
+import { RecurringRules } from "@/components/recurring";
 
 function LandingPage() {
   return (
@@ -65,6 +67,8 @@ export default function App() {
           <Routes>
             <Route path="/" element={<AuthenticatedRoutes />} />
             <Route path="/check-register" element={<CheckRegister />} />
+            <Route path="/recurring" element={<RecurringRules />} />
+            <Route path="/register" element={<Register />} />
             <Route path="/liabilities" element={<LiabilitiesInvestments />} />
             <Route path="/inventory-projects" element={<InventoryProjects />} />
             <Route path="/multi-currency" element={<MultiCurrency />} />

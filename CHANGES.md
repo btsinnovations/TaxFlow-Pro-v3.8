@@ -1,5 +1,63 @@
 ---
 
+# TaxFlow Pro v3.11.0 — Chart of Accounts + Foundation Start
+
+## Release summary (in progress)
+
+- Scaffolded the v3.11 bookkeeping foundation beginning with module 3.11.01 (Chart of Accounts).
+- Reused the existing `GLAccount` table for backward compatibility with v3.10 data.
+- Added the first v3.11 UI shell route and backend/frontend wiring.
+
+---
+
+## Section 56 — v3.11 COA Scaffold (3.11.01)
+
+**Files changed:**
+- `backend/accounting/coa.py` (new)
+- `backend/routers/coa.py`
+- `backend/schemas.py`
+- `backend/tests/test_coa.py` (new)
+- `frontend/src/components/accounts/COATree.tsx` (new)
+- `frontend/src/components/v3.11/index.ts`
+- `frontend/src/App.tsx`
+- `backend/models.py`
+- `backend/local/roles.py`
+
+**Files added:**
+- `backend/accounting/coa.py`
+- `backend/tests/test_coa.py`
+- `frontend/src/components/accounts/COATree.tsx`
+
+**Changes:**
+- Added `backend/accounting/coa.py` domain module:
+  - `AccountType` enum with the five canonical classes: `asset`, `liability`, `equity`, `income`, `expense`.
+  - CRUD helpers `get_accounts`, `create_account`, `update_account`, `delete_account`.
+  - Duplicate-code guard within a tenant.
+  - Delete guard against accounts referenced by `transactions.gl_account_id`, `general_ledger_entries` debit/credit columns, or `categorization_rules.gl_account_id`.
+  - Reuses the existing `GLAccount` table so v3.10 data remains intact.
+- Updated `backend/routers/coa.py` with implemented FastAPI routes:
+  - `GET /api/coa`
+  - `POST /api/coa`
+  - `PUT /api/coa/{id}`
+  - `DELETE /api/coa/{id}`
+  - Uses `get_current_user`, respects single/multi-tenant `X-Tenant-ID` handling, and returns the v3.11 COA wire shape.
+- Updated `backend/schemas.py` `COAAccountType` enum values to lower-case strings (`asset`, `liability`, `equity`, `income`, `expense`) so they serialize directly to the database column format.
+- Added `frontend/src/components/accounts/COATree.tsx`:
+  - Wrapped in `ModuleShell` with `moduleId="3.11.01"`.
+  - Table grid showing account `number`, `name`, `type` (colored badge), and `balance` placeholder.
+  - Loads from `GET /api/coa` with skeleton, error, and empty states.
+- Added `/chart-of-accounts` route to `frontend/src/App.tsx`.
+- Added `COATree` re-export from `frontend/src/components/v3.11/index.ts`.
+- Fixed `backend/models.py` `ProfileMembership` relationship declaration and `backend/local/roles.py` alias so the v3.11.02 roles module resolves against the canonical model without double-defining the table.
+
+**Verification:**
+```bash
+python -m pytest backend/tests/test_coa.py -q
+```
+Expected: **13 passed, 0 failed**.
+
+---
+
 # TaxFlow Pro v3.10.0 — Desktop Packaging Release
 
 ## Release summary

@@ -1,4 +1,8 @@
 export { default as CheckRegister } from "./CheckRegister";
+export { default as COATree } from "../accounts/COATree";
+export { default as RoleManager } from "../accounts/RoleManager";
+export { default as Register } from "../register/Register";
+export { default as RecurringRules } from "../recurring/RecurringRules";
 export { default as LiabilitiesInvestments } from "./LiabilitiesInvestments";
 export { default as InventoryProjects } from "./InventoryProjects";
 export { default as MultiCurrency } from "./MultiCurrency";
