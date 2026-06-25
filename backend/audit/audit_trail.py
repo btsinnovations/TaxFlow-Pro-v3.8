@@ -315,5 +315,8 @@ def backfill_chain_hashes(db: Session) -> int:
             updated += 1
         previous_hash = expected
     if updated:
-        db.commit()
+        # Backfill is the legitimate administrative UPDATE that populates
+        # legacy NULL chain_hash values; use the append-only escape hatch.
+        with _set_audit_entries_mutable():
+            db.commit()
     return updated

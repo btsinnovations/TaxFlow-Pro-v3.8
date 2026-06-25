@@ -11,6 +11,7 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+import os
 
 from backend.utils.temp_file_cleanup import TemporaryOCRDirectory
 
@@ -30,6 +31,13 @@ try:
     import pytesseract
 except Exception:  # pragma: no cover
     pytesseract = None
+else:
+    # Honor vendored Tesseract binary set by launcher.
+    _TESSERACT_CMD = os.environ.get("TESSERACT_CMD")
+    if _TESSERACT_CMD:
+        import pytesseract.pytesseract as _pytess
+        _pytess.tesseract_cmd = _TESSERACT_CMD
+    _POPPLER_PATH = os.environ.get("POPPLER_PATH")
 
 
 @dataclass
@@ -101,6 +109,7 @@ class OCRPDFParser:
                 dpi=self.dpi,
                 fmt="png",
                 output_folder=str(output_folder),
+                **({"poppler_path": _POPPLER_PATH} if _POPPLER_PATH else {}),
             )
             for idx, image in enumerate(images[: self.max_pages], start=1):
                 processed = self._preprocess(image)

@@ -39,8 +39,9 @@ def _reset_rate_limit():
 def _reset_brute_force_tracker():
     """Ensure brute-force counters are isolated between tests."""
     from backend.auth_rate_limit import _tracker
-    from backend.auth_rate_limit import _tracker;     yield
-    from backend.auth_rate_limit import _tracker; 
+    _tracker.clear()
+    yield
+    _tracker.clear()
 
 @pytest.fixture(autouse=True)
 def _force_file_secret_for_legacy_tests(monkeypatch):

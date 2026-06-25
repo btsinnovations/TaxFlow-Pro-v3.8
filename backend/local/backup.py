@@ -371,7 +371,8 @@ def auto_backup_after_import(
     """
     db_path = Path(db_path)
     if backup_dir is None:
-        backup_dir = Path("./backups/auto")
+        from backend.local.settings import LOCAL_ROOT
+        backup_dir = LOCAL_ROOT / "backups" / "auto"
     backup_dir = Path(backup_dir)
     backup_dir.mkdir(parents=True, exist_ok=True)
     extra = {"trigger": "post_import"}

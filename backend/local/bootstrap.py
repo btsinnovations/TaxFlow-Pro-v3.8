@@ -52,8 +52,21 @@ def _module_available(name: str) -> bool:
 
 
 def _binary_available(name: str) -> tuple[bool, str]:
+    """Check whether an external binary is available, honoring vendored paths."""
     path = shutil.which(name)
     if not path:
+        # Fall back to vendored executable if POPPLER_PATH/TESSERACT_CMD are set.
+        ext = ".exe" if os.name == "nt" else ""
+        if name in ("tesseract",):
+            env_cmd = os.environ.get("TESSERACT_CMD")
+            if env_cmd and Path(env_cmd).exists():
+                return True, env_cmd
+        if name in ("pdftotext", "pdfimages", "pdfinfo", "pdftoppm"):
+            poppler_path = os.environ.get("POPPLER_PATH")
+            if poppler_path:
+                candidate = Path(poppler_path) / (name + ext)
+                if candidate.exists():
+                    return True, str(candidate)
         return False, f"{name} not found in PATH"
     try:
         result = subprocess.run(

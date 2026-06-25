@@ -1,3 +1,43 @@
+# Packaging artifacts
+dist/
+build/
+*.spec
+frontend/dist/
+vendored/
+*.AppImage
+*.dmg
+*.exe
+
+# Jupyter
+.ipynb_checkpoints
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Database / runtime
 *.db
 *.db-shm
 *.db-wal
@@ -14,37 +54,20 @@ logs/*
 memory/
 .env
 .env.local
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
-venv/
-.venv/
-*.egg-info/
-dist/
-build/
-*.egg
-.pytest_cache/
-.coverage
-htmlcov/
-.DS_Store
-Thumbs.db
-*.log
-*.pid
+
+# Node
 node_modules/
 frontend/node_modules/
 package-lock.json
-backend/alembic/versions/__pycache__/
-# Temp / patch scripts
-patch*.py
-.task*.py
-test_pg_conn.py
-append_keyfile_tests.py
-# Regression logs (specific files only; do not ignore requirements*.txt / version.txt)
-regression_output.txt
-regression_log.txt
+yarn.lock
+pnpm-lock.yaml
+
+# Logs / temp
+*.log
+*.pid
+npm_install.txt
+collect_check.txt
+regression*.txt
 full_regression*.txt
 first_failure.txt
 second_failure.txt
@@ -58,5 +81,19 @@ revert_api_log.txt
 test_api_log.txt
 full_regression.xml
 tanstack_install.txt
-npm_install.txt
-collect_check.txt
+patch*.py
+.task*.py
+test_pg_conn.py
+append_keyfile_tests.py
+.ipynb_checkpoints
+
+# Debug helpers (keep only necessary ones)
+conftest_debug*.py
+conftest_debug_out.txt
+scripts/_check_tables.py
+scripts/_debug_parse.py
+scripts/_find_tess_zip.py
+scripts/_make_sample_pdf.py
+scripts/_manual_smoke.py
+scripts/run_launcher_smoke.py
+scripts/packaging/

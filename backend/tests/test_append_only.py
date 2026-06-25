@@ -7,9 +7,6 @@ from sqlalchemy.orm import Session
 
 from backend import models
 from backend.audit import record, verify_chain, AuditAction, AuditResource
-from backend.tests.conftest import override_get_db
-from backend.database import Base
-from backend.tests.conftest import engine as test_engine
 
 
 def _make_user(db: Session, username: str) -> models.User:
@@ -18,15 +15,6 @@ def _make_user(db: Session, username: str) -> models.User:
     db.commit()
     db.refresh(user)
     return user
-
-
-@pytest.fixture(scope="function")
-def db():
-    Base.metadata.create_all(bind=test_engine)
-    db = next(override_get_db())
-    yield db
-    db.close()
-    Base.metadata.drop_all(bind=test_engine)
 
 
 def test_audit_entry_insert_still_works(db: Session):

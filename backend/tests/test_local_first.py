@@ -364,17 +364,21 @@ class TestOfflineSelfTest:
 # ── SQLite hardening (database.py) ────────────────────────────────────────
 
 class TestSQLiteHardening:
-    def test_wal_pragma_on_connect(self):
-        """Verify that the SQLAlchemy engine applies WAL pragmas."""
+    def test_wal_pragma_on_connect(self, tmp_path):
+        """Verify that the SQLAlchemy engine applies WAL pragmas to file-backed SQLite."""
         import sqlalchemy
-        from backend.database import engine, DATABASE_URL
+        from sqlalchemy import create_engine
+        from backend.database import _set_sqlite_pragmas
 
-        if not DATABASE_URL.startswith("sqlite"):
-            pytest.skip("Not using SQLite")
+        db_path = tmp_path / "wal_test.db"
+        db_url = f"sqlite:///{db_path}"
+        engine = create_engine(db_url, connect_args={"check_same_thread": False})
+        sqlalchemy.event.listen(engine, "connect", _set_sqlite_pragmas)
 
         with engine.connect() as conn:
             result = conn.execute(sqlalchemy.text("PRAGMA journal_mode")).scalar()
             assert result == "wal"
+        engine.dispose()
 
     def test_foreign_keys_enabled(self):
         from backend.database import engine, DATABASE_URL

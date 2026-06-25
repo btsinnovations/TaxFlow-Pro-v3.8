@@ -1,20 +1,15 @@
 """Audit trail tests for TaxFlow Pro v3.9."""
 import base64
 import secrets
+from datetime import datetime, timezone
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from backend.audit import record, verify_chain, backfill_chain_hashes, AuditAction, AuditResource
 from backend import models
-from backend.tests.conftest import override_get_db
-from backend.database import Base
-from sqlalchemy.orm import sessionmaker
-from backend.database import engine as _prod_engine
-
-# Use the same test engine as conftest to ensure tables are created/dropped.
-from backend.tests.conftest import engine as test_engine
 
 
 def _make_user(db: Session, username: str) -> models.User:
@@ -28,15 +23,6 @@ def _make_user(db: Session, username: str) -> models.User:
     db.commit()
     db.refresh(user)
     return user
-
-
-@pytest.fixture(scope="function")
-def db():
-    Base.metadata.create_all(bind=test_engine)
-    db = next(override_get_db())
-    yield db
-    db.close()
-    Base.metadata.drop_all(bind=test_engine)
 
 
 def test_audit_entry_records_create(db: Session):
@@ -78,20 +64,67 @@ def test_audit_chain_detects_tampering(db: Session):
 
 def test_audit_backfills_null_chain_hashes(db: Session):
     user = _make_user(db, "auditor5")
-    entry1 = record(db, user, AuditAction.CREATE, AuditResource.CLIENT, 1)
-    entry2 = record(db, user, AuditAction.UPDATE, AuditResource.CLIENT, 1)
 
-    # Simulate pre-migration rows with NULL chain_hash.
-    entry1.chain_hash = None
-    entry2.chain_hash = None
+    # Simulate pre-migration audit rows that have no chain_hash or signature.
+    # INSERT is allowed by the append-only trigger; UPDATE is not, so we use
+    # raw SQL to create the synthetic legacy state.
+    now = datetime.now(timezone.utc).isoformat()
+    db.execute(
+        text(
+            """
+            INSERT INTO audit_entries (
+                occurred_at, actor_id, action, resource_type, resource_id,
+                description, details, previous_hash, entry_hash, chain_hash, signature
+            ) VALUES (
+                :ts, :actor_id, 'create', 'client', 1,
+                NULL, '{}', :zero_hash, :entry_hash, NULL, NULL
+            )
+            """
+        ),
+        {
+            "ts": now,
+            "actor_id": user.id,
+            "zero_hash": "0" * 64,
+            "entry_hash": "a" * 64,
+        },
+    )
+    db.execute(
+        text(
+            """
+            INSERT INTO audit_entries (
+                occurred_at, actor_id, action, resource_type, resource_id,
+                description, details, previous_hash, entry_hash, chain_hash, signature
+            ) VALUES (
+                :ts, :actor_id, 'update', 'client', 1,
+                NULL, '{}', :zero_hash, :entry_hash, NULL, NULL
+            )
+            """
+        ),
+        {
+            "ts": now,
+            "actor_id": user.id,
+            "zero_hash": "0" * 64,
+            "entry_hash": "b" * 64,
+        },
+    )
     db.commit()
 
     updated = backfill_chain_hashes(db)
     assert updated == 2
 
-    valid, first_bad_id = verify_chain(db)
-    assert valid is True
-    assert first_bad_id is None
+    # Verify chain hashes were backfilled in id order.
+    entries = db.query(models.AuditEntry).order_by(models.AuditEntry.id.asc()).all()
+    assert len(entries) == 2
+    assert entries[0].chain_hash is not None and entries[0].chain_hash != "0" * 64
+    assert entries[1].chain_hash is not None and entries[1].chain_hash != entries[0].chain_hash
+
+    # Legacy unsigned rows cannot pass signature verification; confirm that
+    # the chain values themselves are deterministic by recomputing them.
+    from backend.audit.audit_trail import _chain_hash_for_entry, _GENESIS_HASH
+    expected_first = _chain_hash_for_entry(entries[0], _GENESIS_HASH)
+    expected_second = _chain_hash_for_entry(entries[1], expected_first)
+    assert entries[0].chain_hash == expected_first
+    assert entries[1].chain_hash == expected_second
 
 
 def test_audit_verify_endpoint(client: TestClient, db: Session):

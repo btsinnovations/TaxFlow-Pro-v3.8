@@ -25,8 +25,8 @@ target_metadata = Base.metadata
 
 
 def get_url():
-    """Prefer the DATABASE_URL env var, fall back to alembic.ini."""
-    return os.environ.get("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
+    """Respect an explicitly configured sqlalchemy.url first; otherwise fall back to env."""
+    return config.get_main_option("sqlalchemy.url") or os.environ.get("DATABASE_URL", "sqlite:///./taxflow.db")
 
 
 def run_migrations_offline() -> None:

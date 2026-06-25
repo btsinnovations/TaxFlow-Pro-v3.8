@@ -12,9 +12,22 @@ from backend.local.secrets_loader import get_secret
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 load_dotenv(os.path.join(_BASE_DIR, ".env"))
 
+
+def _default_database_url() -> str:
+    """Return a default database URL that places the DB in LOCAL_ROOT.
+
+    If TAXFLOW_LOCAL_ROOT is set, use ``<LOCAL_ROOT>/db/taxflow.db``.
+    Otherwise fall back to the legacy project-root relative path for dev/tests.
+    """
+    local_root = os.environ.get("TAXFLOW_LOCAL_ROOT", "").strip()
+    if local_root:
+        return f"sqlite:///{Path(local_root).resolve() / 'db' / 'taxflow.db'}"
+    return "sqlite:///./taxflow.db"
+
+
 DATABASE_URL = get_secret(
     "DATABASE_URL",
-    os.environ.get("DATABASE_URL", "sqlite:///./taxflow.db"),
+    os.environ.get("DATABASE_URL", _default_database_url()),
 )
 
 

@@ -1,5 +1,98 @@
 ---
 
+# TaxFlow Pro v3.10.0 — Desktop Packaging Release
+
+## Release summary
+
+- Packaged TaxFlow Pro as a single-user, offline-first desktop application.
+- Built PyInstaller one-dir bundle (`dist/TaxFlowPro/`) for Windows.
+- Added `scripts/taxflow_launcher.py` to resolve OS-specific local data directories, run Alembic migrations, wire vendored binaries, and start Uvicorn + browser.
+- Vendored Tesseract OCR and Poppler PDF tools so no system installs are required.
+- Provided Windows installer script (`scripts/installer_windows.iss`) for Inno Setup 6.
+- Provided Linux AppImage/tarball build script (`scripts/build_linux.py`).
+- Provided macOS `.app` + DMG build script (`scripts/build_macos.py`).
+- Updated static frontend serving in `backend/api.py` with SPA fallback for browser routes.
+- Bumped version to `3.10.0` across `version.txt`, `frontend/package.json`, and `pyproject.toml`.
+
+## Section 50 — Local Data Directory + Launcher
+
+**Files changed:**
+- `scripts/taxflow_launcher.py`
+- `backend/local/settings.py` (verified it respects `TAXFLOW_LOCAL_ROOT`)
+
+**Changes:**
+- Launcher resolves per-OS user data directory:
+  - Windows: `%LOCALAPPDATA%\TaxFlowPro`
+  - macOS: `~/Library/Application Support/TaxFlowPro`
+  - Linux: `~/.local/share/TaxFlowPro`
+- Ensures `db/`, `backups/`, `uploads/`, `ml/`, `logs/` subdirectories.
+- Sets `DATABASE_URL` to local SQLite, `ALEMBIC_CONFIG` to bundled `alembic.ini`, and runs `alembic upgrade head`.
+- Wires `TESSERACT_CMD`, `TESSDATA_PREFIX`, and `POPPLER_PATH` from `vendored/`.
+- Starts Uvicorn on `127.0.0.1:8000` and opens default browser.
+
+**Verification:**
+```powershell
+$env:TAXFLOW_LOCAL_ROOT='C:\tmp\taxflow-test'
+$env:TAXFLOW_NO_BROWSER='true'
+$env:TAXFLOW_PORT='8002'
+python scripts/taxflow_launcher.py
+```
+Expected: `http://127.0.0.1:8002/api/health` returns `200` with `version: 3.10.0`.
+
+## Section 51 — Vendored Binaries
+
+**Files changed:**
+- `scripts/vendor_binaries.py`
+- `vendored/tesseract/`
+- `vendored/poppler/`
+- `docs/VENDORED_BINS.md`
+
+**Changes:**
+- Vendor Poppler portable Windows zip into `vendored/poppler/`.
+- Vendor Tesseract Windows NSIS installer into `vendored/tesseract/` (falls back to manual copy if UAC blocks silent install).
+- Documented vendoring process, UAC caveat, and manual fallback.
+
+## Section 52 — Static Frontend Serving
+
+**Files changed:**
+- `backend/api.py`
+
+**Changes:**
+- Mount `StaticFiles` at `/assets` for built frontend assets.
+- Add `_SPAFallbackMiddleware` to return `frontend/dist/index.html` for non-API, non-asset browser routes.
+- Preserves `/api/*` and `/health` routes.
+
+## Section 53 — Windows PyInstaller Bundle + Installer
+
+**Files changed:**
+- `scripts/build_windows.py`
+- `scripts/installer_windows.iss`
+- `TaxFlowPro.spec` (PyInstaller generated spec)
+- `dist/TaxFlowPro/`
+
+**Changes:**
+- `build_windows.py` runs `npm run build`, validates vendored binaries, and invokes PyInstaller with `alembic/`, `alembic.ini`, `frontend/dist`, and `vendored/` as bundled data.
+- `installer_windows.iss` creates a per-user installer with Start Menu shortcut and optional desktop icon.
+- Installer title/headers customized to "TaxFlow Pro Installer".
+
+## Section 54 — Linux AppImage / Tarball
+
+**Files changed:**
+- `scripts/build_linux.py`
+- `scripts/taxflow_launcher.py` (already cross-platform)
+
+**Status:** Scaffolded. Build script produces portable tarball and AppImage recipe.
+
+## Section 55 — macOS `.app` + DMG
+
+**Files changed:**
+- `scripts/build_macos.py`
+- `scripts/Info.plist`
+
+**Status:** Scaffolded. Build script produces `.app` bundle and `.dmg` image.
+
+---
+
 # TaxFlow Pro v3.9.2 — Security Sprint + Phase 3 Foundation Completion
 
 ## Release summary

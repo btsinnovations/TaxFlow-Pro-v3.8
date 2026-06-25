@@ -186,25 +186,18 @@ def test_ml_train_endpoint_insufficient_labels(client: TestClient) -> None:
     assert "10" in resp.json()["detail"]
 
 
-def test_ml_train_endpoint_succeeds(client: TestClient) -> None:
-    from backend.database import Base, get_db
-    from backend.api import app
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
-
+def test_ml_train_endpoint_succeeds(client: TestClient, db, fresh_ml_dir: Path, monkeypatch) -> None:
+    """Train endpoint returns a model and persists a registry row in the active test DB."""
     token = _boot_admin(client)
 
-    # Use the same test DB the client fixture uses.
-    TEST_DB = "sqlite:///./test_taxflow.db"
-    engine = create_engine(TEST_DB, connect_args={"check_same_thread": False})
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    db = TestingSessionLocal()
-    try:
-        user = db.query(models.User).first()
-        user_id = user.id
-        _seed_labeled_transactions(db, user_id, user_id)
-    finally:
-        db.close()
+    # Keep model artifacts inside the isolated fixture directory.
+    monkeypatch.setattr("backend.local.ml_pipeline.LOCAL_ROOT", fresh_ml_dir.parent)
+    monkeypatch.setattr("backend.routers.ml.local_settings.LOCAL_ROOT", fresh_ml_dir.parent)
+
+    user = db.query(models.User).first()
+    assert user is not None, "boot endpoint should have created the admin user"
+    user_id = user.id
+    _seed_labeled_transactions(db, user_id, user_id)
 
     resp = client.post("/api/ml/train", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200, resp.text
@@ -214,17 +207,12 @@ def test_ml_train_endpoint_succeeds(client: TestClient) -> None:
     assert data["version"] >= 1
     assert data["support"] >= 10
 
-    # Verify registry row was created.
-    db = TestingSessionLocal()
-    try:
-        registry = db.query(models.TrainedModel).filter(
-            models.TrainedModel.user_id == user_id,
-            models.TrainedModel.is_active == True,
-        ).first()
-        assert registry is not None
-        assert registry.model_sha256 == data["model_sha256"]
-    finally:
-        db.close()
+    registry = db.query(models.TrainedModel).filter(
+        models.TrainedModel.user_id == user_id,
+        models.TrainedModel.is_active == True,
+    ).first()
+    assert registry is not None
+    assert registry.model_sha256 == data["model_sha256"]
 
 
 def test_predict_local_falls_back_to_keyword_categorize(client: TestClient) -> None:

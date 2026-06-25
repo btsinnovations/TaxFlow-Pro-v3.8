@@ -1,9 +1,13 @@
-"""Disable the OS credential store by default so tests stay deterministic
-and do not write real secrets. Individual tests can opt into an in-memory
-keyring backend when exercising TASK-013 behavior.
+"""TaxFlow Pro v3.10 — bulletproof per-test harness.
+
+Every test gets its own isolated in-memory SQLite database.
+Schema is created via Base.metadata.create_all() so it always matches the
+Current declarative models. Legacy module-level imports (engine,
+TestingSessionLocal, override_get_db) are kept as proxies that resolve to the
+currently active test's engine/session.
 """
 
-
+# Disable the OS credential store by default so tests stay deterministic.
 class _FailingKeyring:
     def get_password(self, service: str, username: str):
         raise RuntimeError("keyring disabled in tests")
@@ -27,61 +31,110 @@ import os
 
 os.environ["TAXFLOW_SINGLE_USER"] = "true"
 os.environ["TAXFLOW_RUNTIME_MODE"] = "offline"
-
-
-import os
-import sys
-import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from backend.database import Base, get_db
-from backend.api import app
-from backend.models import User
-from backend.routers.auth import get_password_hash
-
-
-TEST_DB = "sqlite:///./test_taxflow.db"
-engine = create_engine(TEST_DB, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-# Some tests import the model classes before the client fixture creates the
-# schema. Make sure the in-memory test DB is current with any migration-only
-# columns (e.g. txn_uid, import_source) that are not in the baseline.
-def _ensure_test_schema():
-    try:
-        Base.metadata.create_all(bind=engine)
-    except Exception:
-        pass
-
-
-_ensure_test_schema()
-
-
-def override_get_db():
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
+# Prevent shared production DB or secrets file from leaking into tests.
+# Use an in-memory SQLite default for any module-import-time engine creation
+# (e.g. backend.api startup migrations), then each test gets its own temp DB.
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+os.environ.pop("TAXFLOW_SECRETS_FILE", None)
 
 
 import base64
 import secrets
+import sys
+from pathlib import Path
+from typing import Any, Generator
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, event
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from backend.database import Base, get_db  # noqa: E402
+from backend.api import app  # noqa: E402
+from backend.models import User  # noqa: E402
+from backend.routers.auth import get_password_hash  # noqa: E402
 
 
-# Shared test password. Must match what auth_client sends to /api/auth/login.
-_TEST_PASSWORD = "T4xFl0w!T3st-Us3r-2026"
+# -----------------------------------------------------------------------------
+# Per-test context registry
+# -----------------------------------------------------------------------------
+
+from backend.tests._test_context import (
+    _TestContext,
+    get_active_context as _active_context,
+    set_active_context as _set_context,
+    active_engine,
+    active_sessionlocal,
+    active_override_get_db,
+)
 
 
-def _create_test_user(db):
+# -----------------------------------------------------------------------------
+# Proxy objects for legacy module-level imports
+# -----------------------------------------------------------------------------
+
+class _EngineProxy:
+    """Proxy that delegates attribute access to the active test engine."""
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(active_engine(), name)
+
+    def __repr__(self) -> str:
+        try:
+            return repr(active_engine())
+        except RuntimeError:
+            return "<_EngineProxy (no active context)>"
+
+
+class _SessionLocalProxy:
+    """Proxy sessionmaker that creates a Session bound to the active engine."""
+
+    def __call__(self, **kwargs: Any) -> Any:
+        SessionLocal = active_sessionlocal()
+        if kwargs:
+            return SessionLocal(**kwargs)
+        return SessionLocal()
+
+    def __repr__(self) -> str:
+        try:
+            return repr(active_sessionlocal())
+        except RuntimeError:
+            return "<_SessionLocalProxy (no active context)>"
+
+
+engine: Engine = _EngineProxy()  # type: ignore[assignment]
+TestingSessionLocal = _SessionLocalProxy()
+
+
+def override_get_db() -> Generator[Any, None, None]:
+    """Return the active test's DB-override generator."""
+    return active_override_get_db()
+
+
+# -----------------------------------------------------------------------------
+# Migration helper
+# -----------------------------------------------------------------------------
+
+_ALEMBIC_INI = Path(__file__).resolve().parents[2] / "alembic.ini"
+
+
+def _create_schema(engine: Engine) -> None:
+    """Create all tables from the current declarative metadata."""
+    Base.metadata.create_all(bind=engine)
+
+
+# -----------------------------------------------------------------------------
+# Test user helper (shared by auth_client and seed helpers)
+# -----------------------------------------------------------------------------
+
+_TEST_PASSWORD = "T4xFl0…2026"
+
+
+def _create_test_user(db) -> User:
     user = db.query(User).filter(User.username == "testuser").first()
     if user:
         return user
@@ -98,25 +151,90 @@ def _create_test_user(db):
     return user
 
 
+# -----------------------------------------------------------------------------
+# Fixtures
+# -----------------------------------------------------------------------------
+
 @pytest.fixture(scope="function")
-def client():
-    Base.metadata.create_all(bind=engine)
-    with TestClient(app) as c:
-        yield c
-    Base.metadata.drop_all(bind=engine)
+def client() -> Generator[TestClient, None, None]:
+    """Provide a TestClient backed by a fresh per-test SQLite database."""
+    db_url = "sqlite:///:memory:"
+
+    test_engine = create_engine(
+        db_url,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+
+    # Attach SQLite pragma / integrity hooks before creating any connection.
+    from backend.database import _set_sqlite_pragmas, _sqlite_integrity_check
+    event.listen(test_engine, "connect", _set_sqlite_pragmas)
+    event.listen(test_engine, "connect", _sqlite_integrity_check)
+
+    _create_schema(test_engine)
+
+    TestSessionLocal = sessionmaker(
+        autocommit=False, autoflush=False, bind=test_engine
+    )
+
+    def _override_get_db() -> Generator[Any, None, None]:
+        db = TestSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = _override_get_db
+
+    with TestClient(app) as test_client:
+        ctx = _TestContext(
+            engine=test_engine,
+            SessionLocal=TestSessionLocal,
+            override_get_db=_override_get_db,
+            client=test_client,
+            db_url=db_url,
+        )
+        _set_context(ctx)
+        try:
+            yield test_client
+        finally:
+            _set_context(None)
+
+    app.dependency_overrides.pop(get_db, None)
+    test_engine.dispose()
 
 
 @pytest.fixture(scope="function")
-def auth_client(client):
+def db(client: TestClient) -> Generator[Any, None, None]:
+    """Provide a SQLAlchemy Session tied to the current test database."""
+    db_gen = override_get_db()
+    session = next(db_gen)
+    try:
+        yield session
+    finally:
+        session.close()
+        try:
+            next(db_gen)
+        except StopIteration:
+            pass
+
+
+@pytest.fixture(scope="function")
+def auth_client(client: TestClient) -> TestClient:
+    """Return a fresh TestClient authenticated as the shared test user."""
     from backend.auth_rate_limit import reset_attempts
-    db = TestingSessionLocal()
+
+    db_gen = override_get_db()
+    db = next(db_gen)
     try:
         user = _create_test_user(db)
     finally:
         db.close()
+        try:
+            next(db_gen)
+        except StopIteration:
+            pass
 
-    # Reset brute-force tracker for the shared test user so failures in earlier
-    # tests do not lock out this fixture.
     reset_attempts(user.username)
 
     resp = client.post("/api/auth/login", data={
@@ -125,5 +243,9 @@ def auth_client(client):
     })
     assert resp.status_code == 200, resp.text
     token = resp.json()["access_token"]
-    client.headers = {"Authorization": f"Bearer {token}"}
-    return client
+
+    # Do not mutate the shared ``client`` fixture; yield a new TestClient with
+    # the Authorization header set. Both clients share the same app/override.
+    authed_client = TestClient(app)
+    authed_client.headers.update({"Authorization": f"Bearer {token}"})
+    return authed_client

@@ -7,6 +7,7 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 import re
 from datetime import datetime
 from pathlib import Path
@@ -21,6 +22,15 @@ try:
     OCR_AVAILABLE = True
 except ImportError:
     pass
+else:
+    # Honor vendored binary configuration set by the launcher.  pytesseract
+    # stores the executable path as a module attribute, not via PATH, so we
+    # must set it explicitly when TESSERACT_CMD is provided.
+    _TESSERACT_CMD = os.environ.get("TESSERACT_CMD")
+    if _TESSERACT_CMD:
+        import pytesseract.pytesseract as _pytess
+        _pytess.tesseract_cmd = _TESSERACT_CMD
+    _POPPLER_PATH = os.environ.get("POPPLER_PATH")
 
 
 # Re-export helpers that callers expect at module level.
@@ -109,14 +119,18 @@ class GenericPDFParser:
                 with pdfplumber.open(self.pdf_path) as pdf:
                     page_count = min(len(pdf.pages), max_pages)
                 for page_num in range(1, page_count + 1):
-                    images = convert_from_path(
-                        self.pdf_path,
-                        dpi=200,
-                        first_page=page_num,
-                        last_page=page_num,
-                        fmt="ppm",
-                        output_folder=str(output_folder),
-                    )
+                    kwargs: Dict[str, Any] = {
+                        "pdf_path": self.pdf_path,
+                        "dpi": 200,
+                        "first_page": page_num,
+                        "last_page": page_num,
+                        "fmt": "ppm",
+                        "output_folder": str(output_folder),
+                    }
+                    poppler_path = os.environ.get("POPPLER_PATH")
+                    if poppler_path:
+                        kwargs["poppler_path"] = poppler_path
+                    images = convert_from_path(**kwargs)
                     for image in images:
                         text = pytesseract.image_to_string(image)
                         if text:

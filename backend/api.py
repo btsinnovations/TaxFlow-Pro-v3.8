@@ -265,6 +265,15 @@ async def rls_tenant_middleware(request: Request, call_next):
                 status_code=400,
                 content={"detail": "Invalid X-Tenant-ID header"},
             )
+    elif is_postgres():
+        # Postgres but single-user: still honor the header if present.
+        try:
+            request.state.tenant_id = int(tenant_id) if tenant_id is not None else None
+        except ValueError:
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "Invalid X-Tenant-ID header"},
+            )
     else:
         request.state.tenant_id = None
     return await call_next(request)
@@ -290,6 +299,7 @@ app.include_router(gl.router, prefix="/api")
 app.include_router(health.router, prefix="/api")
 if ENVIRONMENT == "development":
     app.include_router(tests.router, prefix="/api")
+
 
 @app.get("/health")
 def health():
@@ -322,7 +332,57 @@ def health_api():
         ],
     }
 
+# ---------------------------------------------------------------------------
+# Static frontend serving (Phase 2 packaging)
+#
+# We cannot mount StaticFiles at "/" because Starlette Mount routes own every
+# path under their prefix. For non-GET/HEAD requests to API paths that do not
+# exist as static files (e.g. POST /api/upload), the mounted StaticFiles app
+# returns 405 Method Not Allowed before FastAPI can route to the API handler.
+#
+# The standard FastAPI SPA pattern is therefore used instead:
+#   1. Serve hashed assets from /assets.
+#   2. Catch non-API 404 responses in middleware and return index.html.
+# This satisfies the same acceptance criteria (root serves the SPA, deep
+# links fallback to index.html, /api/* and /health remain authoritative).
+# ---------------------------------------------------------------------------
+
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+_FRONTEND_DIST = Path(__file__).resolve().parents[1] / "frontend" / "dist"
+
+if _FRONTEND_DIST.exists():
+    app.mount(
+        "/assets",
+        StaticFiles(directory=str(_FRONTEND_DIST / "assets")),
+        name="assets",
+    )
+
+
+class _SPAFallbackMiddleware(BaseHTTPMiddleware):
+    """Return the SPA index.html for any non-API 404 on a browser route."""
+
+    async def dispatch(self, request: StarletteRequest, call_next):
+        response = await call_next(request)
+        if response.status_code != 404:
+            return response
+        path = request.url.path
+        # API, static assets, and the top-level health endpoint must not be
+        # swallowed by the SPA fallback.
+        if path.startswith("/api/") or path.startswith("/assets/") or path == "/health":
+            return response
+        index_path = _FRONTEND_DIST / "index.html"
+        if index_path.exists():
+            return FileResponse(str(index_path))
+        return response
+
+
+app.add_middleware(_SPAFallbackMiddleware)
+
+
 if __name__ == "__main__":
+
     import uvicorn
     # Default to localhost-only binding for local-first safety. LAN/opt-in
     # binding is enabled via TAXFLOW_BIND_LAN=true or UVICORN_HOST override.

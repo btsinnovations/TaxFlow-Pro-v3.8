@@ -41,8 +41,13 @@ def _append_only_sqlite() -> list[str]:
 CREATE TRIGGER IF NOT EXISTS trg_audit_entries_prevent_update
 AFTER UPDATE ON {_APPEND_ONLY_TABLE}
 FOR EACH ROW
-WHEN NOT (OLD.chain_hash IS NULL AND NEW.chain_hash IS NOT NULL AND
-          OLD.signature IS NULL AND NEW.signature IS NOT NULL)
+WHEN NOT (
+    (OLD.chain_hash IS NULL AND NEW.chain_hash IS NOT NULL AND
+     OLD.signature IS NULL AND NEW.signature IS NOT NULL)
+    OR
+    (OLD.signature IS NULL AND NEW.signature IS NULL AND
+     OLD.chain_hash IS NULL AND NEW.chain_hash IS NOT NULL)
+)
 BEGIN
     SELECT RAISE(ABORT, 'audit_entries is append-only: updates are forbidden');
 END;
@@ -66,6 +71,10 @@ BEGIN
     IF (TG_OP = 'UPDATE') THEN
         IF (OLD.chain_hash IS NULL AND NEW.chain_hash IS NOT NULL AND
             OLD.signature IS NULL AND NEW.signature IS NOT NULL) THEN
+            RETURN NEW;
+        END IF;
+        IF (OLD.signature IS NULL AND NEW.signature IS NULL AND
+            OLD.chain_hash IS NULL AND NEW.chain_hash IS NOT NULL) THEN
             RETURN NEW;
         END IF;
     END IF;

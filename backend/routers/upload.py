@@ -23,7 +23,15 @@ from ..database import DATABASE_URL
 from ..utils.temp_file_cleanup import cleanup_uploaded_file
 
 router = APIRouter(prefix="/upload", tags=["upload"])
-UPLOAD_DIR = get_upload_dir()
+
+
+def _get_upload_dir() -> Path:
+    """Resolve the upload directory dynamically to respect TAXFLOW_LOCAL_ROOT."""
+    return get_upload_dir()
+
+
+UPLOAD_DIR = _get_upload_dir()
+
 
 def to_decimal(value):
     if value is None:
@@ -162,6 +170,10 @@ async def upload_statement(request: Request,
                            current_user: models.User = Depends(get_current_user)):
     inferred_tenant_id = _wrap_tenant(request, db, current_user)
 
+    # Do not accept multipart file uploads in GET requests.
+    if request.method.upper() != "POST":
+        raise HTTPException(status_code=405, detail="Method Not Allowed")
+
     validated_bytes = await validate_upload_file(file, file.filename)
 
     # Parent-process defense: inspect raw bytes before writing to disk / sandbox.
@@ -191,9 +203,9 @@ async def upload_statement(request: Request,
     except SandboxError:
         cleanup_uploaded_file(file_path)
         raise HTTPException(status_code=422, detail="PDF could not be parsed safely")
-    finally:
-        # Best-effort deletion of the uploaded scratch PDF after parsing.
-        cleanup_uploaded_file(file_path)
+
+    # Best-effort deletion of the uploaded scratch PDF after parsing.
+    cleanup_uploaded_file(file_path)
 
     stmt_data = result.get("reconciliation", {})
     meta = result.get("meta", {})
