@@ -330,6 +330,7 @@ class Transaction(Base):
     running_balance = Column(Numeric(12, 2), nullable=True)
     workpaper_ref = Column(String, nullable=True)
     txn_uid = Column(String, nullable=True)
+    fitid = Column(String, nullable=True, index=True)
     import_source = Column(String, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     statement = relationship("Statement", back_populates="transactions")
