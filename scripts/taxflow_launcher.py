@@ -48,18 +48,12 @@ def _project_root() -> Path:
 
 
 def _is_frozen_onedir() -> bool:
-    """Return True when running inside a PyInstaller one-directory bundle."""
-    frozen = getattr(sys, "frozen", False)
-    if not frozen:
-        return False
-    # PyInstaller one-dir sets sys.frozen to "application_bundle" on macOS
-    # or True on Windows/Linux and the executable lives in the bundle root
-    # (as opposed to one-file where executable is a temporary extractor).
-    exe = Path(sys.executable).resolve()
-    meipass = Path(sys._MEIPASS).resolve()
-    # In onedir the executable is inside the bundle root; in onefile it is the
-    # parent directory of the temporary _MEI folder.
-    return exe.parent == meipass or exe == meipass
+    """Return True when running inside a PyInstaller bundle (one-dir or one-file)."""
+    return getattr(sys, "frozen", False)
+
+
+# Backward-compatible alias.
+_is_frozen_bundle = _is_frozen_onedir
 
 
 def _wait_for_health(url: str, timeout: float = 60.0) -> bool:
@@ -368,8 +362,8 @@ def main() -> int:
     if _run_migrations(local_root) != 0:
         return 1
 
-    if _is_frozen_onedir():
-        # When bundled as a PyInstaller one-dir app we are the interpreter:
+    if _is_frozen_bundle():
+        # When bundled as a PyInstaller app we are the interpreter:
         # run uvicorn in-process so we do not need to discover an external
         # uvicorn executable and so the bundled sys.path is preserved.
         _open_browser(url)
