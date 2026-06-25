@@ -37,20 +37,19 @@ def get_audit_root(
     entries = db.query(models.AuditEntry).filter(
         models.AuditEntry.actor_id == current_user.id
     ).order_by(models.AuditEntry.id.desc()).offset(skip).limit(limit).all()
-    return _redact_audit_entries([
+    return [
         {
             "id": e.id,
-            "timestamp": e.created_at.isoformat() if e.created_at else None,
+            "timestamp": e.occurred_at.isoformat() if e.occurred_at else None,
             "severity": e.details_dict().get("severity", "INFO"),
             "event_type": e.action,
             "client_id": e.resource_id,
             "description": e.description,
             "user": current_user.username,
-            "session_id": e.session_id,
             "details": e.details_dict(),
         }
         for e in entries
-    ])
+    ]
 
 
 @router.get("/logs", response_model=List[schemas.AuditEntryOut])
