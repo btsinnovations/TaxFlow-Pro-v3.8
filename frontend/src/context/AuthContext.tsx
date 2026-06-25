@@ -10,7 +10,7 @@ interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  isFirstBoot: boolean;
+  isFirstBoot: boolean | null;
   boot: (password: string) => Promise<void>;
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
@@ -22,7 +22,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isFirstBoot, setIsFirstBoot] = useState(false);
+  const [isFirstBoot, setIsFirstBoot] = useState<boolean | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -30,9 +30,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     getAuthStatus()
       .then((status) => {
         if (cancelled) return;
-        setIsFirstBoot(!!status.first_boot);
+        const firstBoot = !!status.first_boot;
+        setIsFirstBoot(firstBoot);
         const token = localStorage.getItem("token");
-        if (token && !status.first_boot) {
+        if (token && !firstBoot) {
           return getMe()
             .then((data) => setUser(data))
             .catch(() => {

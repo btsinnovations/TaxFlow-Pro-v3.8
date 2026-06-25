@@ -53,7 +53,8 @@ function LandingPage() {
 function AuthenticatedRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) return null;
-  return isAuthenticated ? <LandingPage /> : <BootGate children={<LandingPage />} />;
+  if (!isAuthenticated) return <BootGate children={<LandingPage />} />;
+  return <LandingPage />;
 }
 
 export default function App() {

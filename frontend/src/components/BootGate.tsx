@@ -3,7 +3,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Lock, Shield } from "lucide-react";
 
 export function BootGate({ children }: { children: React.ReactNode }) {
-  const { isLoading, isFirstBoot, boot, login } = useAuth();
+  const { isAuthenticated, isLoading, isFirstBoot, boot, login } = useAuth();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +40,7 @@ export function BootGate({ children }: { children: React.ReactNode }) {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || (!isAuthenticated && isFirstBoot === null)) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center text-white/70">
         <div className="flex items-center gap-3">
@@ -51,6 +51,10 @@ export function BootGate({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Authenticated — render the app
+  if (isAuthenticated) return <>{children}</>;
+
+  // Not authenticated — show mandatory gate
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center px-6">
       <div className="w-full max-w-md border border-white/10 bg-white/[0.02] rounded-xl p-8">
