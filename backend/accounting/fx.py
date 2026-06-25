@@ -48,7 +48,7 @@ def get_rate(
     to_currency: str,
     as_of: date | None = None,
 ) -> Decimal:
-    """Return the most recent FX rate for a currency pair."""
+    """Return the most recent FX rate for a currency pair, including inverse."""
     query = db.query(models.FXRate).filter(
         models.FXRate.tenant_id == tenant_id,
         models.FXRate.from_currency == from_currency.upper(),
@@ -57,9 +57,21 @@ def get_rate(
     if as_of is not None:
         query = query.filter(models.FXRate.effective_date <= as_of)
     row = query.order_by(models.FXRate.effective_date.desc()).first()
-    if row is None:
+    if row is not None:
+        return Decimal(row.rate)
+
+    # Try inverse rate.
+    inv_query = db.query(models.FXRate).filter(
+        models.FXRate.tenant_id == tenant_id,
+        models.FXRate.from_currency == to_currency.upper(),
+        models.FXRate.to_currency == from_currency.upper(),
+    )
+    if as_of is not None:
+        inv_query = inv_query.filter(models.FXRate.effective_date <= as_of)
+    inv_row = inv_query.order_by(models.FXRate.effective_date.desc()).first()
+    if inv_row is None:
         raise FXError("No FX rate found")
-    return Decimal(row.rate)
+    return Decimal("1") / Decimal(inv_row.rate)
 
 
 def convert(

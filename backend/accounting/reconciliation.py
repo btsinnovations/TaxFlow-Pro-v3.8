@@ -45,6 +45,7 @@ def auto_match(
     import_id: int,
     user_id: int,
     date_window_days: int = 3,
+    statement_rows: list[dict] | None = None,
 ) -> list[dict]:
     """Auto-match imported statement transactions against ledger transactions."""
     ri = db.query(models.ReconciliationImport).filter(
@@ -60,10 +61,16 @@ def auto_match(
     ).all()
 
     matches = []
-    # Placeholder statement rows: in real implementation these come from OFX/QFX/CSV.
-    for stmt_row in []:
+    rows = statement_rows if statement_rows is not None else []
+    for stmt_row in rows:
         stmt_amount = Decimal(str(stmt_row.get("amount", 0)))
-        stmt_date = stmt_row.get("date")
+        stmt_date_raw = stmt_row.get("date")
+        if isinstance(stmt_date_raw, str):
+            stmt_date = __import__("datetime").date.fromisoformat(stmt_date_raw)
+        elif isinstance(stmt_date_raw, date):
+            stmt_date = stmt_date_raw
+        else:
+            stmt_date = None
         best = None
         for txn in ledger_txns:
             if txn.amount is None or txn.date is None:

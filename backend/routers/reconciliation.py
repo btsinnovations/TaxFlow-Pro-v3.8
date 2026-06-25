@@ -73,17 +73,28 @@ def import_statement(
     }
 
 
+class AutoMatchRequest(BaseModel):
+    statement_rows: list[dict] | None = None
+
+
 @router.post("/{import_id}/auto-match", response_model=list[dict])
 def auto_match_route(
     request: Request,
     import_id: int,
+    payload: AutoMatchRequest | None = None,
     window_days: int = 3,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
     _wrap_tenant(request, db, current_user)
     try:
-        return auto_match(db, import_id=import_id, user_id=current_user.id, date_window_days=window_days)
+        return auto_match(
+            db,
+            import_id=import_id,
+            user_id=current_user.id,
+            date_window_days=window_days,
+            statement_rows=(payload.statement_rows if payload else None),
+        )
     except ReconciliationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

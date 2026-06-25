@@ -287,31 +287,23 @@ def test_materialize_rule_respects_count(db: Session):
 # ---------------------------------------------------------------------------
 
 def test_api_list_recurring(auth_client: TestClient, db: Session):
-    user, client, account = _make_user_and_account(db)
-    # Ensure the auth_client user has a primary client so tenant resolution matches.
     auth_user = db.query(models.User).filter(models.User.username == "testuser").first()
-    if auth_user and not auth_user.clients:
-        auth_client_obj = models.Client(name="Auth Test Client", user_id=auth_user.id)
-        db.add(auth_client_obj)
-        db.commit()
-        db.refresh(auth_client_obj)
-        auth_account = models.Account(
-            name="Auth Checking",
-            type="checking",
-            client_id=auth_client_obj.id,
-            tenant_id=auth_client_obj.id,
-            user_id=auth_user.id,
-        )
-        db.add(auth_account)
-        db.commit()
-        db.refresh(auth_account)
-        # Replace test account with auth-owned account.
-        account = auth_account
-        client = auth_client_obj
+    assert auth_user is not None
+    client_obj = auth_user.clients[0]
+    account = models.Account(
+        name="Auth Checking",
+        type="checking",
+        client_id=client_obj.id,
+        tenant_id=client_obj.id,
+        user_id=auth_user.id,
+    )
+    db.add(account)
+    db.commit()
+    db.refresh(account)
 
     rule = create_rule(
         db=db,
-        tenant_id=client.id,
+        tenant_id=client_obj.id,
         user_id=auth_user.id,
         account_id=account.id,
         description="API rule",
@@ -326,26 +318,19 @@ def test_api_list_recurring(auth_client: TestClient, db: Session):
 
 
 def test_api_create_recurring(auth_client: TestClient, db: Session):
-    user, client, account = _make_user_and_account(db)
     auth_user = db.query(models.User).filter(models.User.username == "testuser").first()
-    if auth_user and not auth_user.clients:
-        auth_client_obj = models.Client(name="Auth Test Client", user_id=auth_user.id)
-        db.add(auth_client_obj)
-        db.commit()
-        db.refresh(auth_client_obj)
-        auth_account = models.Account(
-            name="Auth Checking",
-            type="checking",
-            client_id=auth_client_obj.id,
-            tenant_id=auth_client_obj.id,
-            user_id=auth_user.id,
-        )
-        db.add(auth_account)
-        db.commit()
-        db.refresh(auth_account)
-        account = auth_account
-        client = auth_client_obj
-        user = auth_user
+    assert auth_user is not None
+    client_obj = auth_user.clients[0]
+    account = models.Account(
+        name="Auth Checking",
+        type="checking",
+        client_id=client_obj.id,
+        tenant_id=client_obj.id,
+        user_id=auth_user.id,
+    )
+    db.add(account)
+    db.commit()
+    db.refresh(account)
 
     payload = {
         "account_id": account.id,
@@ -363,31 +348,24 @@ def test_api_create_recurring(auth_client: TestClient, db: Session):
 
 
 def test_api_update_recurring(auth_client: TestClient, db: Session):
-    user, client, account = _make_user_and_account(db)
     auth_user = db.query(models.User).filter(models.User.username == "testuser").first()
-    if auth_user and not auth_user.clients:
-        auth_client_obj = models.Client(name="Auth Test Client", user_id=auth_user.id)
-        db.add(auth_client_obj)
-        db.commit()
-        db.refresh(auth_client_obj)
-        auth_account = models.Account(
-            name="Auth Checking",
-            type="checking",
-            client_id=auth_client_obj.id,
-            tenant_id=auth_client_obj.id,
-            user_id=auth_user.id,
-        )
-        db.add(auth_account)
-        db.commit()
-        db.refresh(auth_account)
-        account = auth_account
-        client = auth_client_obj
-        user = auth_user
+    assert auth_user is not None
+    client_obj = auth_user.clients[0]
+    account = models.Account(
+        name="Auth Checking",
+        type="checking",
+        client_id=client_obj.id,
+        tenant_id=client_obj.id,
+        user_id=auth_user.id,
+    )
+    db.add(account)
+    db.commit()
+    db.refresh(account)
 
     rule = create_rule(
         db=db,
-        tenant_id=client.id,
-        user_id=user.id,
+        tenant_id=client_obj.id,
+        user_id=auth_user.id,
         account_id=account.id,
         description="Original",
         amount="100.00",
@@ -405,31 +383,24 @@ def test_api_update_recurring(auth_client: TestClient, db: Session):
 
 
 def test_api_delete_recurring(auth_client: TestClient, db: Session):
-    user, client, account = _make_user_and_account(db)
     auth_user = db.query(models.User).filter(models.User.username == "testuser").first()
-    if auth_user and not auth_user.clients:
-        auth_client_obj = models.Client(name="Auth Test Client", user_id=auth_user.id)
-        db.add(auth_client_obj)
-        db.commit()
-        db.refresh(auth_client_obj)
-        auth_account = models.Account(
-            name="Auth Checking",
-            type="checking",
-            client_id=auth_client_obj.id,
-            tenant_id=auth_client_obj.id,
-            user_id=auth_user.id,
-        )
-        db.add(auth_account)
-        db.commit()
-        db.refresh(auth_account)
-        account = auth_account
-        client = auth_client_obj
-        user = auth_user
+    assert auth_user is not None
+    client_obj = auth_user.clients[0]
+    account = models.Account(
+        name="Auth Checking",
+        type="checking",
+        client_id=client_obj.id,
+        tenant_id=client_obj.id,
+        user_id=auth_user.id,
+    )
+    db.add(account)
+    db.commit()
+    db.refresh(account)
 
     rule = create_rule(
         db=db,
-        tenant_id=client.id,
-        user_id=user.id,
+        tenant_id=client_obj.id,
+        user_id=auth_user.id,
         account_id=account.id,
         description="To delete",
         amount="100.00",
@@ -438,35 +409,28 @@ def test_api_delete_recurring(auth_client: TestClient, db: Session):
     )
     resp = auth_client.delete(f"/api/recurring/{rule.id}")
     assert resp.status_code == 200
-    assert get_rule(db, rule.id, tenant_id=client.id, user_id=user.id) is None
+    assert get_rule(db, rule.id, tenant_id=client_obj.id, user_id=auth_user.id) is None
 
 
 def test_api_materialize_recurring(auth_client: TestClient, db: Session):
-    user, client, account = _make_user_and_account(db)
     auth_user = db.query(models.User).filter(models.User.username == "testuser").first()
-    if auth_user and not auth_user.clients:
-        auth_client_obj = models.Client(name="Auth Test Client", user_id=auth_user.id)
-        db.add(auth_client_obj)
-        db.commit()
-        db.refresh(auth_client_obj)
-        auth_account = models.Account(
-            name="Auth Checking",
-            type="checking",
-            client_id=auth_client_obj.id,
-            tenant_id=auth_client_obj.id,
-            user_id=auth_user.id,
-        )
-        db.add(auth_account)
-        db.commit()
-        db.refresh(auth_account)
-        account = auth_account
-        client = auth_client_obj
-        user = auth_user
+    assert auth_user is not None
+    client_obj = auth_user.clients[0]
+    account = models.Account(
+        name="Auth Checking",
+        type="checking",
+        client_id=client_obj.id,
+        tenant_id=client_obj.id,
+        user_id=auth_user.id,
+    )
+    db.add(account)
+    db.commit()
+    db.refresh(account)
 
     rule = create_rule(
         db=db,
-        tenant_id=client.id,
-        user_id=user.id,
+        tenant_id=client_obj.id,
+        user_id=auth_user.id,
         account_id=account.id,
         description="API materialize",
         amount="100.00",
