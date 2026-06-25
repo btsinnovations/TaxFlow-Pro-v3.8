@@ -124,9 +124,13 @@ def build_deb() -> None:
     if deb_file.exists():
         deb_file.unlink()
     _run(["dpkg-deb", "--build", "--root-owner-group", str(PKG_ROOT)], cwd=DIST_DIR)
-    built = DIST_DIR / "taxflow-pro_3.10.0_amd64.deb"
+    # dpkg-deb writes the .deb next to PKG_ROOT by default.
+    built = DIST_DIR / "stage" / f"taxflow-pro_{VERSION}_amd64.deb"
     if built.exists():
         built.rename(deb_file)
+    else:
+        # Fallback: sometimes the output lands directly in DIST_DIR.
+        built = DIST_DIR / f"taxflow-pro_{VERSION}_amd64.deb"
     print(f".deb package: {deb_file}")
 
 
