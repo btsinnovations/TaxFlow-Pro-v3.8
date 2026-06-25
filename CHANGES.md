@@ -1642,4 +1642,215 @@ Expected: both focused suites pass with 0 failures.
 
 ---
 
+# TaxFlow Pro v3.11.0 — Complete Bookkeeping Platform
+
+## Release summary
+
+- Implemented all 13 must-have bookkeeping modules: Chart of Accounts, Profile/Roles, Unified Register, Recurring, Check Register, Liabilities/Investments, Inventory/Projects, Multi-Currency, Bank Reconciliation, Tax Filing Exports, Reports Center, Budget/Forecast, and Invoicing/A/P/A/R.
+- Expanded bank parser coverage to 18 supported institutions with auto-detection and per-parser fixtures.
+- Added tax rules engine search/filter API.
+- Added dependency-free OFX/QFX import with FITID-based duplicate detection.
+- Polished export format UI with conditional enablement and progress indicators.
+- Added Alembic baseline migration and v3.10 → v3.11 backup import wizard.
+
 ---
+
+## Section 57 — v3.11 Module Implementations (3.11.02–3.11.13)
+
+**Files changed:**
+- `backend/routers/profiles.py`
+- `backend/routers/recurring.py`
+- `backend/routers/checks.py`
+- `backend/routers/liabilities.py`
+- `backend/routers/investments.py`
+- `backend/routers/inventory.py`
+- `backend/routers/fx.py`
+- `backend/routers/reconciliation.py`
+- `backend/routers/tax_exports.py`
+- `backend/routers/reports.py`
+- `backend/routers/budget.py`
+- `backend/routers/invoicing.py`
+- `backend/accounting/*`
+- `backend/schemas.py`
+- `backend/models.py`
+- `frontend/src/components/v3.11/*`
+- `frontend/src/App.tsx`
+
+**Files added:**
+- `backend/tests/test_roles.py`
+- `backend/tests/test_register.py`
+- `backend/tests/test_recurring.py`
+- `backend/tests/test_checks.py`
+- `backend/tests/test_liabilities.py`
+- `backend/tests/test_investments.py`
+- `backend/tests/test_inventory.py`
+- `backend/tests/test_fx.py`
+- `backend/tests/test_reconciliation.py`
+- `backend/tests/test_tax_exports.py`
+- `backend/tests/test_reports.py`
+- `backend/tests/test_budget.py`
+- `backend/tests/test_invoicing.py`
+
+**Changes:**
+- Implemented each module domain logic under `backend/accounting/`.
+- Wired FastAPI routers with tenant-aware CRUD endpoints.
+- Created placeholder-to-real frontend components in `frontend/src/components/v3.11/`.
+- Added backend tests for all 13 modules.
+
+**Verification:**
+```bash
+cd frontend
+npm run build
+npm test
+```
+Expected: build succeeds; frontend tests pass.
+
+---
+
+## Section 58 — Parser Expansion & Auto-Detection (3.11.PARSER)
+
+**Files changed:**
+- `backend/parsers/institution.py`
+- `backend/parsers/detect.py` (new or updated)
+- `backend/routers/imports.py`
+- `frontend/src/sections/Hero.tsx`
+
+**Files added:**
+- `backend/tests/test_parser_detection.py`
+- `backend/tests/fixtures/parsers/*`
+- `docs/SUPPORTED_INSTITUTIONS.md`
+
+**Changes:**
+- Expanded institution registry to 18 supported institutions.
+- Added `POST /api/imports/detect` endpoint returning institution, confidence, expected columns, layout, and notes.
+- Created synthetic fixtures for every institution and tests covering detection, columns, unknown cases, and interface contract.
+- Updated Hero branding with live institution count from API.
+- Documented supported institutions and input formats.
+
+**Verification:**
+```bash
+python -m pytest backend/tests/test_parser_detection.py -v
+```
+Expected: 63 passed.
+
+---
+
+## Section 59 — Tax Rules Engine Search/Filter (3.11.TAXRULES)
+
+**Files changed:**
+- `backend/models.py`
+- `backend/schemas.py`
+- `backend/routers/rules.py`
+- `frontend/src/components/v3.11/TaxFilingExports.tsx` or dedicated rules component
+
+**Files added:**
+- `backend/tests/test_tax_rules_search.py`
+- `frontend/src/components/v3.11/__tests__/TaxFilingExports.test.tsx` or rules component test
+
+**Changes:**
+- Added `form` and `line` columns to `CategorizationRule`.
+- Added `GET /api/tax-rules` with query, form, line, enabled filters and sorting by priority/pattern length/created_at.
+- Implemented frontend search/filter UX.
+
+**Verification:**
+```bash
+python -m pytest backend/tests/test_tax_rules_search.py -v
+```
+Expected: 6 passed.
+
+---
+
+## Section 60 — OFX/QFX Import (3.11.OFX)
+
+**Files changed:**
+- `backend/parsers/ofx.py` (new)
+- `backend/routers/imports.py`
+- `backend/models.py`
+
+**Files added:**
+- `alembic/versions/330eb386b9c2_add_fitid_to_transactions_for_ofx_.py`
+- `backend/tests/test_ofx.py`
+- `backend/tests/fixtures/ofx/*` if any
+
+**Changes:**
+- Added dependency-free OFX/QFX parser (no `ofxparse` library).
+- Added `fitid` column + index to `transactions` for deduplication.
+- Added `POST /api/imports/ofx` with file upload, account mapping/creation, and FITID duplicate detection.
+
+**Verification:**
+```bash
+python -m pytest backend/tests/test_ofx.py -v
+```
+Expected: 7 passed.
+
+---
+
+## Section 61 — Export UI Polish (3.11.EXPORTUI)
+
+**Files changed:**
+- `frontend/src/sections/ExportFormats.tsx`
+- `frontend/src/hooks/useAPI.ts`
+- `frontend/src/sections/Navigation.tsx`
+
+**Files added:**
+- `frontend/src/sections/__tests__/ExportFormats.test.tsx`
+
+**Changes:**
+- Removed stale "(HomeBank)" label from QIF option.
+- Disabled OFX/QIF formats until at least one statement is processed; CSV stays enabled.
+- Added disabled hint/empty state with upload CTA.
+- Added spinner and success/error toast during export generation.
+
+**Verification:**
+```bash
+cd frontend
+npm test -- ExportFormats
+```
+Expected: tests pass.
+
+---
+
+## Section 62 — Alembic Baseline & Backup Import (3.11.GLOBAL)
+
+**Files changed:**
+- `alembic/versions/*`
+- `backend/api.py`
+- `backend/backup_import.py` (new)
+- `backend/routers/backup.py` (new)
+- `backend/version.py`
+- `frontend/package.json`
+- `CHANGES.md`
+
+**Files added:**
+- `backend/tests/test_alembic_migrations.py`
+- `backend/tests/test_backup_import.py`
+- `backend/tests/test_version.py`
+
+**Changes:**
+- Added Alembic baseline migration representing v3.11 schema.
+- Added scoped migration for `fitid` and `is_active` columns.
+- Created v3.10 → v3.11 backup import wizard (`POST /api/backup/import`).
+- Bumped version to `3.11.0` in backend and frontend.
+
+**Verification:**
+```bash
+python -m pytest backend/tests/test_alembic_migrations.py backend/tests/test_backup_import.py backend/tests/test_version.py -v
+```
+Expected: all pass.
+
+---
+
+## Section 63 — v3.11.0 Final Verification
+
+**Verification:**
+```bash
+cd projects/TaxFlow-Pro/TaxFlow-Pro-v3.9
+python -m pytest backend/tests/ tests/
+cd frontend
+npm run build
+npm test
+```
+
+**Expected:**
+- Backend: 660+ passed, 1 skipped.
+- Frontend: build succeeds; all tests pass.
