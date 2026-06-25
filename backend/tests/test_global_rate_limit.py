@@ -25,10 +25,14 @@ def _reset_global_limiter(tight_limit: int = 1, window: int = 60, burst: int = 0
 def reset_global_rate_limiter():
     """Ensure a clean default rate limiter for every test."""
     _reset_global_limiter(tight_limit=100, window=60, burst=10)
+    # Default instance: allow the test bypass in middleware to work so login
+    # fixtures across the suite do not trip rate limits. Rate-limit-specific
+    # tests replace the limiter with a tight one via _reset_global_limiter().
+    from backend import api
+    api._GLOBAL_RATE_LIMITER._test_enforce = False
     yield
     # Re-enable the test bypass for all other tests by clearing the enforcement
     # sentinel; rate-limit tests that need enforcement set it explicitly.
-    from backend import api
     api._GLOBAL_RATE_LIMITER._test_enforce = False
     _reset_global_limiter(tight_limit=100, window=60, burst=10)
     api._GLOBAL_RATE_LIMITER._test_enforce = False
