@@ -18,24 +18,34 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _table_columns(table_name: str) -> set[str]:
+    """Return the set of column names for the given table via SQLite introspection."""
+    conn = op.get_bind()
+    rows = conn.execute(sa.text(f"PRAGMA table_info({table_name})")).fetchall()
+    return {row[1] for row in rows}
+
+
 def upgrade() -> None:
     """Add columns that exist in the models but were not created by earlier migrations."""
-    # transactions.import_source
-    if not op.get_bind().dialect.has_column(op.get_bind(), 'transactions', 'import_source'):
+    tx_cols = _table_columns('transactions')
+    if 'import_source' not in tx_cols:
         op.add_column('transactions', sa.Column('import_source', sa.String(), nullable=True))
 
-    # flags.created_by and flags.resolved_at
-    if not op.get_bind().dialect.has_column(op.get_bind(), 'flags', 'created_by'):
+    flag_cols = _table_columns('flags')
+    if 'created_by' not in flag_cols:
         op.add_column('flags', sa.Column('created_by', sa.String(), nullable=False, server_default='system'))
-    if not op.get_bind().dialect.has_column(op.get_bind(), 'flags', 'resolved_at'):
+    if 'resolved_at' not in flag_cols:
         op.add_column('flags', sa.Column('resolved_at', sa.DateTime(), nullable=True))
 
 
 def downgrade() -> None:
     """Remove columns added above."""
-    if op.get_bind().dialect.has_column(op.get_bind(), 'flags', 'resolved_at'):
+    flag_cols = _table_columns('flags')
+    if 'resolved_at' in flag_cols:
         op.drop_column('flags', 'resolved_at')
-    if op.get_bind().dialect.has_column(op.get_bind(), 'flags', 'created_by'):
+    if 'created_by' in flag_cols:
         op.drop_column('flags', 'created_by')
-    if op.get_bind().dialect.has_column(op.get_bind(), 'transactions', 'import_source'):
+
+    tx_cols = _table_columns('transactions')
+    if 'import_source' in tx_cols:
         op.drop_column('transactions', 'import_source')
