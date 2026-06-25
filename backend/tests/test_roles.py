@@ -204,21 +204,22 @@ def test_remove_member(auth_client: TestClient, db: Session):
 
 
 def test_admin_cannot_promote_to_owner_without_ownership(auth_client: TestClient, db: Session):
+    """An admin (non-owner) must be blocked from adding/promoting an owner.
+
+    Note: in single-user mode the auth layer always resolves to the first user,
+    so we make ``testuser`` (the authenticated actor) the non-owner admin and
+    use a separate user as the implicit profile owner.
+    """
     from backend.auth_rate_limit import reset_attempts
 
     me = db.query(models.User).filter(models.User.username == "testuser").first()
-    profile = _create_client(db, me, "Promote Test")
+    owner_user = _create_user(db, "owner_promote")
+    reset_attempts(owner_user.username)
+    profile = _create_client(db, owner_user, "Promote Test")
+    set_role(db, me.id, profile.id, Role.admin, actor_user_id=owner_user.id)
 
-    # Create an admin member who is not owner.
-    admin_user = _create_user(db, "admin_promote")
-    reset_attempts(admin_user.username)
-    set_role(db, admin_user.id, profile.id, Role.admin, actor_user_id=me.id)
-
-    admin_client = _login_client(auth_client, "admin_promote")
-
-    # An admin (non-owner) invites a new user.
     new_user = _create_user(db, "promote_target")
-    resp = admin_client.post(f"/api/profiles/{profile.id}/members", json={
+    resp = auth_client.post(f"/api/profiles/{profile.id}/members", json={
         "user_id": new_user.id,
         "role": "owner",
     })
@@ -226,17 +227,22 @@ def test_admin_cannot_promote_to_owner_without_ownership(auth_client: TestClient
 
 
 def test_non_admin_cannot_add_members(auth_client: TestClient, db: Session):
+    """A viewer must be blocked from adding members.
+
+    In single-user mode the auth layer always resolves to the first user, so we
+    make ``testuser`` (the authenticated actor) the viewer and use a separate
+    user as the implicit profile owner.
+    """
     from backend.auth_rate_limit import reset_attempts
 
     me = db.query(models.User).filter(models.User.username == "testuser").first()
-    profile = _create_client(db, me, "Viewer Tries Invite")
-    viewer = _create_user(db, "viewer_invite")
-    reset_attempts(viewer.username)
-    set_role(db, viewer.id, profile.id, Role.viewer, actor_user_id=me.id)
+    owner_user = _create_user(db, "owner_invite")
+    reset_attempts(owner_user.username)
+    profile = _create_client(db, owner_user, "Viewer Tries Invite")
+    set_role(db, me.id, profile.id, Role.viewer, actor_user_id=owner_user.id)
 
-    viewer_client = _login_client(auth_client, "viewer_invite")
     target = _create_user(db, "target_invite")
-    resp = viewer_client.post(f"/api/profiles/{profile.id}/members", json={
+    resp = auth_client.post(f"/api/profiles/{profile.id}/members", json={
         "user_id": target.id,
         "role": "viewer",
     })
