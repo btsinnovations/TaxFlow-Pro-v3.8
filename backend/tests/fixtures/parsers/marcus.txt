@@ -1,0 +1,7 @@
+Marcus by Goldman Sachs
+High Yield Online Savings
+Statement Period: 01/01/2026 - 01/31/2026
+Date        Description               Debit   Credit   Balance
+01/02/2026  INTEREST PAYMENT                      120.00   12,120.00
+01/15/2026  TRANSFER FROM EXTERNAL     500.00             11,620.00
+01/28/2026  TRANSFER TO CHECKING     1,000.00             10,620.00

@@ -39,6 +39,7 @@ os.environ.pop("TAXFLOW_SECRETS_FILE", None)
 # Disable global rate limiting so fast test suites do not hit burst limits.
 os.environ["TAXFLOW_GLOBAL_RATE_LIMIT"] = "10000/second"
 os.environ["TAXFLOW_GLOBAL_BURST_LIMIT"] = "10000"
+os.environ["TAXFLOW_TESTING"] = "true"
 
 
 import base64
@@ -58,18 +59,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend.database import Base, get_db  # noqa: E402
 from backend.api import app  # noqa: E402
-from backend import models  # noqa: E402
 from backend.models import User  # noqa: E402
 from backend.routers.auth import get_password_hash  # noqa: E402
 
 # Disable global API rate limiting in tests; the limiter is imported at module
-# load time with production defaults, so mutate its internal state in place
-# rather than replacing the module reference (the middleware closure already
-# captured the original instance).
+# load time with production defaults. Mutating limits is fragile, so replace the
+# check method with a no-op to guarantee tests never hit 429s.
 import backend.api as _api_module  # noqa: E402
-_api_module._GLOBAL_RATE_LIMITER.limit = 10000
-_api_module._GLOBAL_RATE_LIMITER.burst = 10000
-_api_module._GLOBAL_RATE_LIMITER.window = 1
+_api_module._GLOBAL_RATE_LIMITER.check = lambda remote_addr, headers: None
 _api_module._GLOBAL_RATE_LIMITER._windows.clear()
 
 
@@ -151,14 +148,6 @@ _TEST_PASSWORD = "T4xFl0…2026"
 def _create_test_user(db) -> User:
     user = db.query(User).filter(User.username == "testuser").first()
     if user:
-        # Ensure a primary client exists for single-user tenant resolution.
-        has_client = db.query(models.Client).filter(
-            models.Client.user_id == user.id
-        ).first() is not None
-        if not has_client:
-            client = models.Client(name="Test Client", user_id=user.id)
-            db.add(client)
-            db.commit()
         return user
     user = User(
         username="testuser",
@@ -170,9 +159,6 @@ def _create_test_user(db) -> User:
     db.add(user)
     db.commit()
     db.refresh(user)
-    client = models.Client(name="Test Client", user_id=user.id)
-    db.add(client)
-    db.commit()
     return user
 
 

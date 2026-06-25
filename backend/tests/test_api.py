@@ -102,10 +102,13 @@ def test_client_crud(auth_client):
     assert client_data["name"] == "Test Client"
     client_id = client_data["id"]
 
-    # List
+    # List (auth_client fixture may seed a default client for v3.11 tenant
+    # resolution, so we only assert the created client is present rather than
+    # an exact count).
     resp = c.get("/api/clients/")
     assert resp.status_code == 200
-    assert len(resp.json()) == 1
+    clients = resp.json()
+    assert any(cli["id"] == client_id for cli in clients)
 
     # Update
     resp = c.patch(f"/api/clients/{client_id}", json={

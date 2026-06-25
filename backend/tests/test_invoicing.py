@@ -166,7 +166,12 @@ def test_aging_report_buckets(db: Session):
 def _ensure_auth_user(db: Session):
     auth_user = db.query(models.User).filter(models.User.username == "testuser").first()
     assert auth_user is not None
-    return auth_user
+    if not auth_user.clients:
+        client = models.Client(name="Invoicing Auth Client", user_id=auth_user.id)
+        db.add(client)
+        db.commit()
+        db.refresh(client)
+    return auth_user, auth_user.clients[0]
 
 
 def test_api_create_invoice(auth_client: TestClient, db: Session):
@@ -206,9 +211,9 @@ def test_api_create_bill(auth_client: TestClient, db: Session):
 
 
 def test_api_record_payment(auth_client: TestClient, db: Session):
-    auth_user = _ensure_auth_user(db)
+    auth_user, client = _ensure_auth_user(db)
     invoice = create_invoice(
-        db, auth_user.clients[0].id, auth_user.id, "Pay Client", "API-PAY-001",
+        db, client.id, auth_user.id, "Pay Client", "API-PAY-001",
         date(2026, 4, 1), date(2026, 5, 1),
         [{"description": "Service", "qty": 1, "rate": 400.0}],
     )
@@ -221,9 +226,9 @@ def test_api_record_payment(auth_client: TestClient, db: Session):
 
 
 def test_api_over_payment_fails(auth_client: TestClient, db: Session):
-    auth_user = _ensure_auth_user(db)
+    auth_user, client = _ensure_auth_user(db)
     invoice = create_invoice(
-        db, auth_user.clients[0].id, auth_user.id, "Overpay", "API-OP-001",
+        db, client.id, auth_user.id, "Overpay", "API-OP-001",
         date(2026, 4, 1), date(2026, 5, 1),
         [{"description": "X", "qty": 1, "rate": 100.0}],
     )
@@ -234,10 +239,10 @@ def test_api_over_payment_fails(auth_client: TestClient, db: Session):
 
 
 def test_api_aging_report(auth_client: TestClient, db: Session):
-    auth_user = _ensure_auth_user(db)
+    auth_user, client = _ensure_auth_user(db)
     today = date.today()
     create_invoice(
-        db, auth_user.clients[0].id, auth_user.id, "Aging", "API-AGING-001",
+        db, client.id, auth_user.id, "Aging", "API-AGING-001",
         today, today - timedelta(days=20),
         [{"description": "X", "qty": 1, "rate": 250.0}],
     )

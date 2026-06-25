@@ -1,0 +1,6 @@
+Cash App
+Statement Period: 01/01/2026 - 01/31/2026
+Date        To / From                  Amount
+01/02       From Payroll               +900.00
+01/05       To Grocery Store           -75.00
+01/12       To Friend                  -30.00

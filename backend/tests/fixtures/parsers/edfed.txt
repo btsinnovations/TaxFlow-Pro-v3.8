@@ -1,0 +1,7 @@
+Educational Federal Credit Union
+Share Draft Account Statement
+Account Activity for Share Draft 1234
+Date        Description               Withdrawal   Deposit   Balance
+01/02/2026  PAYROLL DEPOSIT                         2,400.00   2,400.00
+01/07/2026  CHECK 1001                     150.00              2,250.00
+01/14/2026  ATM WITHDRAWAL                 100.00              2,150.00

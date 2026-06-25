@@ -16,6 +16,9 @@ def _reset_global_limiter(tight_limit: int = 1, window: int = 60, burst: int = 0
         burst=burst,
         trusted_proxy_hops=0,
     )
+    # Tell the limiter this test explicitly wants enforcement, so the test
+    # bypass in `check()` does not short-circuit.
+    api._GLOBAL_RATE_LIMITER._test_enforce = True
 
 
 @pytest.fixture(autouse=True)

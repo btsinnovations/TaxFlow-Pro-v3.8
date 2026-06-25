@@ -1,0 +1,6 @@
+Navy Federal Credit Union
+Statement Period: 01/01/2026 - 01/31/2026
+Transaction Date    Description               Withdrawal   Deposit   Balance
+01/02/2026          PAYROLL DEPOSIT                         3,200.00   3,200.00
+01/06/2026          GROCERY STORE                  110.00              3,090.00
+01/15/2026          MORTGAGE PAYMENT             1,000.00              2,090.00

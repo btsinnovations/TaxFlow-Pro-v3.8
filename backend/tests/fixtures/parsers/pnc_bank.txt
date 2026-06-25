@@ -1,0 +1,7 @@
+PNC Bank
+Statement Period: 01/01/2026 - 01/31/2026
+Virtual Wallet - Spend Account
+Date        Description               Debit   Credit   Balance
+01/02/2026  PAYROLL DEPOSIT                     3,100.00   3,100.00
+01/05/2026  COFFEE SHOP                  6.00              3,094.00
+01/18/2026  GAS BILL                    80.00              3,014.00

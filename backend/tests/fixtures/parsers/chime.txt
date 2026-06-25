@@ -1,0 +1,6 @@
+Chime Checking Account
+Statement Period: 01/01/2026 - 01/31/2026
+Transaction Date    Description               Amount
+01/02   Direct Deposit                +1,800.00
+01/05   Coffee Shop                   -12.50
+01/12   SpotMe Debit                  -45.00

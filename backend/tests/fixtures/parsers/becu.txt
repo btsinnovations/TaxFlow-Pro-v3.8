@@ -1,0 +1,8 @@
+BECU
+Boeing Employees Credit Union
+Member Share Savings Statement
+Statement Period: 01/01/2026 - 01/31/2026
+Transaction Date    Description               Withdrawal   Deposit   Balance
+01/02/2026          DIRECT DEPOSIT                        2,200.00   2,200.00
+01/09/2026          CHECK 2001                     200.00              2,000.00
+01/19/2026          TRANSFER FROM SAVINGS          300.00              1,700.00

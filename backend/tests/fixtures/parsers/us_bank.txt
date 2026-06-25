@@ -1,0 +1,6 @@
+U.S. Bank
+Statement Period: 01/01/2026 - 01/31/2026
+Date        Description               Debit   Credit   Balance
+01/02/2026  DIRECT DEPOSIT                    2,800.00   2,800.00
+01/05/2026  RESTAURANT                  35.00              2,765.00
+01/20/2026  ELECTRIC COMPANY           110.00              2,655.00

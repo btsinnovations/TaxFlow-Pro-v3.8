@@ -1,0 +1,6 @@
+TD Bank
+Statement Period: 01/01/2026 - 01/31/2026
+Date    Description               Withdrawals   Deposits   Balance
+01/02   PAYCHECK DEPOSIT                       2,500.00   2,500.00
+01/05   GROCERY STORE                125.00              2,375.00
+01/12   ATM WITHDRAWAL               200.00              2,175.00

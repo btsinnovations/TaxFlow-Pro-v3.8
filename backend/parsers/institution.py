@@ -62,7 +62,7 @@ _INSTITUTION_REGISTRY: List[Tuple[str, List[str], List[str], Dict[str, str]]] = 
         "quirk": "Peer-to-peer / digital wallet; often single-column amount with To/From semantics.",
     }),
     # Tier 1 additions per v3.9 Stage 1 research
-    ("Navy Federal", ["navy federal", "navyfcu"], ["transaction", "withdrawal", "deposit", "balance"], {
+    ("Navy Federal", ["navy federal", "navyfcu", "navy", "fcu"], ["transaction", "withdrawal", "deposit", "balance"], {
         "source": "Stage 1 research — aggregator-inferred from DocuClipper/CapyParse blogs",
         "quirk": "Credit-union statements often list running balance on each transaction row.",
     }),
@@ -74,7 +74,7 @@ _INSTITUTION_REGISTRY: List[Tuple[str, List[str], List[str], Dict[str, str]]] = 
         "source": "Stage 1 research — converter-site inference; no validated public sample PDF acquired",
         "quirk": "OPEN QUESTION: checking vs credit card layout ambiguity. v3.9 assumes multi-column Date/Description/Debit/Credit/Balance pending primary-source fixture.",
     }),
-    ("PNC Bank", ["pnc bank", "pncbank"], ["description", "debit", "credit", "balance"], {
+    ("PNC Bank", ["pnc bank", "pncbank", "pnc"], ["description", "debit", "credit", "balance"], {
         "source": "Stage 1 research — converter-site inference; no validated public sample PDF acquired",
         "quirk": "OPEN QUESTION: Virtual Wallet vs standard checking statement layouts differ. v3.9 detection only; full parser deferred until sample available.",
     }),

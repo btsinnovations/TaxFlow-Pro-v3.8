@@ -1,0 +1,6 @@
+Wells Fargo
+Statement Period: 01/01/2026 - 01/31/2026
+Date    Description               Debits   Credits   Balance
+01/02   PAYROLL DEPOSIT                     3,500.00   3,500.00
+01/06   GAS STATION                  45.00              3,455.00
+01/22   RENT PAYMENT               1,200.00              2,255.00

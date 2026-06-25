@@ -1,0 +1,6 @@
+Bank of America
+Statement Period: January 1, 2026 - January 31, 2026
+Date    Description               Withdrawal   Deposit   Balance
+01/02   PAYROLL DEPOSIT                       3,000.00   3,000.00
+01/06   COFFEE SHOP                  4.50               2,995.50
+01/15   ELECTRIC BILL              120.00               2,875.50

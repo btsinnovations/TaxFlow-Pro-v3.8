@@ -1,0 +1,6 @@
+SoFi Money
+Statement Period: 01/01/2026 - 01/31/2026
+Date        Description               Debit   Credit   Balance
+01/02/2026  PAYROLL DEPOSIT                     2,600.00   2,600.00
+01/06/2026  SUBSCRIPTION                15.00              2,585.00
+01/22/2026  TRANSFER TO SAVINGS        400.00              2,185.00

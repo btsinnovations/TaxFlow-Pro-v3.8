@@ -174,7 +174,7 @@ def _ensure_auth_user(db: Session):
     auth_user = db.query(models.User).filter(models.User.username == "testuser").first()
     assert auth_user is not None
     if not auth_user.clients:
-        client = models.Client(name="Auth Budget Client", user_id=auth_user.id)
+        client = models.Client(name="Budget Auth Client", user_id=auth_user.id)
         db.add(client)
         db.commit()
         db.refresh(client)
