@@ -72,15 +72,13 @@ def collect_package() -> None:
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, dst)
 
-    # Create the bundled venv inside the package. This is built on the
-    # packaging host and bundled into the .deb. Using --without-pip avoids
-    # depending on the exact pip version available on the host.
+    # Create the bundled venv inside the package. The package depends on
+    # python3-venv, so this works on Debian/Ubuntu.
     venv = OPT_DIR / ".venv"
-    _run(["python3", "-m", "venv", str(venv), "--without-pip"])
-    # Ensure pip is available so we can install requirements.
-    _run([str(venv / "bin" / "python"), "-m", "ensurepip", "--upgrade"])
-    _run([str(venv / "bin" / "pip"), "install", "--upgrade", "pip"])
-    _run([str(venv / "bin" / "pip"), "install", "-r", str(OPT_DIR / "requirements.txt")])
+    _run(["python3", "-m", "venv", str(venv)])
+    pip = venv / "bin" / "pip"
+    _run([str(pip), "install", "--upgrade", "pip"])
+    _run([str(pip), "install", "-r", str(OPT_DIR / "requirements.txt")])
 
     # Wrapper script uses the bundled venv.
     wrapper = BIN_DIR / "taxflow-pro"
