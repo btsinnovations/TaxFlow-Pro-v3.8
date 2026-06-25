@@ -40,11 +40,18 @@ def _project_root() -> Path:
     In a PyInstaller bundle the extracted assets live at ``sys._MEIPASS``.
     In source mode the project root is two directories above this script
     (``scripts/taxflow_launcher.py`` -> project root).
+    When installed as a Linux .deb, the launcher itself is the project root
+    (``/opt/taxflow-pro/taxflow_launcher.py``), so we return its directory.
     """
     if getattr(sys, "frozen", False):
         # _MEIPASS points at the extracted bundle root.
         return Path(sys._MEIPASS)
-    return Path(__file__).resolve().parents[1]
+    launcher = Path(__file__).resolve()
+    # If the launcher is named 'taxflow_launcher.py' and lives next to backend/,
+    # it *is* the project root. Otherwise we're in scripts/.
+    if (launcher.parent / "backend").exists():
+        return launcher.parent
+    return launcher.parents[1]
 
 
 def _is_frozen_onedir() -> bool:
