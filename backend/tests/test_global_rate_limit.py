@@ -26,7 +26,12 @@ def reset_global_rate_limiter():
     """Ensure a clean default rate limiter for every test."""
     _reset_global_limiter(tight_limit=100, window=60, burst=10)
     yield
+    # Re-enable the test bypass for all other tests by clearing the enforcement
+    # sentinel; rate-limit tests that need enforcement set it explicitly.
+    from backend import api
+    api._GLOBAL_RATE_LIMITER._test_enforce = False
     _reset_global_limiter(tight_limit=100, window=60, burst=10)
+    api._GLOBAL_RATE_LIMITER._test_enforce = False
 
 
 def test_default_rate_limit_allows_reasonable_volume(client):

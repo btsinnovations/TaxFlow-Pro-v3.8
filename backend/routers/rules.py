@@ -12,8 +12,11 @@ from ..rls import is_postgres, resolve_user_tenant_id, set_tenant_id
 from ..local import settings as local_settings
 from ..audit import record, AuditAction, AuditResource
 from .auth import get_current_user
+from sqlalchemy import func, or_
+from fastapi import Query
 
 router = APIRouter(prefix="/rules", tags=["rules"])
+tax_rules_router = APIRouter(prefix="/tax-rules", tags=["tax-rules"])
 
 
 def _resolve_tenant_id(request: Request, current_user: models.User) -> int:
@@ -69,6 +72,8 @@ def create_rule(
         user_id=current_user.id,
         name=rule.name,
         pattern=rule.pattern,
+        form=rule.form,
+        line=rule.line,
         gl_account_id=rule.gl_account_id,
         priority=rule.priority,
         enabled=rule.enabled,
@@ -161,3 +166,56 @@ def delete_rule(
     db.delete(rule)
     db.commit()
     return {"ok": True}
+
+
+@tax_rules_router.get("/", response_model=List[schemas.CategorizationRuleOut])
+def search_tax_rules(
+    request: Request,
+    query: str | None = Query(default=None, description="Substring match on name or pattern"),
+    form: str | None = Query(default=None, description="Tax form filter"),
+    line: str | None = Query(default=None, description="Tax form line filter"),
+    enabled: bool | None = Query(default=None, description="Filter by enabled status"),
+    sort: str = Query(default="priority", description="Sort field: priority, created_at, pattern_length"),
+    order: str = Query(default="desc", description="Sort order: asc or desc"),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Search/filter/sort categorization rules for the current tenant."""
+    effective_tenant_id = _resolve_tenant_id(request, current_user)
+    _wrap_tenant(request, db, current_user)
+
+    q = db.query(models.CategorizationRule).filter(
+        models.CategorizationRule.tenant_id == effective_tenant_id,
+        models.CategorizationRule.user_id == current_user.id,
+    )
+
+    if query:
+        like = f"%{query}%"
+        q = q.filter(
+            or_(
+                models.CategorizationRule.name.ilike(like),
+                models.CategorizationRule.pattern.ilike(like),
+            )
+        )
+
+    if form:
+        q = q.filter(models.CategorizationRule.form.ilike(form))
+
+    if line:
+        q = q.filter(models.CategorizationRule.line.ilike(line))
+
+    if enabled is not None:
+        q = q.filter(models.CategorizationRule.enabled == enabled)
+
+    sort_col = {
+        "priority": models.CategorizationRule.priority,
+        "created_at": models.CategorizationRule.created_at,
+        "pattern_length": func.length(models.CategorizationRule.pattern),
+    }.get(sort, models.CategorizationRule.priority)
+
+    if order.lower() == "asc":
+        q = q.order_by(sort_col.asc())
+    else:
+        q = q.order_by(sort_col.desc())
+
+    return q.all()

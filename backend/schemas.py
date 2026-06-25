@@ -190,6 +190,8 @@ class GeneralLedgerEntryUpdate(BaseModel):
 class CategorizationRuleCreate(BaseModel):
     name: str
     pattern: str
+    form: Optional[str] = None
+    line: Optional[str] = None
     gl_account_id: int
     priority: int = 0
     enabled: bool = True
@@ -200,6 +202,8 @@ class CategorizationRuleOut(BaseModel):
     user_id: int
     name: str
     pattern: str
+    form: Optional[str] = None
+    line: Optional[str] = None
     gl_account_id: int
     priority: int
     enabled: bool
@@ -209,6 +213,8 @@ class CategorizationRuleOut(BaseModel):
 class CategorizationRuleUpdate(BaseModel):
     name: Optional[str] = None
     pattern: Optional[str] = None
+    form: Optional[str] = None
+    line: Optional[str] = None
     gl_account_id: Optional[int] = None
     priority: Optional[int] = None
     enabled: Optional[bool] = None

@@ -261,6 +261,8 @@ class CategorizationRule(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name = Column(String, nullable=False)
     pattern = Column(String, nullable=False)
+    form = Column(String, nullable=True)
+    line = Column(String, nullable=True)
     gl_account_id = Column(Integer, ForeignKey("gl_accounts.id", ondelete="CASCADE"), nullable=False)
     priority = Column(Integer, default=0)
     enabled = Column(Boolean, default=True)

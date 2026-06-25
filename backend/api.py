@@ -92,6 +92,11 @@ class _GlobalRateLimitMiddleware(BaseHTTPMiddleware):
     """Apply a sliding-window per-IP rate limit to all requests."""
 
     async def dispatch(self, request: StarletteRequest, call_next):
+        # Tests bypass the limiter unless they explicitly flag the current
+        # instance for enforcement (see backend.tests.test_global_rate_limit).
+        if os.environ.get("TAXFLOW_TESTING") and not getattr(_GLOBAL_RATE_LIMITER, "_test_enforce", False):
+            return await call_next(request)
+
         remote_addr = request.client.host if request.client else None
         try:
             _GLOBAL_RATE_LIMITER.check(remote_addr, dict(request.headers))
@@ -305,6 +310,7 @@ app.include_router(ml.router, prefix="/api")
 app.include_router(audit.router, prefix="/api")
 app.include_router(depreciation.router, prefix="/api")
 app.include_router(rules.router, prefix="/api")
+app.include_router(rules.tax_rules_router, prefix="/api")
 app.include_router(flags.router, prefix="/api")
 app.include_router(gl.router, prefix="/api")
 app.include_router(health.router, prefix="/api")

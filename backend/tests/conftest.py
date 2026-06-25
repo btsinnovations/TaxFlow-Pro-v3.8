@@ -59,6 +59,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend.database import Base, get_db  # noqa: E402
 from backend.api import app  # noqa: E402
+from backend import models  # noqa: E402
 from backend.models import User  # noqa: E402
 from backend.routers.auth import get_password_hash  # noqa: E402
 
@@ -148,6 +149,10 @@ _TEST_PASSWORD = "T4xFl0…2026"
 def _create_test_user(db) -> User:
     user = db.query(User).filter(User.username == "testuser").first()
     if user:
+        if not user.clients:
+            client = models.Client(name="Test Client", user_id=user.id)
+            db.add(client)
+            db.commit()
         return user
     user = User(
         username="testuser",
@@ -159,6 +164,9 @@ def _create_test_user(db) -> User:
     db.add(user)
     db.commit()
     db.refresh(user)
+    client = models.Client(name="Test Client", user_id=user.id)
+    db.add(client)
+    db.commit()
     return user
 
 
@@ -239,7 +247,9 @@ def auth_client(client: TestClient) -> TestClient:
     db = next(db_gen)
     try:
         user = _create_test_user(db)
-        username = user.username  # capture scalar while still bound
+        # Ensure relationship is loaded so resolve_user_tenant_id can pick the client.
+        db.refresh(user, ["clients"])
+        username = user.username
     finally:
         db.close()
         try:
