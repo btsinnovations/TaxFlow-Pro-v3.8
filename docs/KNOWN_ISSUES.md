@@ -42,5 +42,34 @@
 
 ---
 
+## 4. Missing API Endpoints for v3.10 Desktop Smoke Test
+
+**Date:** 2026-06-24  
+**Status:** Known issue; deferred to v3.11
+
+**Problem:** The v3.10 packaged desktop smoke test revealed two missing backend endpoints required for a complete end-to-end workflow:
+
+- `POST /api/transactions/` — manual transaction creation (server-side)
+- `POST /api/backup/now` — on-demand backup trigger (server-side)
+
+**Evidence:**
+- Windows smoke test v4: both endpoints returned `HTTP 404 Not Found`.
+- Export CSV (`/api/export/transactions`) and auth boot work fine.
+
+**Why deferred:**
+- v3.10 scope is locked to packaging-only.
+- These endpoints are part of the full bookkeeping feature set already planned for v3.11.
+- Adding them now would require product-code changes outside v3.10 scope.
+
+**Fix scheduled for:** v3.11 (Bookkeeping Platform Expansion). Likely owned by modules:
+- 3.11.03 Unified Register + Transactions (`backend/routers/transactions.py`)
+- 3.11.11 Reports Center or a dedicated `backup.router` endpoint
+
+**Workaround in v3.10:**
+- Users can still import transactions via `/api/upload` when available.
+- Backups are created automatically after import via `backend/local/backup.py`.
+
+---
+
 *Owner: James Clawd / Orchestrator*  
-*Next review: After v3.10 Phase 1 completion*
+*Next review: v3.11 planning kickoff*
