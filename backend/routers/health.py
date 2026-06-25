@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from backend.database import get_db
 from backend.local.migration_health import check_migrations
@@ -54,4 +54,19 @@ def bootstrap_status():
     """Return the local dependency bootstrap status (no auth required)."""
     report = run_bootstrap()
     return report.to_dict()
+
+
+@router.get("/echo-auth")
+def echo_auth(request: Request):
+    """Echo Authorization header and localStorage token status for UI debugging.
+
+    No auth required. Call from browser console with:
+        fetch('/api/health/echo-auth').then(r => r.json()).then(console.log)
+    """
+    auth_header = request.headers.get("authorization")
+    return {
+        "received_authorization": auth_header,
+        "has_authorization": bool(auth_header),
+        "authorization_prefix": auth_header.split(" ")[0] if auth_header else None,
+    }
 
