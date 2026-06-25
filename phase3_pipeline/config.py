@@ -1,9 +1,13 @@
 from pathlib import Path
 from typing import List, Tuple
 
-# Logs directory – created in project root
-LOGS_DIR = Path(__file__).parent.parent / "logs"
+# Logs directory – prefer the user's local data directory so packaged installs
+# (e.g. /opt/taxflow-pro on Linux) do not try to write into read-only install dirs.
+_local_root = Path(os.environ.get("TAXFLOW_LOCAL_ROOT", Path.home() / ".local/share/TaxFlowPro"))
+LOGS_DIR = _local_root / "logs"
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
+
+import os  # noqa: E402 - imported after Path for the local-root helper above
 
 # (keyword, category, schedule_line, deductible)
 TAX_RULES: List[Tuple[str, str, str, bool]] = [
