@@ -71,5 +71,40 @@
 
 ---
 
+## 5. Frontend Auth Token Handling in Packaged Builds
+
+**Date:** 2026-06-25  
+**Status:** Known issue; fix pushed to v3.10-dev, pending verification in fresh `.deb` install
+
+**Problem:** The packaged desktop app (Linux `.deb`) serves the UI from the same origin as the API, but dashboard/audit/account/client endpoints return 401 because the frontend does not reliably attach the Bearer token to all API calls.
+
+**Evidence:**
+- Ubuntu `.deb` install 2026-06-25: `GET /api/dashboard/stats`, `/api/clients/`, `/api/accounts/`, `/api/audit/`, `/api/tax/` all return 401 after auth boot.
+- The `AuthContext` stores the token in `localStorage`, but many `useAPI.ts` helpers were not sending it.
+
+**Fix applied to v3.10-dev:**
+- `frontend/src/hooks/useAPI.ts` now sends `Authorization: Bearer <token>` on all protected calls.
+- `getTests()` / `runTests()` are no-ops in production builds.
+
+**Verification needed:**
+- Fresh `.deb` build + install on Ubuntu must show no 401s in browser console.
+
+**If verification fails:** escalate to v3.11 for a proper `fetchWithAuth` refactor and request interceptor.
+
+---
+
+## 6. Extension Noise in Browser Console
+
+**Date:** 2026-06-25  
+**Status:** Not a TaxFlow bug
+
+**Problem:** Browser console shows `MaxListenersExceededWarning` and `ObjectMultiplex` warnings from `contentscript.js`.
+
+**Root cause:** Browser extension (likely MetaMask or another wallet/injecting extension) injecting content scripts into the local app.
+
+**Action:** None required for TaxFlow.
+
+---
+
 *Owner: James Clawd / Orchestrator*  
-*Next review: v3.11 planning kickoff*
+*Next review: After v3.10 tag or v3.11 planning kickoff*
