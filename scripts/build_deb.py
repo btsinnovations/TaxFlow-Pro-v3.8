@@ -57,12 +57,14 @@ def collect_package() -> None:
         (PROJECT_ROOT / "alembic", OPT_DIR / "alembic"),
         (PROJECT_ROOT / "alembic.ini", OPT_DIR / "alembic.ini"),
         (PROJECT_ROOT / "frontend" / "dist", OPT_DIR / "frontend" / "dist"),
-        (PROJECT_ROOT / "vendored", OPT_DIR / "vendored"),
         (PROJECT_ROOT / "requirements.txt", OPT_DIR / "requirements.txt"),
         (PROJECT_ROOT / "scripts" / "taxflow_launcher.py", OPT_DIR / "taxflow_launcher.py"),
         (PROJECT_ROOT / "scripts" / "setup_linux.sh", OPT_DIR / "setup_linux.sh"),
         (PROJECT_ROOT / "version.txt", OPT_DIR / "version.txt"),
     ]
+    vendored = PROJECT_ROOT / "vendored"
+    if vendored.exists():
+        items.append((vendored, OPT_DIR / "vendored"))
     for src, dst in items:
         if src.is_dir():
             shutil.copytree(src, dst)

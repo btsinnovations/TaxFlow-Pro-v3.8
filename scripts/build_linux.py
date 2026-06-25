@@ -59,12 +59,13 @@ def collect_bundle() -> None:
         (PROJECT_ROOT / "alembic", BUNDLE_DIR / "alembic"),
         (PROJECT_ROOT / "alembic.ini", BUNDLE_DIR / "alembic.ini"),
         (PROJECT_ROOT / "frontend" / "dist", BUNDLE_DIR / "frontend" / "dist"),
-        (PROJECT_ROOT / "vendored", BUNDLE_DIR / "vendored"),
         (PROJECT_ROOT / "requirements.txt", BUNDLE_DIR / "requirements.txt"),
-        (PROJECT_ROOT / "version.txt", BUNDLE_DIR / "version.txt"),
         (PROJECT_ROOT / "scripts" / "taxflow_launcher.py", BUNDLE_DIR / "taxflow_launcher.py"),
         (PROJECT_ROOT / "version.txt", BUNDLE_DIR / "version.txt"),
     ]
+    vendored = PROJECT_ROOT / "vendored"
+    if vendored.exists():
+        items.append((vendored, BUNDLE_DIR / "vendored"))
     for src, dst in items:
         if src.is_dir():
             shutil.copytree(src, dst)

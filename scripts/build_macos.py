@@ -64,11 +64,13 @@ def build_app() -> None:
         (PROJECT_ROOT / "alembic", RESOURCES / "alembic"),
         (PROJECT_ROOT / "alembic.ini", RESOURCES / "alembic.ini"),
         (PROJECT_ROOT / "frontend" / "dist", RESOURCES / "frontend" / "dist"),
-        (PROJECT_ROOT / "vendored", RESOURCES / "vendored"),
         (PROJECT_ROOT / "requirements.txt", RESOURCES / "requirements.txt"),
         (PROJECT_ROOT / "scripts" / "taxflow_launcher.py", RESOURCES / "taxflow_launcher.py"),
         (PROJECT_ROOT / "version.txt", RESOURCES / "version.txt"),
     ]
+    vendored = PROJECT_ROOT / "vendored"
+    if vendored.exists():
+        items.append((vendored, RESOURCES / "vendored"))
     for src, dst in items:
         if src.is_dir():
             shutil.copytree(src, dst)
