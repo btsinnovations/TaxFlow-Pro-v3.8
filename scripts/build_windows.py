@@ -79,6 +79,7 @@ def build_pyinstaller() -> None:
             "--add-data", f"{PROJECT_ROOT / 'alembic'};alembic",
             "--add-data", f"{PROJECT_ROOT / 'alembic.ini'};.",
             "--add-data", f"{PROJECT_ROOT / 'frontend' / 'dist'};frontend/dist",
+            "--add-data", f"{PROJECT_ROOT / 'version.txt'};.",
             "--add-data", f"{VENDOR_DIR};vendored",
         ] + collect_args + [
             str(PROJECT_ROOT / "scripts" / "taxflow_launcher.py"),

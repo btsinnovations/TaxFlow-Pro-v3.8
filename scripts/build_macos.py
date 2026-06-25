@@ -60,6 +60,7 @@ def build_app() -> None:
     # Copy backend code and vendored binaries into Resources.
     items = [
         (PROJECT_ROOT / "backend", RESOURCES / "backend"),
+        (PROJECT_ROOT / "phase3_pipeline", RESOURCES / "phase3_pipeline"),
         (PROJECT_ROOT / "alembic", RESOURCES / "alembic"),
         (PROJECT_ROOT / "alembic.ini", RESOURCES / "alembic.ini"),
         (PROJECT_ROOT / "frontend" / "dist", RESOURCES / "frontend" / "dist"),

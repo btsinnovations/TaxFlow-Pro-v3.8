@@ -61,6 +61,7 @@ def collect_bundle() -> None:
         (PROJECT_ROOT / "frontend" / "dist", BUNDLE_DIR / "frontend" / "dist"),
         (PROJECT_ROOT / "vendored", BUNDLE_DIR / "vendored"),
         (PROJECT_ROOT / "requirements.txt", BUNDLE_DIR / "requirements.txt"),
+        (PROJECT_ROOT / "version.txt", BUNDLE_DIR / "version.txt"),
         (PROJECT_ROOT / "scripts" / "taxflow_launcher.py", BUNDLE_DIR / "taxflow_launcher.py"),
         (PROJECT_ROOT / "version.txt", BUNDLE_DIR / "version.txt"),
     ]
