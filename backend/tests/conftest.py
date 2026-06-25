@@ -238,6 +238,27 @@ def db(client: TestClient) -> Generator[Any, None, None]:
             pass
 
 
+@pytest.fixture(scope="function", autouse=True)
+def reset_global_rate_limiter():
+    """Ensure a clean default rate limiter for every test."""
+    from backend import api
+    from backend.rate_limit import GlobalRateLimiter
+
+    api._GLOBAL_RATE_LIMITER = GlobalRateLimiter(
+        limit=100,
+        window=60,
+        burst=10,
+        trusted_proxy_hops=0,
+    )
+    # Default instance: allow the test bypass in middleware to work so login
+    # fixtures across the suite do not trip rate limits.
+    api._GLOBAL_RATE_LIMITER._test_enforce = False
+    yield
+    # Re-enable the test bypass for all other tests by clearing the enforcement
+    # sentinel; rate-limit tests that need enforcement set it explicitly.
+    api._GLOBAL_RATE_LIMITER._test_enforce = False
+
+
 @pytest.fixture(scope="function")
 def auth_client(client: TestClient) -> TestClient:
     """Return a fresh TestClient authenticated as the shared test user."""

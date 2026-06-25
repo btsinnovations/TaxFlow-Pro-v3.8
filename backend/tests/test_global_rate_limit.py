@@ -4,12 +4,12 @@ import time
 
 import pytest
 
+from backend import api
+from backend.rate_limit import GlobalRateLimiter
+
 
 def _reset_global_limiter(tight_limit: int = 1, window: int = 60, burst: int = 0) -> None:
     """Replace the global limiter in api with a deterministic instance."""
-    from backend import api
-    from backend.rate_limit import GlobalRateLimiter
-
     api._GLOBAL_RATE_LIMITER = GlobalRateLimiter(
         limit=tight_limit,
         window=window,
@@ -19,23 +19,6 @@ def _reset_global_limiter(tight_limit: int = 1, window: int = 60, burst: int = 0
     # Tell the limiter this test explicitly wants enforcement, so the test
     # bypass in `check()` does not short-circuit.
     api._GLOBAL_RATE_LIMITER._test_enforce = True
-
-
-@pytest.fixture(autouse=True)
-def reset_global_rate_limiter():
-    """Ensure a clean default rate limiter for every test."""
-    _reset_global_limiter(tight_limit=100, window=60, burst=10)
-    # Default instance: allow the test bypass in middleware to work so login
-    # fixtures across the suite do not trip rate limits. Rate-limit-specific
-    # tests replace the limiter with a tight one via _reset_global_limiter().
-    from backend import api
-    api._GLOBAL_RATE_LIMITER._test_enforce = False
-    yield
-    # Re-enable the test bypass for all other tests by clearing the enforcement
-    # sentinel; rate-limit tests that need enforcement set it explicitly.
-    api._GLOBAL_RATE_LIMITER._test_enforce = False
-    _reset_global_limiter(tight_limit=100, window=60, burst=10)
-    api._GLOBAL_RATE_LIMITER._test_enforce = False
 
 
 def test_default_rate_limit_allows_reasonable_volume(client):
