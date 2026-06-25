@@ -62,15 +62,19 @@ def _is_frozen_onedir() -> bool:
     return exe.parent == meipass or exe == meipass
 
 
-def _wait_for_health(url: str, timeout: float = 30.0) -> bool:
-    """Poll /health until the server responds or the deadline expires."""
+def _wait_for_health(url: str, timeout: float = 60.0) -> bool:
+    """Poll /api/health and /health until the server responds."""
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
             import urllib.request
-            with urllib.request.urlopen(f"{url}/health", timeout=1.0) as r:
-                if r.status == 200:
-                    return True
+            for path in ("/api/health", "/health"):
+                try:
+                    with urllib.request.urlopen(f"{url}{path}", timeout=1.0) as r:
+                        if r.status == 200:
+                            return True
+                except Exception:
+                    pass
         except Exception:
             pass
         time.sleep(0.5)
@@ -326,6 +330,13 @@ def main() -> int:
     local_root = _local_root()
     _ensure_dirs(local_root)
 
+    # Limit BLAS/LAPACK threads to reduce memory pressure on low-RAM machines
+    # when heavy numeric libraries are imported by ML/parser code paths.
+    os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+    os.environ.setdefault("MKL_NUM_THREADS", "1")
+    os.environ.setdefault("OMP_NUM_THREADS", "1")
+    os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+
     configured = _configure_vendored_binaries()
 
     # Ensure the project root is on sys.path so ``backend.api:app`` resolves.
@@ -370,6 +381,7 @@ def main() -> int:
             port=port,
             log_level="info",
             reload=False,
+            workers=1,
         )
         return 0
 
