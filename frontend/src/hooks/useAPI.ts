@@ -1,4 +1,7 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+// When the React app is served from the same origin as the FastAPI backend
+// (the production desktop bundle case), use relative URLs so we don't hit
+// CORS or cross-origin issues between 127.0.0.1 and localhost.
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export async function uploadFile(file: File, clientId: string = 'default', forceOcr: boolean = false): Promise<any> {
   const formData = new FormData();
