@@ -26,18 +26,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    setIsLoading(true);
     getAuthStatus()
       .then((status) => {
         if (cancelled) return;
-        setIsFirstBoot(status.first_boot);
+        setIsFirstBoot(!!status.first_boot);
         const token = localStorage.getItem("token");
         if (token && !status.first_boot) {
           return getMe()
             .then((data) => setUser(data))
-            .catch(() => localStorage.removeItem("token"));
+            .catch(() => {
+              localStorage.removeItem("token");
+              setUser(null);
+            });
+        } else {
+          setUser(null);
         }
       })
-      .catch(() => setIsFirstBoot(false))
+      .catch(() => {
+        if (!cancelled) {
+          setIsFirstBoot(false);
+          setUser(null);
+        }
+      })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
       });

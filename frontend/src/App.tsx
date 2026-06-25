@@ -1,7 +1,8 @@
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { Routes, Route } from "react-router";
 import ToastContainer from "@/components/ToastContainer";
+import { BootGate } from "@/components/BootGate";
 import Navigation from './sections/Navigation';
 import Hero from './sections/Hero';
 import UploadSection from './sections/UploadSection';
@@ -49,13 +50,19 @@ function LandingPage() {
   );
 }
 
+function AuthenticatedRoutes() {
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return null;
+  return isAuthenticated ? <LandingPage /> : <BootGate children={<LandingPage />} />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <ToastProvider>
         <div className="min-h-screen bg-canvas text-text-primary">
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<AuthenticatedRoutes />} />
             <Route path="/check-register" element={<CheckRegister />} />
             <Route path="/liabilities" element={<LiabilitiesInvestments />} />
             <Route path="/inventory-projects" element={<InventoryProjects />} />
