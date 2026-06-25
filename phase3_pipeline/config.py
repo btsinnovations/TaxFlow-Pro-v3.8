@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import List, Tuple
 
@@ -6,8 +7,6 @@ from typing import List, Tuple
 _local_root = Path(os.environ.get("TAXFLOW_LOCAL_ROOT", Path.home() / ".local/share/TaxFlowPro"))
 LOGS_DIR = _local_root / "logs"
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
-
-import os  # noqa: E402 - imported after Path for the local-root helper above
 
 # (keyword, category, schedule_line, deductible)
 TAX_RULES: List[Tuple[str, str, str, bool]] = [
