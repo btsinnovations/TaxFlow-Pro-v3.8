@@ -98,6 +98,12 @@ export function BootGate({ children }: { children: React.ReactNode }) {
             </div>
           )}
 
+          {isFirstBoot && (
+            <div className="text-sm text-white/50 bg-white/5 rounded-lg px-3 py-2">
+              Password must be at least 12 characters and strong enough to meet the security policy.
+            </div>
+          )}
+
           {error && (
             <div className="text-sm text-red-400 bg-red-400/10 rounded-lg px-3 py-2">
               {error}

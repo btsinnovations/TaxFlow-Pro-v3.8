@@ -223,7 +223,20 @@ export async function bootLocalAdmin(password: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ password }),
   });
-  if (!res.ok) throw new Error("Boot failed");
+  if (!res.ok) {
+    let msg = "Boot failed";
+    try {
+      const body = await res.json();
+      if (body?.detail?.message) {
+        msg = body.detail.message;
+      } else if (body?.detail) {
+        msg = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
+      }
+    } catch {
+      msg = await res.text();
+    }
+    throw new Error(msg);
+  }
   return res.json();
 }
 
@@ -240,7 +253,16 @@ export async function loginUser(username: string, password: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
   });
-  if (!res.ok) throw new Error("Login failed");
+  if (!res.ok) {
+    let msg = "Login failed";
+    try {
+      const body = await res.json();
+      if (body?.detail) msg = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
+    } catch {
+      msg = await res.text();
+    }
+    throw new Error(msg);
+  }
   return res.json();
 }
 

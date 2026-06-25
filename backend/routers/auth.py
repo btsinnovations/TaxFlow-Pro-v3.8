@@ -152,7 +152,12 @@ def boot(request: Request, body: BootRequest, db: Session = Depends(get_db)):
         # Uniform failure path: run a dummy password check before returning.
         _timing_safe_authenticate(db, body.password, body.password)
         raise HTTPException(status_code=400, detail="Already initialized")
-    _check_password_policy(body.password)
+    policy_failures = _check_password_policy(body.password)
+    if policy_failures:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"message": "Password does not meet security policy", "failures": policy_failures},
+        )
     keyfile_path = Path(body.keyfile_path) if body.keyfile_path else None
     try:
         user = boot_local_admin(db, body.password, keyfile_path)
