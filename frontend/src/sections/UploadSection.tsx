@@ -8,6 +8,7 @@ import { Download, FileText, AlertTriangle } from 'lucide-react';
 import FileDropzone from '../components/FileDropzone';
 import { uploadFile, processFile, downloadResult, getClients } from '../hooks/useAPI';
 import { useToast } from "@/hooks/useToast";
+import OFXUpload from '../components/upload/OFXUpload';
 
 const UploadSection = () => {
   const [clientId, setClientId] = useState('default');
@@ -133,7 +134,7 @@ const UploadSection = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="qif">QIF (HomeBank)</SelectItem>
+                  <SelectItem value="qif">QIF</SelectItem>
                   <SelectItem value="csv">CSV</SelectItem>
                   <SelectItem value="json">JSON</SelectItem>
                 </SelectContent>
@@ -165,6 +166,10 @@ const UploadSection = () => {
         </div>
 
         <FileDropzone onUpload={handleUpload} />
+
+        <div className="mt-12">
+          <OFXUpload />
+        </div>
 
         {pendingFiles.length > 0 && (
           <div className="mt-4 p-3 rounded-lg bg-white/[0.03] border border-white/10">

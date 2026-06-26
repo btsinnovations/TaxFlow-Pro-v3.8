@@ -1,15 +1,4 @@
-// When the React app is served from the same origin as the FastAPI backend
-// (the production desktop bundle case), use relative URLs so we don't hit
-// CORS or cross-origin issues between 127.0.0.1 and localhost.
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
-
-function authHeaders(contentType?: string): Record<string, string> {
-  const token = localStorage.getItem("token");
-  const headers: Record<string, string> = {};
-  if (token) headers.Authorization = `Bearer ${token}`;
-  if (contentType) headers['Content-Type'] = contentType;
-  return headers;
-}
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 export async function uploadFile(file: File, clientId: string = 'default', forceOcr: boolean = false): Promise<any> {
   const formData = new FormData();
@@ -19,7 +8,6 @@ export async function uploadFile(file: File, clientId: string = 'default', force
 
   const res = await fetch(`${API_BASE}/upload/`, {
     method: 'POST',
-    headers: authHeaders(),
     body: formData,
   });
   if (!res.ok) throw new Error(await res.text());
@@ -35,7 +23,7 @@ export async function processFile(fileId: string, options: {
 } = {}): Promise<any> {
   const res = await fetch(`${API_BASE}/upload/process`, {
     method: 'POST',
-    headers: authHeaders('application/json'),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       file_id: fileId,
       client_id: options.client_id || 'default',
@@ -50,17 +38,13 @@ export async function processFile(fileId: string, options: {
 }
 
 export async function downloadResult(fileId: string, format: string = 'qif'): Promise<Blob> {
-  const res = await fetch(`${API_BASE}/upload/download/${fileId}?format=${format}`, {
-    headers: authHeaders(),
-  });
+  const res = await fetch(`${API_BASE}/upload/download/${fileId}?format=${format}`);
   if (!res.ok) throw new Error('Download failed');
   return res.blob();
 }
 
 export async function getClients(): Promise<any[]> {
-  const res = await fetch(`${API_BASE}/clients/`, {
-    headers: authHeaders(),
-  });
+  const res = await fetch(`${API_BASE}/clients/`);
   if (!res.ok) throw new Error('Failed to fetch clients');
   return res.json();
 }
@@ -68,7 +52,7 @@ export async function getClients(): Promise<any[]> {
 export async function createClient(data: { name: string; entity_type?: string; tax_id?: string; notes?: string }): Promise<any> {
   const res = await fetch(`${API_BASE}/clients/`, {
     method: 'POST',
-    headers: authHeaders('application/json'),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error('Failed to create client');
@@ -76,18 +60,14 @@ export async function createClient(data: { name: string; entity_type?: string; t
 }
 
 export async function getAuditLog(limit: number = 50): Promise<any[]> {
-  const res = await fetch(`${API_BASE}/audit/?limit=${limit}`, {
-    headers: authHeaders(),
-  });
+  const res = await fetch(`${API_BASE}/audit/?limit=${limit}`);
   if (!res.ok) throw new Error('Failed to fetch audit log');
   return res.json();
 }
 
 export async function getTaxRules(tenantId?: string | number): Promise<any[]> {
   const q = tenantId != null ? `?tenant_id=${tenantId}` : "?tenant_id=default";
-  const res = await fetch(`${API_BASE}/tax/${q}`, {
-    headers: authHeaders(),
-  });
+  const res = await fetch(`${API_BASE}/tax/${q}`);
   if (!res.ok) throw new Error('Failed to fetch tax rules');
   return res.json();
 }
@@ -96,7 +76,7 @@ export async function updateTaxRule(ruleId: string, data: any, tenantId?: string
   const q = tenantId != null ? `?tenant_id=${tenantId}` : "?tenant_id=default";
   const res = await fetch(`${API_BASE}/tax/${ruleId}${q}`, {
     method: 'PATCH',
-    headers: authHeaders('application/json'),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error('Failed to update tax rule');
@@ -104,21 +84,27 @@ export async function updateTaxRule(ruleId: string, data: any, tenantId?: string
 }
 
 export async function getDashboardStats(): Promise<any> {
-  const res = await fetch(`${API_BASE}/dashboard/stats`, {
-    headers: authHeaders(),
-  });
+  const res = await fetch(`${API_BASE}/dashboard/stats`);
   if (!res.ok) throw new Error('Failed to fetch stats');
   return res.json();
 }
 
-// Tests router is intentionally not exposed in production builds.
-export async function getTests(): Promise<any[]> { return []; }
-export async function runTests(): Promise<any> { return { status: 'disabled' }; }
+export async function getTests(): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/tests/`);
+  if (!res.ok) throw new Error('Failed to fetch tests');
+  return res.json();
+}
+
+export async function runTests(): Promise<any> {
+  const res = await fetch(`${API_BASE}/tests/run`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error('Failed to run tests');
+  return res.json();
+}
 
 export async function getMLStatus(): Promise<any> {
-  const res = await fetch(`${API_BASE}/ml/status`, {
-    headers: authHeaders(),
-  });
+  const res = await fetch(`${API_BASE}/ml/status`);
   if (!res.ok) throw new Error('Failed to fetch ML status');
   return res.json();
 }
@@ -126,16 +112,13 @@ export async function getMLStatus(): Promise<any> {
 export async function toggleML(): Promise<any> {
   const res = await fetch(`${API_BASE}/ml/toggle`, {
     method: 'POST',
-    headers: authHeaders(),
   });
   if (!res.ok) throw new Error('Failed to toggle ML');
   return res.json();
 }
 
 export async function getExportFormats(): Promise<any[]> {
-  const res = await fetch(`${API_BASE}/export/formats`, {
-    headers: authHeaders(),
-  });
+  const res = await fetch(`${API_BASE}/export/formats`);
   if (!res.ok) throw new Error('Failed to fetch export formats');
   return res.json();
 }
@@ -143,7 +126,7 @@ export async function getExportFormats(): Promise<any[]> {
 export async function updateClient(clientId: string, data: { name: string; entity_type?: string; tax_id?: string; notes?: string }): Promise<any> {
   const res = await fetch(`${API_BASE}/clients/${clientId}`, {
     method: 'PATCH',
-    headers: authHeaders('application/json'),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error('Failed to update client');
@@ -153,16 +136,13 @@ export async function updateClient(clientId: string, data: { name: string; entit
 export async function deleteClient(clientId: string): Promise<any> {
   const res = await fetch(`${API_BASE}/clients/${clientId}`, {
     method: 'DELETE',
-    headers: authHeaders(),
   });
   if (!res.ok) throw new Error('Failed to delete client');
   return res.json();
 }
 
 export async function getProcessedFiles(): Promise<any[]> {
-  const res = await fetch(`${API_BASE}/audit/`, {
-    headers: authHeaders(),
-  });
+  const res = await fetch(`${API_BASE}/audit/`);
   if (!res.ok) throw new Error('Failed to fetch processed files');
   const events = await res.json();
   // Filter to processing complete events and extract file info
@@ -179,11 +159,60 @@ export async function getProcessedFiles(): Promise<any[]> {
     .filter((f: any) => f.file_id);
 }
 
+export async function searchTaxRules(params?: {
+  query?: string;
+  form?: string;
+  line?: string;
+  enabled?: boolean;
+  sort?: string;
+  order?: string;
+}): Promise<any[]> {
+  const qs = new URLSearchParams();
+  if (params?.query) qs.set('query', params.query);
+  if (params?.form) qs.set('form', params.form);
+  if (params?.line) qs.set('line', params.line);
+  if (params?.enabled != null) qs.set('enabled', String(params.enabled));
+  if (params?.sort) qs.set('sort', params.sort);
+  if (params?.order) qs.set('order', params.order);
+  const query = qs.toString();
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${API_BASE}/tax-rules${query ? `?${query}` : ''}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!res.ok) throw new Error('Failed to fetch tax rules');
+  return res.json();
+}
+
+export async function uploadOFX(
+  file: File,
+  accountId?: number | null,
+): Promise<{
+  statement_id: number;
+  account_id: number;
+  account_name: string;
+  transactions_count: number;
+  duplicates_skipped: number;
+  period_start?: string;
+  period_end?: string;
+}> {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (accountId != null) {
+    formData.append('account_id', String(accountId));
+  }
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${API_BASE}/imports/ofx`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: formData,
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 export async function getAccounts(clientId?: string): Promise<any[]> {
   const url = clientId ? `${API_BASE}/accounts/?client_id=${clientId}` : `${API_BASE}/accounts/`;
-  const res = await fetch(url, {
-    headers: authHeaders(),
-  });
+  const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch accounts');
   return res.json();
 }
@@ -191,7 +220,7 @@ export async function getAccounts(clientId?: string): Promise<any[]> {
 export async function createAccount(data: { client_id: string; nickname: string; institution: string; account_type?: string; account_number_last4?: string; notes?: string }): Promise<any> {
   const res = await fetch(`${API_BASE}/accounts/`, {
     method: 'POST',
-    headers: authHeaders('application/json'),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error('Failed to create account');
@@ -201,7 +230,6 @@ export async function createAccount(data: { client_id: string; nickname: string;
 export async function deleteAccount(accountId: string): Promise<any> {
   const res = await fetch(`${API_BASE}/accounts/${accountId}`, {
     method: 'DELETE',
-    headers: authHeaders(),
   });
   if (!res.ok) throw new Error('Failed to delete account');
   return res.json();
@@ -210,7 +238,6 @@ export async function deleteAccount(accountId: string): Promise<any> {
 export async function syncAccount(accountId: string): Promise<any> {
   const res = await fetch(`${API_BASE}/accounts/${accountId}/sync`, {
     method: 'POST',
-    headers: authHeaders(),
   });
   if (!res.ok) throw new Error('Failed to sync account');
   return res.json();
@@ -223,20 +250,7 @@ export async function bootLocalAdmin(password: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ password }),
   });
-  if (!res.ok) {
-    let msg = "Boot failed";
-    try {
-      const body = await res.json();
-      if (body?.detail?.message) {
-        msg = body.detail.message;
-      } else if (body?.detail) {
-        msg = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
-      }
-    } catch {
-      msg = await res.text();
-    }
-    throw new Error(msg);
-  }
+  if (!res.ok) throw new Error("Boot failed");
   return res.json();
 }
 
@@ -253,16 +267,7 @@ export async function loginUser(username: string, password: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
   });
-  if (!res.ok) {
-    let msg = "Login failed";
-    try {
-      const body = await res.json();
-      if (body?.detail) msg = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
-    } catch {
-      msg = await res.text();
-    }
-    throw new Error(msg);
-  }
+  if (!res.ok) throw new Error("Login failed");
   return res.json();
 }
 
@@ -306,3 +311,5 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
     },
   });
 }
+
+
