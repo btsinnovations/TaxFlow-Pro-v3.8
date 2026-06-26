@@ -1,31 +1,79 @@
-"""Stub tests for production-mode behavior.
+"""Production-mode behavior tests.
 
-Expected coverage (v3.11.5):
-- ``TAXFLOW_ENV=production`` sets ``local_settings.is_production()`` to True.
-- ``/api/tests/`` router is absent in production.
-- Debug-only middleware/routes are absent in production.
-- Health endpoints report ``production_mode: true`` in production.
-
-These tests currently import the helpers without making assertions so that the
-stub scaffolding can land before full logic is implemented.
+Covers:
+- ``TAXFLOW_ENV=production`` makes ``local_settings.is_production()`` True.
+- ``/api/tests/`` returns 404 in production.
+- ``/api/health`` reports ``production_mode: true`` in production and
+  ``production_mode: false`` in development.
 """
 from __future__ import annotations
 
+import os
 
-# TODO(v3.11.5): import backend.local.settings and backend.security.production_mode
-# once the full production-mode contract is wired.
-
-
-def test_production_mode_stub_imports():
-    """Placeholder that ensures the production-mode module imports cleanly."""
-    from backend.security import production_mode
-
-    assert hasattr(production_mode, "is_production")
-    assert hasattr(production_mode, "is_development")
+import pytest
+from fastapi.testclient import TestClient
 
 
-def test_production_mode_defaults_to_development():
-    """Placeholder confirming the default environment is development."""
-    from backend.security.production_mode import is_development
+@pytest.fixture
+def prod_env(monkeypatch):
+    """Set the active environment to production for one test."""
+    monkeypatch.setenv("TAXFLOW_ENV", "production")
+    # The settings module reads dynamically, but the api module captures
+    # ENVIRONMENT at import time. We reload both so the test sees prod mode.
+    import backend.local.settings as settings
+    import backend.api as api
+    from importlib import reload
+    reload(settings)
+    reload(api)
+    yield settings, api
+    # Restore development default after the test.
+    monkeypatch.setenv("TAXFLOW_ENV", "development")
+    reload(settings)
+    reload(api)
 
-    assert is_development() is True
+
+def test_production_env_flag():
+    """``TAXFLOW_ENV=production`` sets ``is_production()`` True."""
+    import backend.local.settings as settings
+    from importlib import reload
+
+    # Default test environment from conftest is development.
+    assert settings.is_development() is True
+    assert settings.is_production() is False
+
+    os.environ["TAXFLOW_ENV"] = "production"
+    try:
+        reload(settings)
+        assert settings.is_production() is True
+        assert settings.is_development() is False
+    finally:
+        os.environ["TAXFLOW_ENV"] = "development"
+        reload(settings)
+
+
+def test_api_tests_returns_404_in_production(prod_env):
+    """The test-runner router is absent in production builds."""
+    _settings, api = prod_env
+    client = TestClient(api.app)
+    resp = client.get("/api/tests/")
+    assert resp.status_code == 404
+
+
+def test_api_health_reports_production_mode(prod_env):
+    """``/api/health`` reports production_mode: true in production."""
+    _settings, api = prod_env
+    client = TestClient(api.app)
+    resp = client.get("/api/health")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["environment"] == "production"
+    assert data["production_mode"] is True
+
+
+def test_api_health_reports_development_mode(client):
+    """``/api/health`` reports production_mode: false in development."""
+    resp = client.get("/api/health")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["environment"] == "development"
+    assert data["production_mode"] is False

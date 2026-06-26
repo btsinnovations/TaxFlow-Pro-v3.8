@@ -6,13 +6,18 @@ from starlette.responses import JSONResponse
 from pathlib import Path
 from .database import engine, DATABASE_URL
 from . import models  # noqa: F401 - ensure models are registered
-from .routers import upload, clients, accounts, audit, tax, tax_exports, ml, export, tests, dashboard, auth, depreciation, rules, flags, gl, transactions, health, coa, profiles, recurring, checks, inventory, fx, reconciliation, reports, budget, invoicing, liabilities, investments, imports, backup
+from .routers import upload, clients, accounts, audit, tax, tax_exports, ml, export, dashboard, auth, depreciation, rules, flags, gl, transactions, health, coa, profiles, recurring, checks, inventory, fx, reconciliation, reports, budget, invoicing, liabilities, investments, imports, backup
 from . import auth as auth_module
 from .rls import is_postgres
 from .local import settings as local_settings
 from alembic.config import Config
 from alembic import command
 import os
+
+
+# Debug/test-only routers are imported only in development mode.
+if local_settings.is_development():
+    from .routers import tests
 
 
 ENVIRONMENT = local_settings.ENVIRONMENT
@@ -186,7 +191,7 @@ class _SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
         )
         # HSTS is only meaningful over HTTPS; enable it in production.
-        if ENVIRONMENT == "production":
+        if local_settings.is_production():
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
@@ -317,6 +322,13 @@ app.include_router(gl.router, prefix="/api")
 app.include_router(health.router, prefix="/api")
 if local_settings.is_development():
     app.include_router(tests.router, prefix="/api")
+else:
+    # Production build: explicitly reject the test-runner namespace so scans
+    # and accidental packaging leaks are unambiguous 404s.
+    @app.get("/api/tests", include_in_schema=False)
+    @app.get("/api/tests/{path:path}", include_in_schema=False)
+    def _tests_not_found(path: str = ""):
+        return JSONResponse(status_code=404, content={"detail": "Not Found"})
 
 
 @app.get("/health")

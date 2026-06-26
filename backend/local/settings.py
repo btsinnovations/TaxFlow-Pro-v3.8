@@ -46,18 +46,27 @@ RUNTIME_MODE = os.environ.get("TAXFLOW_RUNTIME_MODE", RuntimeMode.OFFLINE)
 
 # Environment classification: development | production
 # Accept either TAXFLOW_ENV (short) or TAXFLOW_ENVIRONMENT (explicit).
-_ENV = os.environ.get("TAXFLOW_ENV", os.environ.get("TAXFLOW_ENVIRONMENT", "development")).lower()
-ENVIRONMENT = _ENV
+# Read dynamically so tests can toggle without reloading the module.
+def _read_env() -> str:
+    return os.environ.get("TAXFLOW_ENV", os.environ.get("TAXFLOW_ENVIRONMENT", "development")).lower()
+
+
+ENVIRONMENT = _read_env()
 
 
 def is_production() -> bool:
     """Return True when the app is configured for production mode."""
-    return ENVIRONMENT == "production"
+    return _read_env() == "production"
 
 
 def is_development() -> bool:
     """Return True when the app is configured for development mode."""
-    return ENVIRONMENT != "production"
+    return not is_production()
+
+
+def production_flag() -> str:
+    """Return the raw, lower-cased environment string."""
+    return _read_env()
 
 
 def is_offline() -> bool:
