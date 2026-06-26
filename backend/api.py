@@ -315,7 +315,7 @@ app.include_router(rules.tax_rules_router, prefix="/api")
 app.include_router(flags.router, prefix="/api")
 app.include_router(gl.router, prefix="/api")
 app.include_router(health.router, prefix="/api")
-if ENVIRONMENT == "development":
+if local_settings.is_development():
     app.include_router(tests.router, prefix="/api")
 
 
@@ -329,6 +329,8 @@ def health():
         "offline": local_settings.is_offline(),
         "single_user": local_settings.is_single_user(),
         "multi_entity": getattr(local_settings, "TAXFLOW_MULTI_ENTITY", False),
+        "environment": local_settings.ENVIRONMENT,
+        "production_mode": local_settings.is_production(),
     }
 
 @app.get("/api/health")
@@ -344,6 +346,8 @@ def health_api():
         "single_user": local_settings.is_single_user(),
         "multi_entity": getattr(local_settings, "TAXFLOW_MULTI_ENTITY", False),
         "bootstrap_ready": report.ready,
+        "environment": local_settings.ENVIRONMENT,
+        "production_mode": local_settings.is_production(),
         "bootstrap_checks": [
             {"name": c.name, "available": c.available, "required": c.required, "message": c.message}
             for c in report.checks

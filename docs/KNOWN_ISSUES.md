@@ -106,5 +106,31 @@
 
 ---
 
+## 6. v3.11.5 Scaffold Known Issues
+
+**Date:** 2026-06-26
+**Status:** Scaffold in progress on `v3.11.5-dev`
+
+### 6.1 macOS `.app` + DMG Packaging
+- **Issue:** macOS bundle is scaffolded but cannot be built or signed on the current Windows/Linux hosts.
+- **Impact:** macOS packaging remains deferred until a macOS host is available.
+- **Workaround:** Documented in `shared/specs/v3.11.5-security-packaging-spec.md` as a staged deferral.
+
+### 6.2 RLS Validation Requires Live PostgreSQL
+- **Issue:** PostgreSQL Row-Level Security policies are scaffolded but the full isolation test suite needs a live PostgreSQL instance.
+- **Impact:** `backend/tests/test_rls_postgres.py` is stubbed and skipped on SQLite.
+- **Workaround:** SQLite builds rely on application-level tenant filtering; PostgreSQL policies are applied via Alembic migration.
+
+### 6.3 Public Code-Signing / Notarization Deferred
+- **Issue:** Windows OV certs, Apple Developer membership, and GPG signing keys have not been purchased/generated.
+- **Impact:** Installers will be unsigned for friends/family distribution.
+- **Workaround:** Trust-signal options documented; signing will be wired into build scripts only after explicit Josh approval.
+
+### 6.4 Production Mode is a Skeleton
+- **Issue:** `TAXFLOW_ENV=production` removes `/api/tests/` and reports production mode via health endpoints, but additional debug-only middleware/routes may need to be gated as they are identified.
+- **Impact:** No functional bug, but the production-mode surface will be tightened during implementation.
+
+---
+
 *Owner: James Clawd / Orchestrator*  
-*Next review: After v3.10 tag or v3.11 planning kickoff*
+*Next review: After v3.11.5 scaffold commit or full implementation kickoff*

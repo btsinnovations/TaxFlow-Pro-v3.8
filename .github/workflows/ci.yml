@@ -30,6 +30,9 @@ jobs:
       - name: Run Alembic migrations (SQLite test DB)
         run: python -m alembic upgrade head
 
+      - name: Run production-mode smoke stub
+        run: python scripts/packaging/smoke_ci.py
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:

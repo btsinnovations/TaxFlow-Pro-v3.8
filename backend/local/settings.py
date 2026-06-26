@@ -45,7 +45,19 @@ class RuntimeMode:
 RUNTIME_MODE = os.environ.get("TAXFLOW_RUNTIME_MODE", RuntimeMode.OFFLINE)
 
 # Environment classification: development | production
-ENVIRONMENT = os.environ.get("TAXFLOW_ENVIRONMENT", "development").lower()
+# Accept either TAXFLOW_ENV (short) or TAXFLOW_ENVIRONMENT (explicit).
+_ENV = os.environ.get("TAXFLOW_ENV", os.environ.get("TAXFLOW_ENVIRONMENT", "development")).lower()
+ENVIRONMENT = _ENV
+
+
+def is_production() -> bool:
+    """Return True when the app is configured for production mode."""
+    return ENVIRONMENT == "production"
+
+
+def is_development() -> bool:
+    """Return True when the app is configured for development mode."""
+    return ENVIRONMENT != "production"
 
 
 def is_offline() -> bool:

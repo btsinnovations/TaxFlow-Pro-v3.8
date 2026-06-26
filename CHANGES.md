@@ -1,5 +1,79 @@
 ---
 
+# TaxFlow Pro v3.11.5 — Security Hardening + Desktop Packaging
+
+## Release summary (in progress)
+
+- Re-validated v3.9.2 security controls and closed remaining production-build gaps.
+- Introduced `TAXFLOW_ENV=production` runtime mode that disables test-only and debug routers.
+- Removed `/api/tests/` from production builds; retained for development only.
+- Scaffolded CI packaging smoke tests for Windows and Linux installers.
+- Documented staged code-signing / notarization trust options (deferred until public distribution).
+- Hardened multi-tenant RLS: expanded PostgreSQL policies and SQLite application-level fallback.
+
+## Section 64 — Version Bump
+
+**Files changed:**
+- `version.txt`
+- `frontend/package.json`
+- `pyproject.toml`
+- `backend/version.py`
+- `backend/tests/test_version.py`
+
+**Changes:**
+- Bumped canonical version to `3.11.5` across all version-bearing files.
+
+**Verification:**
+```bash
+python -m pytest backend/tests/test_version.py -q
+```
+Expected: **1 passed**.
+
+## Section 65 — Production Mode Flag Skeleton (SEC.24 / SEC.25)
+
+**Files changed:**
+- `backend/local/settings.py`
+- `backend/api.py`
+
+**Changes:**
+- Added `TAXFLOW_ENV=production` detection to `backend/local/settings.py`.
+- `api.py` now gates `/api/tests/` and debug-only routers on `ENVIRONMENT == "development"`.
+- Health endpoints report the effective environment.
+
+## Section 66 — RLS Policy Stubs for PostgreSQL + SQLite Fallback
+
+**Files changed:**
+- `backend/rls.py`
+- `alembic/versions/..._rls_core_tables.py` (new stub)
+- `backend/tests/test_rls_postgres.py` (new)
+- `backend/tests/test_rls_sqlite.py` (new)
+
+**Changes:**
+- Expanded RLS helpers to cover all tenant-isolated tables.
+- Added Alembic migration stub that installs tenant-scoped policies on PostgreSQL and is a no-op on SQLite.
+- Added empty test files describing the expected isolation contract.
+
+## Section 67 — CI Packaging Smoke Tests
+
+**Files changed:**
+- `.github/workflows/ci.yml`
+- `scripts/packaging/smoke_test.py`
+- `scripts/packaging/smoke_ci.py` (new)
+
+**Changes:**
+- Added a CI job that builds frontend and runs packaging smoke test stubs on Ubuntu.
+- Smoke test stub verifies production-mode boot and `/api/tests/` 404 without running full PyInstaller build.
+
+## Section 68 — Known Issues Update
+
+**Files changed:**
+- `docs/KNOWN_ISSUES.md`
+
+**Changes:**
+- Documented v3.11.5-specific known issues: macOS packaging host availability, RLS PostgreSQL validation requiring live PG instance, public code-signing deferred.
+
+---
+
 # TaxFlow Pro v3.11.0 — Chart of Accounts + Foundation Start
 
 ## Release summary (in progress)
