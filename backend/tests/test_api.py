@@ -6,7 +6,7 @@ def test_health_endpoint(client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "ok"
-    assert data["version"] == "3.10.0"
+    assert data["version"] == "3.11.0"
     assert data["single_user"] is True
     assert data["multi_entity"] is False
 
@@ -16,7 +16,7 @@ def test_api_health_endpoint(client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "ok"
-    assert data["version"] == "3.10.0"
+    assert data["version"] == "3.11.0"
     assert data["single_user"] is True
     assert data["multi_entity"] is False
 

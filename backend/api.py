@@ -6,7 +6,7 @@ from starlette.responses import JSONResponse
 from pathlib import Path
 from .database import engine, DATABASE_URL
 from . import models  # noqa: F401 - ensure models are registered
-from .routers import upload, clients, accounts, audit, tax, tax_exports, ml, export, tests, dashboard, auth, depreciation, rules, flags, gl, transactions, health, coa, profiles, recurring, checks, inventory, fx, reconciliation, reports, budget, invoicing, liabilities, investments, imports
+from .routers import upload, clients, accounts, audit, tax, tax_exports, ml, export, tests, dashboard, auth, depreciation, rules, flags, gl, transactions, health, coa, profiles, recurring, checks, inventory, fx, reconciliation, reports, budget, invoicing, liabilities, investments, imports, backup
 from . import auth as auth_module
 from .rls import is_postgres
 from .local import settings as local_settings
@@ -302,6 +302,7 @@ app.include_router(liabilities.router, prefix="/api")
 app.include_router(investments.router, prefix="/api")
 app.include_router(upload.router, prefix="/api")
 app.include_router(imports.router, prefix="/api")
+app.include_router(backup.router, prefix="/api")
 app.include_router(export.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(tax.router, prefix="/api")
