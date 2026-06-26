@@ -87,19 +87,6 @@ export default function TaxFilingExports() {
     loadMappings();
   }, []);
 
-  async function createMapping(accountId: number, line: string) {
-    try {
-      const res = await fetchWithAuth("/api/tax-exports/mappings", {
-        method: "POST",
-        body: JSON.stringify({ coa_account_id: accountId, form: "Schedule C", line, description: "" }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      loadMappings();
-    } catch (e: any) {
-      setError(e?.message || "Failed to create mapping");
-    }
-  }
-
   const scheduleCLines: ScheduleCLine[] = useMemo(() => {
     if (!scheduleC) return [];
     return [

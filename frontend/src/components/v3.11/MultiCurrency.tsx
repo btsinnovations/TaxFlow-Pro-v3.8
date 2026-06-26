@@ -56,7 +56,7 @@ export default function MultiCurrency() {
       })
       .then((accounts) => {
         // Rates are not yet exposed as a list endpoint. We compute pairs from account currencies.
-        const currencies = Array.from(new Set((accounts || []).map((a: any) => a.currency || "USD")));
+        const currencies: string[] = Array.from(new Set((accounts || []).map((a: any) => a.currency || "USD")));
         if (currencies.length === 0) currencies.push("USD");
         // Build all possible pairs except identical. For now we treat USD pairs as available.
         const pairs: FXRate[] = [];

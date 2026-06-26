@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { fetchWithAuth } from "@/hooks/useAPI";
-import { Loader2, FileText, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 
 export interface InvoiceRow {
   id: number;
