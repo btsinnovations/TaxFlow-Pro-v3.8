@@ -151,7 +151,177 @@ Expected: `http://127.0.0.1:8002/api/health` returns `200` with `version: 3.10.0
 
 ---
 
-# TaxFlow Pro v3.9.2 — Security Sprint + Phase 3 Foundation Completion
+# TaxFlow Pro v3.11.0 — Bookkeeping Foundation + Import/Export Polish
+
+## Release summary
+
+- Completed the v3.11 bookkeeping foundation: Chart of Accounts, v3.11 module shells, and frontend smoke-test harness.
+- Delivered a polished import/export experience: OFX/QFX import with duplicate detection, tax-rules search, parser branding, and export-format lock states.
+- Hardened the migration story: idempotent v3.11 Alembic baseline, v3.10 → v3.11 backup import wizard, and dedicated migration health tests.
+- Bumped canonical version to `3.11.0` across `version.txt`, `pyproject.toml`, and `frontend/package.json`.
+- Documented supported financial institutions and deferred public packaging/code-signing to v3.11.5.
+
+## Section 57 — Version Bump + Supported Institutions
+
+**Files changed:**
+- `version.txt`
+- `pyproject.toml`
+- `frontend/package.json`
+- `backend/version.py` (new)
+- `backend/tests/test_version.py` (new)
+- `docs/SUPPORTED_INSTITUTIONS.md` (new)
+
+**Changes:**
+- Bumped version to `3.11.0` in all version-bearing files.
+- Added canonical `backend/version.py` constant and `backend/tests/test_version.py` to guard release tags.
+- Added `docs/SUPPORTED_INSTITUTIONS.md` documenting 18 supported banks/credit unions, parser status, and the `POST /api/imports/detect` workflow.
+
+**Verification:**
+```bash
+python -m pytest backend/tests/test_version.py -q
+```
+Expected: **1 passed**.
+
+---
+
+## Section 58 — Frontend v3.11 Component Test Harness
+
+**Files changed:**
+- `frontend/src/components/v3.11/ModuleShell.tsx`
+- `frontend/src/components/v3.11/__tests__/*.test.tsx`
+- `frontend/vite.config.ts`
+- `frontend/tsconfig.app.json`
+- `frontend/src/components/v3.11/InvoicingAPAR.tsx`
+- `frontend/src/components/v3.11/MultiCurrency.tsx`
+- `frontend/src/components/v3.11/TaxFilingExports.tsx`
+
+**Changes:**
+- Standardized `ModuleShell` and all 9 v3.11 component tests on `react-router-dom` to resolve `useNavigate` context mismatches.
+- Added `vitest/globals` to `tsconfig.app.json` and imported `defineConfig` from `vitest/config` for typed config.
+- Fixed TypeScript errors blocking `npm run build`: unused imports, untyped arrays, and dangling references.
+- Smoke tests mock `useAPI` and assert module headings instead of brittle data-fetch behavior.
+
+**Verification:**
+```bash
+cd frontend
+npm run build
+npm test -- --run
+```
+Expected: build green, **9 passed**.
+
+---
+
+## Section 59 — Backend Support-Router Audit
+
+**Files changed:**
+- `shared/tasks/v3.11/ROUTER-AUDIT.md`
+
+**Changes:**
+- Ran targeted tests for 11 support routers flagged as missing dedicated tests: `accounts`, `clients`, `transactions`, `upload`, `dashboard`, `audit`, `tax`, `gl`, `ml`, `health`, `auth`.
+- Confirmed all are exercised by existing test modules.
+- Updated audit with coverage table and adjusted action items.
+
+**Verification:**
+```bash
+python -m pytest backend/tests -xvs \
+  -k "accounts or clients or transactions or upload or dashboard or audit or tax or gl or ml or health or auth"
+```
+Expected: **161 passed, 0 failed**.
+
+---
+
+## Section 60 — OFX/QFX Import (Backend + Frontend)
+
+**Files changed:**
+- `backend/parsers/ofx.py` (already existed)
+- `backend/routers/imports.py`
+- `backend/models.py` (added `fitid` column)
+- `alembic/versions/330eb386b9c2_add_fitid_to_transactions_for_ofx_.py` (new)
+- `frontend/src/hooks/useAPI.ts`
+- `frontend/src/components/upload/OFXUpload.tsx` (new)
+- `frontend/src/sections/UploadSection.tsx`
+
+**Changes:**
+- Added `POST /api/imports/ofx` endpoint that parses OFX/QFX statements, creates/ maps accounts, writes statements and transactions, and deduplicates by `fitid`.
+- Added `fitid` column to `transactions` via scoped Alembic migration.
+- Added `uploadOFX` helper in `useAPI.ts`.
+- Added `OFXUpload` React component with drag-and-drop, account mapping, import preview, duplicate-count summary, and result export.
+- Wired `OFXUpload` into `UploadSection`.
+
+**Verification:**
+```bash
+python -m pytest backend/tests/test_ofx.py -q
+```
+Expected: existing OFX tests green.
+
+---
+
+## Section 61 — Tax Rules Search + Export Polish
+
+**Files changed:**
+- `backend/routers/rules.py` (or tax_rules_router)
+- `frontend/src/sections/TaxRules.tsx`
+- `frontend/src/sections/ExportFormats.tsx`
+- `frontend/src/sections/Hero.tsx`
+
+**Changes:**
+- Added backend search/filter/sort API for tax rules.
+- Rewrote `TaxRules` section with live search, filter chips, and sortable table against `/api/tax-rules`.
+- Polished `ExportFormats`: locked state until statements are processed, removed HomeBank label, added spinner.
+- Updated `Hero` with 16+ supported institutions and PDF/CSV/OFX input formats.
+
+**Verification:**
+```bash
+python -m pytest backend/tests -k "tax" -q
+cd frontend && npm test -- --run
+```
+Expected: backend tax tests green, frontend smoke tests green.
+
+---
+
+## Section 62 — Alembic Baseline + v3.10 → v3.11 Backup Import
+
+**Files changed:**
+- `alembic/versions/e8f4a2c1d0b5_v3_11_baseline.py` (new)
+- `alembic/versions/330eb386b9c2_add_fitid_to_transactions_for_ofx_.py`
+- `alembic/versions/35b27f93b50d_add_txn_uid_unique_idempotent_import.py`
+- `backend/backup_import.py` (new)
+- `backend/routers/backup.py` (new)
+- `backend/api.py`
+- `backend/tests/test_alembic_migrations.py` (new)
+- `backend/tests/test_backup_import.py` (new)
+
+**Changes:**
+- Added idempotent v3.11 baseline Alembic migration creating core tables only if missing.
+- Re-chained revisions: `ba949088fd32` → `e8f4a2c1d0b5` → `330eb386b9c2`.
+- Hardened `35b27f93b50d` downgrade to tolerate table absence during baseline downgrade.
+- Added `backend/backup_import.py` to import v3.10 JSON backups, remapping IDs and deduplicating existing users by username/email.
+- Added `backend/routers/backup.py` with `POST /api/backup/import` and `GET /api/backup/export`.
+- Wired backup router into `backend/api.py`.
+- Added migration roundtrip tests and backup import/export tests.
+
+**Verification:**
+```bash
+python -m pytest backend/tests/test_alembic_migrations.py backend/tests/test_backup_import.py -q
+```
+Expected: **6 passed, 0 failed**.
+
+---
+
+## Section 63 — Packaging / Code-Signing Deferred to v3.11.5
+
+**Files changed:**
+- `TOOLS.md`
+- `agents/jane/workspace/TOOLS.md`
+
+**Changes:**
+- Documented packaging options (Windows Defender submission, OV/EV code signing, Microsoft Store, Linux GPG/PPA/Flatpak, macOS Apple Developer/notarization).
+- Explicitly deferred all public-trust work to v3.11.5; v3.11.0 is for friends/family/internal use only.
+- Current baseline remains: feature-complete, hardened, functionality over form, grandmother-simple UX.
+
+**Status:** No code-signing or installer changes in v3.11.0.
+
+---
 
 ## Release summary
 
