@@ -8,6 +8,8 @@ Create Date: 2026-06-22 20:49:11.019663
 from typing import Sequence, Union
 
 from alembic import op
+from sqlalchemy import inspect
+from sqlalchemy.exc import NoSuchTableError
 import sqlalchemy as sa
 
 
@@ -33,5 +35,18 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Remove txn_uid idempotency support."""
-    op.drop_index(op.f('ix_transactions_txn_uid'), table_name='transactions')
-    op.drop_column('transactions', 'txn_uid')
+    # The v3.11 baseline migration also creates this index/table, so when
+    # downgrading through the baseline the table may already be gone. Be
+    # defensive and skip if the table or index is absent.
+    bind = op.get_bind()
+    try:
+        existing_indexes = {idx['name'] for idx in inspect(bind).get_indexes('transactions')}
+    except NoSuchTableError:
+        existing_indexes = set()
+    if 'ix_transactions_txn_uid' in existing_indexes:
+        op.drop_index(op.f('ix_transactions_txn_uid'), table_name='transactions')
+    try:
+        op.drop_column('transactions', 'txn_uid')
+    except Exception:
+        # Column may already be gone if the table was dropped by baseline downgrade.
+        pass
