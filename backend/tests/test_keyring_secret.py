@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from backend.local.keyring_secret import (
-    LOCAL_SECRET_FILE,
+    _local_secret_file,
     _set_secret_file_permissions,
     _write_file_secret,
     store_secret,
@@ -25,8 +25,8 @@ class TestLocalSecretFilePermissions:
     def test_secret_file_is_written_inside_local_root(self, tmp_path, monkeypatch):
         """The plaintext fallback secret must live inside LOCAL_ROOT."""
         monkeypatch.setattr(
-            "backend.local.keyring_secret.LOCAL_SECRET_FILE",
-            tmp_path / ".local_secret",
+            "backend.local.keyring_secret._local_secret_file",
+            lambda: tmp_path / ".local_secret",
         )
         _write_file_secret("test-secret-value")
         secret_path = tmp_path / ".local_secret"
@@ -49,8 +49,8 @@ class TestLocalSecretFilePermissions:
 
         # Conftest disables keyring, so store_secret falls back to file.
         monkeypatch.setattr(
-            "backend.local.keyring_secret.LOCAL_SECRET_FILE",
-            tmp_path / ".local_secret",
+            "backend.local.keyring_secret._local_secret_file",
+            lambda: tmp_path / ".local_secret",
         )
         store_secret("test-secret-value")
         secret_path = tmp_path / ".local_secret"

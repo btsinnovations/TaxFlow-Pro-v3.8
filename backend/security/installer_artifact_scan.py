@@ -29,8 +29,8 @@ FORBIDDEN_PATTERNS = (
     ".env",
     ".local_secret",
     ".local_secret.old",
-    ".pytest_cache",
-    "__pycache__",
+    ".pytest_cache/",
+    "__pycache__/",
     "*.pem",
     "*.key",
     "id_rsa",
@@ -47,6 +47,9 @@ FORBIDDEN_PATTERNS = (
 
 # File extensions that are definitely test code.
 TEST_CODE_SUFFIXES = ("_test.py", "test_.py")
+
+# File name patterns that indicate test code.
+TEST_CODE_PREFIXES = ("test_",)
 
 
 class Finding:
@@ -66,12 +69,18 @@ def _is_forbidden(name: str) -> str | None:
     lowered = name.lower()
     for pattern in FORBIDDEN_PATTERNS:
         if pattern.endswith("/"):
-            # Directory pattern: match as a path component.
-            if (f"/{pattern}" in name or name.startswith(pattern)) and not name.endswith("/"):
-                # Allow exact directory entries through; only flag contents.
-                return None
-            if pattern.rstrip("/") in name.split("/"):
-                return f"forbidden directory: {pattern}"
+            # Directory pattern: flag any path whose components include the
+            # directory name.  We skip the directory entry itself (trailing
+            # slash) to avoid false positives on the folder node.
+            dir_name = pattern.rstrip("/")
+            components = name.split("/")
+            if dir_name in components:
+                # If the path *is* the directory itself (no further
+                # components after dir_name), skip it — we only flag
+                # files *inside* forbidden directories.
+                idx = components.index(dir_name)
+                if idx < len(components) - 1:
+                    return f"forbidden directory: {pattern}"
         elif "*" in pattern:
             import fnmatch
             if fnmatch.fnmatch(name, pattern):
@@ -83,6 +92,12 @@ def _is_forbidden(name: str) -> str | None:
     for suffix in TEST_CODE_SUFFIXES:
         if name.endswith(suffix):
             return f"test code file: {suffix}"
+    # Also flag Python files that start with test_ (common pytest convention).
+    basename = Path(name).name
+    if basename.endswith(".py"):
+        for prefix in TEST_CODE_PREFIXES:
+            if basename.startswith(prefix):
+                return f"test code file: {prefix}*"
     return None
 
 

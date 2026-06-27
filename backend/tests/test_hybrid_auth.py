@@ -22,6 +22,7 @@ from backend.auth import (
     cleanup_expired_revoked_tokens,
 )
 from backend.local.crypto import generate_keyfile
+from backend.local.crypto import generate_local_secret_key
 from backend import models
 
 
@@ -60,10 +61,11 @@ def _force_file_secret_for_legacy_tests(monkeypatch):
     monkeypatch.setattr("backend.local.keyring_secret.keyring", _FailingKeyring())
     yield
     # Remove any leftover fallback file between tests.
-    from backend import auth as auth_module
+    from backend.local.keyring_secret import _local_secret_file
 
-    if os.path.exists(auth_module.LOCAL_SECRET_FILE):
-        os.remove(auth_module.LOCAL_SECRET_FILE)
+    secret_path = _local_secret_file()
+    if secret_path.exists():
+        secret_path.unlink()
 
 
 
@@ -138,14 +140,12 @@ def test_token_expiry_and_secret_regeneration_invalidates_token(client: TestClie
     token = resp.json()["access_token"]
 
     # Simulate secret regeneration by deleting .local_secret
+    from backend.local.keyring_secret import _local_secret_file, _delete_file_secret, store_secret
     secret_file = get_local_secret()
-    secret_path = None
-    from backend import auth as auth_module
-    # best-effort locate file
-    if os.path.exists(auth_module.LOCAL_SECRET_FILE):
-        secret_path = auth_module.LOCAL_SECRET_FILE
-        os.remove(secret_path)
-    # generate new secret
+    # Delete and regenerate to simulate a new secret
+    _delete_file_secret()
+    # Generate new secret
+    store_secret(generate_local_secret_key())
     new_secret = get_local_secret()
     assert new_secret != secret_file
     resp = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
