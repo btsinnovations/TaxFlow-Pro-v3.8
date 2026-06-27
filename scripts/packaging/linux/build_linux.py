@@ -17,7 +17,6 @@ import platform
 import shutil
 import stat
 import subprocess
-import string
 import sys
 import tarfile
 from pathlib import Path
@@ -91,9 +90,9 @@ added_files = [
     (str(root / "version.txt"), "."),
     (str(root / "requirements.txt"), "."),
     (str(root / "categories.yaml"), "."),
-    (str(root / "scripts" / "taxflow_launcher.py"), "scripts/taxflow_launcher.py"),
-    (str(root / "scripts" / "backup.py"), "scripts/backup.py"),
-    (str(root / "scripts" / "restore.py"), "scripts/restore.py"),
+    (str(root / "scripts" / "taxflow_launcher.py"), "scripts"),
+    (str(root / "scripts" / "backup.py"), "scripts"),
+    (str(root / "scripts" / "restore.py"), "scripts"),
 ]
 
 vendored = root / "vendored"
