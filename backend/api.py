@@ -154,6 +154,9 @@ def _get_cors_origins() -> list[str]:
         "http://127.0.0.1:3000",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        # Packaged app default: frontend served by backend on port 8000.
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
     ]
 
 
