@@ -47,9 +47,10 @@ Only 4 institution-specific parsers exist:
 
 ## v3.11.6 Goal
 
-Add dedicated statement parsers for **every single institution identified in the Stage 1 research**, including Tier 1 recommended additions and Tier 2 investigated-but-deferred candidates.
+Add dedicated statement parsers for **every single institution identified in the Stage 1 research** AND for every institution on DocuClipper's published supported-banks list. The research-derived 23 parsers are implemented first (Phase 1 Track 3). The full DocuClipper list is scraped and implemented at the **end of the v3.11.6 cycle** so core bookkeeping work is not interrupted.
 
-**Total new parsers required:** 23 institutions.
+**Initial parsers delivered in Phase 1:** 23 institutions (research-derived).  
+**Final target:** 100+ institutions (exact count determined after scraping DocuClipper's list at end of cycle).
 
 ---
 
