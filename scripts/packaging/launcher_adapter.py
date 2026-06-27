@@ -23,6 +23,17 @@ if getattr(sys, "frozen", False):
 else:
     _project_root = Path(__file__).resolve().parents[2]
 
+# Pre-seed the local data directory and database URL before any backend
+# modules are imported. PyInstaller hiddenimports and eager imports inside
+# the launcher can import backend.database before the launcher main() runs,
+# and database.py resolves DATABASE_URL at import time. Without this the
+# engine can point at a project-root ./taxflow.db instead of the user data
+# directory.
+_local_root_default = Path(os.environ.get("TAXFLOW_LOCAL_ROOT", Path.home() / ".local" / "share" / "TaxFlowPro"))
+os.environ.setdefault("TAXFLOW_LOCAL_ROOT", str(_local_root_default))
+_db_url_default = f"sqlite:///{(_local_root_default / 'db' / 'taxflow.db').resolve()}"
+os.environ.setdefault("DATABASE_URL", _db_url_default)
+
 # Ensure the project root is importable.
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
