@@ -53,36 +53,58 @@ def _module_available(name: str) -> bool:
 
 def _binary_available(name: str) -> tuple[bool, str]:
     """Check whether an external binary is available, honoring vendored paths."""
+    ext = ".exe" if os.name == "nt" else ""
+
+    # 1. Direct vendored executable lookup via TESSERACT_CMD / POPPLER_PATH env vars.
+    if name == "tesseract":
+        env_cmd = os.environ.get("TESSERACT_CMD")
+        if env_cmd and Path(env_cmd).exists():
+            return True, env_cmd
+    if name in ("pdftotext", "pdfimages", "pdfinfo", "pdftoppm"):
+        poppler_path = os.environ.get("POPPLER_PATH")
+        if poppler_path:
+            candidate = Path(poppler_path) / (name + ext)
+            if candidate.exists():
+                return True, str(candidate)
+            # Some Poppler distributions ship binaries under a bin/ subdirectory.
+            candidate_bin = Path(poppler_path) / "bin" / (name + ext)
+            if candidate_bin.exists():
+                return True, str(candidate_bin)
+
+    # 2. Resolve from PATH / shutil.which.
     path = shutil.which(name)
-    if not path:
-        # Fall back to vendored executable if POPPLER_PATH/TESSERACT_CMD are set.
-        ext = ".exe" if os.name == "nt" else ""
-        if name in ("tesseract",):
-            env_cmd = os.environ.get("TESSERACT_CMD")
-            if env_cmd and Path(env_cmd).exists():
-                return True, env_cmd
-        if name in ("pdftotext", "pdfimages", "pdfinfo", "pdftoppm"):
-            poppler_path = os.environ.get("POPPLER_PATH")
-            if poppler_path:
-                candidate = Path(poppler_path) / (name + ext)
-                if candidate.exists():
-                    return True, str(candidate)
-        return False, f"{name} not found in PATH"
-    try:
-        result = subprocess.run(
-            [name, "--version"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if result.returncode != 0:
-            return False, f"{name} --version failed"
-        # Use first non-empty line of stdout/stderr for version info.
-        output = (result.stdout + result.stderr).strip()
-        first_line = output.splitlines()[0] if output.splitlines() else "unknown"
-        return True, first_line
-    except Exception as exc:
-        return False, f"{name} version check failed: {exc}"
+    if path:
+        try:
+            result = subprocess.run(
+                [path, "--version"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode != 0:
+                return False, f"{name} --version failed"
+            output = (result.stdout + result.stderr).strip()
+            first_line = output.splitlines()[0] if output.splitlines() else "unknown"
+            return True, first_line
+        except Exception as exc:
+            return False, f"{name} version check failed: {exc}"
+
+    # 3. Project-root vendored fallback (useful in source mode before env vars are set).
+    project_root = Path(__file__).resolve().parents[2]
+    vendored = project_root / "vendored"
+    if name == "tesseract":
+        candidate = vendored / "tesseract" / f"tesseract{ext}"
+        if candidate.exists():
+            return True, str(candidate)
+    if name in ("pdftotext", "pdfimages", "pdfinfo", "pdftoppm"):
+        candidate = vendored / "poppler" / f"{name}{ext}"
+        if candidate.exists():
+            return True, str(candidate)
+        candidate_bin = vendored / "poppler" / "bin" / f"{name}{ext}"
+        if candidate_bin.exists():
+            return True, str(candidate_bin)
+
+    return False, f"{name} not found in PATH or vendored layout"
 
 
 def _sqlite_available(db_path: Optional[Path] = None) -> tuple[bool, str]:
