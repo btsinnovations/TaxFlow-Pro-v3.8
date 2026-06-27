@@ -297,6 +297,8 @@ exec "$HERE/TaxFlowPro" "$@"
 
 def _build_tarball() -> None:
     tarball = INSTALLER_DIR / TARBALL_NAME
+    if not INSTALLER_DIR.exists():
+        INSTALLER_DIR.mkdir(parents=True)
     if tarball.exists():
         tarball.unlink()
     _write_desktop_file()
@@ -315,6 +317,8 @@ def _build_tarball() -> None:
 
 def _build_deb() -> None:
     """Build a Debian .deb package from the PyInstaller bundle."""
+    if not INSTALLER_DIR.exists():
+        INSTALLER_DIR.mkdir(parents=True)
     deb = INSTALLER_DIR / DEB_NAME
     if deb.exists():
         deb.unlink()
