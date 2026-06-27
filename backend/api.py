@@ -15,6 +15,8 @@ from alembic import command
 import os
 
 
+from .local.keyring_secret import _local_secret_file
+
 # Debug/test-only routers are imported only in development mode.
 if local_settings.is_development():
     from .routers import tests
@@ -34,7 +36,7 @@ def run_migrations():
 
 def _check_local_secret_permissions():
     """Warn if the local secret file has unsafe permissions."""
-    secret_file = local_settings.LOCAL_ROOT / auth_module.LOCAL_SECRET_FILE.name
+    secret_file = _local_secret_file()
     if not secret_file.exists():
         return
     try:
