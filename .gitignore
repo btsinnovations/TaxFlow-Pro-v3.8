@@ -96,4 +96,3 @@ scripts/_find_tess_zip.py
 scripts/_make_sample_pdf.py
 scripts/_manual_smoke.py
 scripts/run_launcher_smoke.py
-scripts/packaging/

@@ -1,0 +1,20 @@
+# Build outputs
+dist/
+build/
+*.spec
+*.ico
+*.icns
+*.svg
+*.png
+*.AppImage
+*.dmg
+*.exe
+*.tar.gz
+
+# Generated icons
+assets/icon*.png
+assets/icon*.ico
+assets/icon*.icns
+
+# macOS iconset
+assets/icon.iconset/

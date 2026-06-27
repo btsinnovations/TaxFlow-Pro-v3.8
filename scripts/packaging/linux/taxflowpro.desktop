@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=TaxFlow Pro
+Comment=Local-first tax document processing
+Exec=%k/TaxFlowPro
+Icon=%k/icon_256.png
+Type=Application
+Terminal=false
+Categories=Office;Finance;
