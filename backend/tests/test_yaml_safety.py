@@ -32,7 +32,7 @@ def test_no_unsafe_yaml_load_in_project() -> None:
     """AST scan: no yaml.load() call lacks an explicit Loader."""
     bad: list[str] = []
     for path in PROJECT_ROOT.rglob("*.py"):
-        if "node_modules" in path.parts:
+        if any(skip in path.parts for skip in ("node_modules", "dist", "build")):
             continue
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"))
