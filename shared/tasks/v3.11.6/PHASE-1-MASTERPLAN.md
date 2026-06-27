@@ -37,12 +37,13 @@ All architectural decisions are already made:
 
 ## Phase 1 Tracks
 
-Phase 1 has **two tracks**. Track 1 must complete before Track 2 starts.
+Phase 1 has **three parallel-permitted tracks**. Track 1 must complete before Track 2 starts. Track 3 (Bank Parser Expansion) can run in parallel with Track 1 and Track 2 because it does not depend on the new bookkeeping data model.
 
 | Track | ID | Goal | Owner | Output |
 |-------|----|------|-------|--------|
 | 1 | `PHASE1-TRACK1` | Test harness | Jane | Fixtures, MSW, CI job |
-| 2 | `PHASE1-TRACK2` | B1 Foundation | Jane | COA, roles, migration, RLS, API contract |
+| 2 | `PHASE1-TRACK2` | B1 Foundation | Jane | COA, roles, RLS, API contract |
+| 3 | `PHASE1-TRACK3` | Bank Parser Expansion | Jane | 14 new dedicated bank parsers + unified test suite |
 
 ---
 
@@ -162,18 +163,51 @@ Jane may do this herself or spawn a specialist subagent. If spawning, include:
 
 ---
 
+## Track 3 — Bank Parser Expansion
+
+### Task
+Add dedicated statement parsers for all 14 institutions currently detected in `backend/parsers/institution.py` but falling back to generic parsing.
+
+### Deliverables
+- Port `phase3_pipeline/parsers/cashapp.py` to `backend/parsers/cashapp.py`.
+- Create new backend parser modules:
+  - `bankofamerica.py`, `chase.py`, `wellsfargo.py`, `navyfederal.py`, `usbank.py`
+  - `citibank.py`, `pnc.py`, `ally.py`, `sofi.py`, `truist.py`, `becu.py`, `discover.py`, `marcus.py`
+- Add synthetic statement fixtures for each parser in `backend/tests/fixtures/statements/`.
+- Wire all 18 detected institutions to their dedicated parser in the dispatch path.
+- Add unified test suite `backend/tests/test_bank_parsers.py` with ≥40 tests.
+
+### Acceptance Criteria
+- All 14 new parsers exist and are importable.
+- At least one synthetic fixture test passes for each new parser.
+- `parse_statement_pdf()` dispatches correctly for all 18 detected institutions.
+- Full backend suite still passes with 0 failures.
+- No real customer statements or credentials used.
+
+### Work Branch
+`v3.11.6-dev-PHASE1-TRACK3-bank-parser-expansion`
+
+### Subagent Option
+Jane may do this herself or spawn a specialist subagent. If spawning, include:
+- This file path
+- `BANK-PARSER-EXPANSION-PLAN.md`
+- Branch and acceptance criteria above
+
+---
+
 ## Execution Order
 
-1. Jane reads all required context files.
+1. Jane reads all required context files PLUS `BANK-PARSER-EXPANSION-PLAN.md`.
 2. Jane executes **Track 1** (test harness) herself or via subagent.
 3. Jane validates Track 1 against acceptance criteria.
 4. Jane reports Track 1 completion to James.
 5. James approves Track 1 merge to `v3.11.6-dev`.
-6. Jane executes **Track 2** (B1 Foundation) herself or via subagent.
-7. Jane validates Track 2 against acceptance criteria.
-8. Jane reports Track 2 completion to James.
-9. James approves Track 2 merge to `v3.11.6-dev`.
-10. Phase 1 complete.
+6. Jane may execute **Track 3** (Bank Parser Expansion) in parallel with Track 1 or Track 2.
+7. Jane executes **Track 2** (B1 Foundation) after Track 1 is green.
+8. Jane validates Track 2 and Track 3 against acceptance criteria.
+9. Jane reports completion to James.
+10. James approves merges to `v3.11.6-dev`.
+11. Phase 1 complete.
 
 ---
 
@@ -199,6 +233,7 @@ Do not change scope or pivot without James approval.
 ## Notes
 
 - Track 1 and Track 2 are sequential to avoid fixture/test chaos in B1.
-- Jane is the persistent builder; she owns both tracks and may spawn subagents for focused work.
+- Track 3 can run in parallel with Track 1 and Track 2 because it does not depend on the new bookkeeping data model.
+- Jane is the persistent builder; she owns all three tracks and may spawn subagents for focused work.
 - No merge to `v3.11.6-dev` without James approval.
 - macOS packaging and code signing are out of scope for Phase 1.
