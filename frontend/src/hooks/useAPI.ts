@@ -1,4 +1,11 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE = (() => {
+  const envBase = import.meta.env.VITE_API_BASE_URL;
+  if (envBase) return envBase;
+  // Packaged app: serve API from the same origin to avoid CORS.
+  return window.location.origin.includes("127.0.0.1:8000") || window.location.origin.includes("localhost:8000")
+    ? "/api"
+    : "http://localhost:8000/api";
+})();
 
 export async function uploadFile(file: File, clientId: string = 'default', forceOcr: boolean = false): Promise<any> {
   const formData = new FormData();
