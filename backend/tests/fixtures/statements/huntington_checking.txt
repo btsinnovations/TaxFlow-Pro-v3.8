@@ -1,0 +1,21 @@
+Huntington Bank
+Account: HUNTINGTON CHECKING ****1590
+Statement Period: 03/01/2026 - 03/31/2026
+
+Beginning Balance: $1,670.00
+
+Date       Description                                      Amount       Balance
+03/01/2026 Direct Deposit PAYROLL MANUFACTURING CO        +1,640.00    3,310.00
+03/03/2026 Debit Card Purchase GROCERY STORE              -58.20       3,251.80
+03/05/2026 Online Bill Pay GAS UTILITY                    -67.80       3,184.00
+03/07/2026 Debit Card Purchase GAS STATION                -43.50       3,140.50
+03/10/2026 Direct Deposit PAYROLL MANUFACTURING CO        +1,640.00    4,780.50
+03/12/2026 ATM Withdrawal HUNTINGTON                      -120.00      4,660.50
+03/15/2026 Debit Card Purchase HARDWARE STORE             -72.40       4,588.10
+03/18/2026 ACH Payment AUTO INSURANCE                     -88.00       4,500.10
+03/20/2026 Debit Card Purchase RESTAURANT                 -25.60       4,474.50
+03/22/2026 Transfer to HUNTINGTON SAVINGS                 -200.00      4,274.50
+03/25/2026 Debit Card Purchase PHARMACY                   -14.35       4,260.15
+03/31/2026 Monthly Maintenance Fee                        -4.00        4,256.15
+
+Ending Balance: $4,256.15

@@ -1,0 +1,21 @@
+Citizens Bank
+Account: CITIZENS ACCESS CHECKING ****3847
+Statement Period: 01/01/2026 - 01/31/2026
+
+Beginning Balance: $2,030.00
+
+Date       Description                                      Amount       Balance
+01/02/2026 Direct Deposit PAYROLL NORTHEAST MEDICAL       +1,950.00    3,980.00
+01/04/2026 Debit Card Purchase GROCERY                    -62.75       3,917.25
+01/06/2026 Online Bill Pay ELECTRIC UTILITY               -105.40      3,811.85
+01/09/2026 Debit Card Purchase GAS STATION                -39.60       3,772.25
+01/12/2026 Direct Deposit PAYROLL NORTHEAST MEDICAL       +1,950.00    5,722.25
+01/14/2026 ATM Withdrawal CITIZENS BANK                   -100.00      5,622.25
+01/16/2026 Debit Card Purchase PHARMACY                   -17.85       5,604.40
+01/18/2026 Transfer to CITIZENS SAVINGS                   -350.00      5,254.40
+01/20/2026 Debit Card Purchase RESTAURANT                 -34.50       5,219.90
+01/23/2026 ACH Automatic Payment GYM MEMBERSHIP           -29.99       5,189.91
+01/26/2026 Debit Card Purchase RETAIL STORE               -48.00       5,141.91
+01/31/2026 Monthly Account Fee                            -3.50        5,138.41
+
+Ending Balance: $5,138.41

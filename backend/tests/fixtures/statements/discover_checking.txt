@@ -1,0 +1,21 @@
+Discover Bank
+Account: DISCOVER CASHBACK DEBIT ****1357
+Statement Period: 03/01/2026 - 03/31/2026
+
+Beginning Balance: $1,540.00
+
+Date       Description                                      Amount       Balance
+03/01/2026 ACH Deposit PAYROLL DATASTREAM INC             +1,890.00    3,430.00
+03/03/2026 Debit Card Purchase GROCERY                    -71.20       3,358.80
+03/05/2026 Online Bill Pay WATER UTILITY                  -34.50       3,324.30
+03/07/2026 Debit Card Purchase GAS STATION                -40.15       3,284.15
+03/10/2026 ACH Deposit PAYROLL DATASTREAM INC             +1,890.00    5,174.15
+03/12/2026 Debit Card Purchase RESTAURANT                 -29.80       5,144.35
+03/15/2026 Discover Cashback Bonus Credit                 +1.25        5,145.60
+03/18/2026 Debit Card Purchase ONLINE STORE               -52.00       5,093.60
+03/20/2026 Transfer to DISCOVER SAVINGS                   -400.00      4,693.60
+03/22/2026 Debit Card Purchase COFFEE SHOP                -5.50        4,688.10
+03/25/2026 ACH Payment STREAMING SERVICE                  -14.99       4,673.11
+03/31/2026 Interest Paid                                  +0.22        4,673.33
+
+Ending Balance: $4,673.33

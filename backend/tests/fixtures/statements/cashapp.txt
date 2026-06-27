@@ -1,0 +1,21 @@
+Cash App
+Account: CASH APP ***9876
+Statement Period: 02/01/2026 - 02/28/2026
+
+Beginning Balance: $425.00
+
+Date       Description                                      Amount       Balance
+02/01/2026 Cash In from BANK ACCOUNT                      +200.00      625.00
+02/03/2026 Payment to USER @friend1                       -25.00      600.00
+02/05/2026 Payment from USER @employer                    +500.00      1,100.00
+02/07/2026 Purchase at COFFEE SHOP                        -6.75       1,093.25
+02/10/2026 Cash Out to BANK ACCOUNT                       -300.00     793.25
+02/12/2026 Payment to USER @landlord                      -400.00     393.25
+02/14/2026 Payment from USER @buyer                       +75.00      468.25
+02/16/2026 Purchase at GAS STATION                        -32.50      435.75
+02/20/2026 Direct Deposit PAYROLL GIG CORP                +850.00     1,285.75
+02/22/2026 Purchase at RESTAURANT                         -18.40      1,267.35
+02/25/2026 Bitcoin Purchase                               -50.00      1,217.35
+02/27/2026 Cash In from DEBIT CARD                        +100.00     1,317.35
+
+Ending Balance: $1,317.35

@@ -1,0 +1,21 @@
+Citibank
+Account: CITI ACCESS CHECKING ****2345
+Statement Period: 03/01/2026 - 03/31/2026
+
+Beginning Balance: $980.50
+
+Date       Description                                      Amount       Balance
+03/02/2026 DIRECT DEPOSIT PAYROLL MERIDIAN INC            +1,725.00    2,705.50
+03/04/2026 DEBIT CARD PURCHASE SUPERMARKET                -55.30       2,650.20
+03/06/2026 ONLINE TRANSFER TO CITI SAVINGS                -200.00      2,450.20
+03/08/2026 AUTOMATIC PAYMENT CABLE TV                     -89.99       2,360.21
+03/12/2026 DIRECT DEPOSIT PAYROLL MERIDIAN INC            +1,725.00    4,085.21
+03/14/2026 DEBIT CARD PURCHASE GAS STATION                -38.75       4,046.46
+03/16/2026 ATM WITHDRAWAL CITIBANK                        -100.00      3,946.46
+03/18/2026 BILL PAY PHONE SERVICE                         -65.00       3,881.46
+03/20/2026 DEBIT CARD PURCHASE CLOTHING STORE             -78.40       3,803.06
+03/22/2026 DEBIT RETURN FEE                               -0.50        3,802.56
+03/25/2026 DEBIT CARD PURCHASE RESTAURANT                 -42.15       3,760.41
+03/28/2026 ACCOUNT MAINTENANCE FEE                        -10.00       3,750.41
+
+Ending Balance: $3,750.41

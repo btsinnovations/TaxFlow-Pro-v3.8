@@ -1,0 +1,9 @@
+Huntington Bank
+Checking Account Statement
+Statement Period: January 1, 2026 - January 31, 2026
+Date    Description               Debit       Credit      Balance
+01/03   PAYROLL DEPOSIT                         2,400.00   2,400.00
+01/10   GROCERY STORE                68.50               2,331.50
+01/17   GAS STATION                  45.20               2,286.30
+01/24   UTILITY PAYMENT              92.00               2,194.30
+01/31   RESTAURANT                   35.75               2,158.55

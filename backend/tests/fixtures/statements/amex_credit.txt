@@ -1,0 +1,24 @@
+American Express
+Account: AMEX GOLD CARD ****1001
+Statement Period: 01/15/2026 - 02/14/2026
+
+Previous Balance: $1,230.45
+Payment Received 01/20/2026: -$1,230.45
+
+Date       Description                                      Amount
+01/16/2026 RESTAURANT GROUP NYC                           -48.50
+01/18/2026 AIRLINE TICKET DELTA AIR LINES                 -312.40
+01/20/2026 PAYMENT RECEIVED - THANK YOU                   +1,230.45
+01/22/2026 GAS STATION SHELL #4521                        -52.75
+01/25/2026 GROCERY WHOLE FOODS MARKET                    -87.30
+01/28/2026 ONLINE SUBSCRIPTION ADOBE CREATIVE             -54.99
+01/30/2026 HOTEL MARRIOTT DOWNTOWN                        -189.00
+02/02/2026 RESTAURANT CAFE BISTRO                         -36.20
+02/05/2026 RIDESHARE UBER                                 -23.45
+02/08/2026 ONLINE PURCHASE AMAZON                         -67.80
+02/10/2026 CAR RENTAL HERTZ                               -145.00
+02/12/2026 RESTAURANT SUSHI BAR                           -28.90
+
+New Balance: $1,205.29
+Minimum Payment Due: $35.00
+Payment Due Date: 03/14/2026

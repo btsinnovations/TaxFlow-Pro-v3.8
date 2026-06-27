@@ -1,0 +1,21 @@
+Pentagon Federal Credit Union
+Account: CHECKING ****8642
+Statement Period: 03/01/2026 - 03/31/2026
+
+Beginning Balance: $1,920.00
+
+Date       Description                                      Amount       Balance
+03/01/2026 MILITARY PAY DEPOSIT DOD                       +2,150.00    4,070.00
+03/03/2026 POS DEBIT PX GROCERY                           -71.30       3,998.70
+03/05/2026 ACH DEBIT AUTO LOAN PENFED                     -285.00      3,713.70
+03/07/2026 ATM WITHDRAWAL PENFED                          -120.00      3,593.70
+03/10/2026 MILITARY PAY DEPOSIT DOD                       +2,150.00    5,743.70
+03/12/2026 POS DEBIT GAS STATION                          -38.75       5,704.95
+03/15/2026 TRANSFER TO SAVINGS                       -350.00      5,354.95
+03/18/2026 POS DEBIT RESTAURANT                           -31.20       5,323.75
+03/20/2026 ACH DEBIT CREDIT CARD PAYMENT                  -250.00      5,073.75
+03/22/2026 POS DEBIT PHARMACY                             -15.80       5,057.95
+03/25/2026 POS DEBIT CLOTHING                             -52.00       5,005.95
+03/31/2026 DIVIDEND PAID                                  +0.38        5,006.33
+
+Ending Balance: $5,006.33

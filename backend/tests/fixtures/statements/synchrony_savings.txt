@@ -1,0 +1,16 @@
+Synchrony Bank
+Account: HIGH YIELD SAVINGS ****7654
+Statement Period: 02/01/2026 - 02/28/2026
+
+Beginning Balance: $8,200.00
+
+Date       Description                                      Amount       Balance
+02/05/2026 ACH TRANSFER IN FROM EXTERNAL                  +600.00      8,800.00
+02/10/2026 ACH TRANSFER OUT TO EXTERNAL                   -400.00      8,400.00
+02/15/2026 INTEREST CREDIT                                +24.15       8,424.15
+02/20/2026 ACH TRANSFER IN FROM EXTERNAL                  +300.00      8,724.15
+02/25/2026 ACH TRANSFER OUT TO EXTERNAL                   -200.00      8,524.15
+02/28/2026 INTEREST CREDIT                                +24.78       8,548.93
+
+Ending Balance: $8,548.93
+APY: 3.30%

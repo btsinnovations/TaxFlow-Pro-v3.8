@@ -99,9 +99,46 @@ _INSTITUTION_REGISTRY: List[Tuple[str, List[str], List[str], Dict[str, str]]] = 
         "source": "Stage 1 research — aggregator-inferred",
         "quirk": "Credit-card-first brand; Discover Bank checking/savings use 'purchase'/'payment' terminology.",
     }),
-    ("Marcus by Goldman Sachs", ["marcus by goldman sachs", "marcus"], ["description", "debit", "credit", "balance"], {
+    ("Marcus by Goldman Sachs", ["marcus by goldman sachs", "marcus", "goldman sachs bank"], ["description", "debit", "credit", "balance"], {
         "source": "Stage 1 research — aggregator-inferred from high-yield savings statement guides",
         "quirk": "High-yield savings statements are sparse; detection triggers on 'Marcus' or full brand string.",
+    }),
+    # Tier 2 additions per v3.11.6 research expansion
+    ("American Express", ["american express", "amex", "amex blue", "amex gold", "amex platinum"], ["description", "purchase", "payment", "balance"], {
+        "source": "Tier 2 research — 403/blocked sources; layout inferred from credit card statement patterns",
+        "quirk": "Credit-card-first; uses 'purchase'/'payment' terminology. Conservative parsing.",
+    }),
+    ("USAA", ["usaa", "usaa bank", "usaa federal savings"], ["description", "debit", "credit", "balance"], {
+        "source": "Tier 2 research — military-focused bank; sources limited",
+        "quirk": "Conservative parsing; may raise ParserError for ambiguous layouts.",
+    }),
+    ("PenFed", ["penfed", "pentagon federal", "pentagon federal credit union"], ["description", "debit", "credit", "balance"], {
+        "source": "Tier 2 research — credit union layout",
+        "quirk": "Credit union share-draft patterns; conservative parsing.",
+    }),
+    ("Alliant Credit Union", ["alliant", "alliant credit union"], ["description", "debit", "credit", "balance"], {
+        "source": "Tier 2 research — online credit union",
+        "quirk": "Online credit union; simpler layout expected.",
+    }),
+    ("Synchrony Bank", ["synchrony", "synchrony bank"], ["description", "debit", "credit", "balance"], {
+        "source": "Tier 2 research — online savings / co-branded credit cards",
+        "quirk": "May have co-branded credit card layouts; conservative parsing.",
+    }),
+    ("Huntington Bank", ["huntington", "huntington bank", "huntington national bank"], ["description", "debit", "credit", "balance"], {
+        "source": "Tier 2 research — regional Midwest bank",
+        "quirk": "Regional bank; standard multi-column layout expected.",
+    }),
+    ("Citizens Bank", ["citizens bank", "citizens", "citizens financial"], ["description", "debit", "credit", "balance"], {
+        "source": "Tier 2 research — regional Northeast bank",
+        "quirk": "Regional bank; standard multi-column layout expected.",
+    }),
+    ("Capital One", ["capital one", "capitalone", "capital one 360"], ["description", "debit", "credit", "balance"], {
+        "source": "Tier 2 research — 360 checking/savings + credit cards",
+        "quirk": "Both checking and credit card layouts; detect subtype from text.",
+    }),
+    ("Charles Schwab Bank", ["schwab", "charles schwab", "schwab bank", "schwab brokerage"], ["description", "debit", "credit", "balance"], {
+        "source": "Tier 2 research — brokerage-linked checking",
+        "quirk": "Brokerage-linked checking; may have investment-like line items.",
     }),
 ]
 
@@ -163,6 +200,15 @@ INSTITUTION_ALIASES = {
     "Discover Bank": ["Discover"],
     "Marcus by Goldman Sachs": ["Marcus", "Goldman Sachs Bank"],
     "BECU": ["Boeing Employees Credit Union"],
+    "American Express": ["Amex", "AMEX", "American Express Company"],
+    "USAA": ["USAA Bank", "USAA Federal Savings Bank"],
+    "PenFed": ["Pentagon Federal Credit Union"],
+    "Alliant Credit Union": ["Alliant"],
+    "Synchrony Bank": ["Synchrony", "Synchrony Financial"],
+    "Huntington Bank": ["Huntington National Bank", "Huntington"],
+    "Citizens Bank": ["Citizens", "Citizens Financial"],
+    "Capital One": ["CapitalOne", "Capital One 360", "COF"],
+    "Charles Schwab Bank": ["Schwab Bank", "Charles Schwab", "Schwab"],
 }
 
 
@@ -180,6 +226,29 @@ def parse_statement_pdf(pdf_path: str, parse_options: Optional[Dict[str, Any]] =
     from .chime import ChimeParser
     from .edfed import EdFedParser
     from .queensborough import QueensboroughParser
+    from .bankofamerica import BankOfAmericaParser
+    from .chase import ChaseParser
+    from .wellsfargo import WellsFargoParser
+    from .navyfederal import NavyFederalParser
+    from .usbank import USBankParser
+    from .citibank import CitibankParser
+    from .pnc import PNCBankParser
+    from .ally import AllyBankParser
+    from .sofi import SoFiParser
+    from .truist import TruistParser
+    from .becu import BECUParser
+    from .discover import DiscoverBankParser
+    from .marcus import MarcusParser
+    from .cashapp import CashAppParser
+    from .amex import AmexParser
+    from .usaa import USAAParser
+    from .penfed import PenFedParser
+    from .alliant import AlliantParser
+    from .synchrony import SynchronyBankParser
+    from .huntington import HuntingtonBankParser
+    from .citizens import CitizensBankParser
+    from .capitalone import CapitalOneParser
+    from .schwab import SchwabBankParser
 
     options = parse_options or {}
     # Defense-in-depth: run the guard before any parser library is imported.
@@ -210,6 +279,29 @@ def parse_statement_pdf(pdf_path: str, parse_options: Optional[Dict[str, Any]] =
         "Chime": ChimeParser,
         "EdFed": EdFedParser,
         "Queensborough National Bank": QueensboroughParser,
+        "Bank of America": BankOfAmericaParser,
+        "Chase": ChaseParser,
+        "Wells Fargo": WellsFargoParser,
+        "Navy Federal": NavyFederalParser,
+        "U.S. Bank": USBankParser,
+        "Citibank": CitibankParser,
+        "PNC Bank": PNCBankParser,
+        "Ally Bank": AllyBankParser,
+        "SoFi": SoFiParser,
+        "Truist": TruistParser,
+        "BECU": BECUParser,
+        "Discover Bank": DiscoverBankParser,
+        "Marcus by Goldman Sachs": MarcusParser,
+        "Cash App": CashAppParser,
+        "American Express": AmexParser,
+        "USAA": USAAParser,
+        "PenFed": PenFedParser,
+        "Alliant Credit Union": AlliantParser,
+        "Synchrony Bank": SynchronyBankParser,
+        "Huntington Bank": HuntingtonBankParser,
+        "Citizens Bank": CitizensBankParser,
+        "Capital One": CapitalOneParser,
+        "Charles Schwab Bank": SchwabBankParser,
     }
 
     if institution in specific_parsers:

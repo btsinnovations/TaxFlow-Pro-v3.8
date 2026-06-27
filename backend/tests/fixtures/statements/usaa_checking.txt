@@ -1,0 +1,21 @@
+USAA
+Account: USAA CHECKING ****5432
+Statement Period: 02/01/2026 - 02/28/2026
+
+Beginning Balance: $2,850.00
+
+Date       Description                                      Amount       Balance
+02/01/2026 MILITARY PAY DEPOSIT DOD                       +2,300.00    5,150.00
+02/03/2026 POS PURCHASE COMMISSARY                        -98.45       5,051.55
+02/05/2026 ACH DEBIT AUTO INSURANCE USAA                 -112.00      4,939.55
+02/07/2026 ATM WITHDRAWAL USAA                            -200.00      4,739.55
+02/10/2026 MILITARY PAY DEPOSIT DOD                       +2,300.00    7,039.55
+02/12/2026 POS PURCHASE GAS STATION BX                    -36.80       7,002.75
+02/14/2026 TRANSFER TO USAA SAVINGS                       -400.00      6,602.75
+02/16/2026 POS PURCHASE PHARMACY                          -21.50       6,581.25
+02/18/2026 ACH DEBIT MORTGAGE                             -1,080.00    5,501.25
+02/20/2026 POS PURCHASE RESTAURANT                        -27.40       5,473.85
+02/23/2026 POS PURCHASE CLOTHING STORE                    -45.00       5,428.85
+02/27/2026 FEE ATM OUT OF NETWORK                         -2.50        5,426.35
+
+Ending Balance: $5,426.35

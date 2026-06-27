@@ -1,0 +1,21 @@
+U.S. Bank
+Account: SILVER CHECKING ****7890
+Statement Period: 02/01/2026 - 02/28/2026
+
+Beginning Balance: $3,200.00
+
+Date       Description                                      Amount       Balance
+02/01/2026 ELECTRONIC DEPOSIT PAYROLL SUMMIT LLC          +1,950.00    5,150.00
+02/03/2026 CHECK CARD PURCHASE GROCERY STORE              -68.42       5,081.58
+02/05/2026 ONLINE BILL PAY ELECTRIC CO                    -110.00      4,971.58
+02/07/2026 ATM WITHDRAWAL US BANK                         -150.00      4,821.58
+02/10/2026 ELECTRONIC DEPOSIT PAYROLL SUMMIT LLC          +1,950.00    6,771.58
+02/12/2026 CHECK CARD PURCHASE HARDWARE STORE             -89.99       6,681.59
+02/15/2026 ACH AUTOMATIC PAYMENT CAR LOAN US BANK         -320.00      6,361.59
+02/18/2026 CHECK CARD PURCHASE GAS STATION                -44.10       6,317.49
+02/20/2026 MOBILE DEPOSIT CHECK                           +250.00      6,567.49
+02/22/2026 CHECK CARD PURCHASE RESTAURANT                 -31.50       6,535.99
+02/25/2026 MONTHLY MAINTENANCE FEE                        -6.95        6,529.04
+02/27/2026 INTEREST CREDIT                                +0.03        6,529.07
+
+Ending Balance: $6,529.07

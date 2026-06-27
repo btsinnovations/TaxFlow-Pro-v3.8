@@ -1,0 +1,16 @@
+Marcus by Goldman Sachs
+Account: HIGH-YIELD SAVINGS ****2468
+Statement Period: 01/01/2026 - 01/31/2026
+
+Beginning Balance: $12,500.00
+
+Date       Description                                      Amount       Balance
+01/05/2026 ACH TRANSFER IN FROM EXTERNAL BANK             +1,000.00    13,500.00
+01/10/2026 ACH TRANSFER OUT TO EXTERNAL BANK              -500.00      13,000.00
+01/15/2026 INTEREST PAID                                  +38.42       13,038.42
+01/20/2026 ACH TRANSFER IN FROM EXTERNAL BANK             +750.00      13,788.42
+01/25/2026 ACH TRANSFER OUT TO EXTERNAL BANK              -300.00      13,488.42
+01/31/2026 INTEREST PAID                                  +39.82       13,528.24
+
+Ending Balance: $13,528.24
+APY: 3.50%

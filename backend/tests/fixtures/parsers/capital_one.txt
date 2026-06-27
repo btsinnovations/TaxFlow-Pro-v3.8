@@ -1,0 +1,9 @@
+Capital One
+360 Checking Statement
+Statement Period: January 1, 2026 - January 31, 2026
+Date    Description               Debit       Credit      Balance
+01/04   PAYROLL DEPOSIT                         3,000.00   3,000.00
+01/11   RENT PAYMENT                1,400.00               1,600.00
+01/18   GROCERY STORE                82.30               1,517.70
+01/25   STREAMING SERVICE             15.99               1,501.71
+01/31   INTEREST PAID                            0.50               1,502.21

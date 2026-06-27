@@ -1,0 +1,21 @@
+Capital One
+Account: 360 CHECKING ****2024
+Statement Period: 02/01/2026 - 02/28/2026
+
+Beginning Balance: $2,780.00
+
+Date       Description                                      Amount       Balance
+02/01/2026 ACH Deposit PAYROLL FINANCIAL PARTNERS         +1,870.00    4,650.00
+02/03/2026 Debit Card Purchase SUPERMARKET                -71.30       4,578.70
+02/05/2026 Online Transfer TO 360 SAVINGS                 -400.00      4,178.70
+02/07/2026 Debit Card Purchase GAS STATION                -45.25       4,133.45
+02/10/2026 ACH Deposit PAYROLL FINANCIAL PARTNERS         +1,870.00    6,003.45
+02/12/2026 Debit Card Purchase RESTAURANT                 -38.90       5,964.55
+02/14/2026 Bill Pay CABLE AND INTERNET                    -89.99       5,874.56
+02/17/2026 Debit Card Purchase COFFEE SHOP                -5.50        5,869.06
+02/20/2026 Mobile Check Deposit                           +125.00      5,994.06
+02/22/2026 Debit Card Purchase ONLINE STORE               -54.00       5,940.06
+02/25/2026 ACH Payment STREAMING SERVICE                  -12.99       5,927.07
+02/28/2026 Interest Earned                                +0.18        5,927.25
+
+Ending Balance: $5,927.25

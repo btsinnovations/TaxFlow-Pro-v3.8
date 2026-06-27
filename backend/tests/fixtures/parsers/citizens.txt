@@ -1,0 +1,9 @@
+Citizens Bank
+Checking Account Statement
+Statement Period: January 1, 2026 - January 31, 2026
+Date    Description               Debit       Credit      Balance
+01/05   DIRECT DEPOSIT                         2,600.00   2,600.00
+01/12   MORTGAGE PAYMENT            1,250.00               1,350.00
+01/19   GROCERY STORE                75.40               1,274.60
+01/26   ELECTRIC BILL               115.00               1,159.60
+01/31   COFFEE SHOP                   5.25               1,154.35

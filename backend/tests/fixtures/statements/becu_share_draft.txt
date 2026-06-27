@@ -1,0 +1,21 @@
+BECU (Boeing Employees Credit Union)
+Account: CHECKING ****8765
+Statement Period: 02/01/2026 - 02/28/2026
+
+Beginning Balance: $2,215.00
+
+Date       Description                                      Amount       Balance
+02/01/2026 PAYROLL DEPOSIT AEROSPACE SYSTEMS              +2,050.00    4,265.00
+02/03/2026 POS DEBIT GROCERY STORE                        -62.30       4,202.70
+02/05/2026 ACH DEBIT AUTO INSURANCE                       -98.75       4,103.95
+02/07/2026 ATM WITHDRAWAL BECU                            -150.00      3,953.95
+02/10/2026 PAYROLL DEPOSIT AEROSPACE SYSTEMS              +2,050.00    6,003.95
+02/12/2026 POS DEBIT GAS STATION                          -37.80       5,966.15
+02/14/2026 TRANSFER TO SAVINGS                       -250.00      5,716.15
+02/17/2026 POS DEBIT PHARMACY                             -19.25       5,696.90
+02/20/2026 POS DEBIT RESTAURANT                           -34.60       5,662.30
+02/22/2026 ACH DEBIT MORTGAGE PAYMENT                     -980.00      4,682.30
+02/25/2026 POS DEBIT COFFEE SHOP                          -6.50        4,675.80
+02/28/2026 DIVIDEND PAID                                  +0.45        4,676.25
+
+Ending Balance: $4,676.25

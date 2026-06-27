@@ -1,0 +1,21 @@
+SoFi
+Account: SoFi MONEY ***4567
+Statement Period: 03/01/2026 - 03/31/2026
+
+Beginning Balance: $3,100.00
+
+Date       Description                                      Amount       Balance
+03/01/2026 ACH Deposit PAYROLL INNOVATE LLC               +2,100.00    5,200.00
+03/03/2026 Point of Sale GROCERY STORE                    -58.40       5,141.60
+03/05/2026 Transfer to SoFi SAVINGS                       -500.00      4,641.60
+03/07/2026 Point of Sale GAS STATION                      -36.75       4,604.85
+03/10/2026 ACH Deposit PAYROLL INNOVATE LLC               +2,100.00    6,704.85
+03/12/2026 Point of Sale RESTAURANT                       -41.20       6,663.65
+03/15/2026 ACH Payment AUTO INSURANCE                     -110.00      6,553.65
+03/18/2026 Point of Sale ONLINE SUBSCRIPTION              -15.99       6,537.66
+03/20/2026 P2P Transfer FROM USER                         +75.00       6,612.66
+03/22/2026 Point of Sale COFFEE SHOP                      -7.25        6,605.41
+03/25/2026 Point of Sale RETAIL STORE                     -63.40       6,542.01
+03/31/2026 Interest Earned                                +1.85        6,543.86
+
+Ending Balance: $6,543.86

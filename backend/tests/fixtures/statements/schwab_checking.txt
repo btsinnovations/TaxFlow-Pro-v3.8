@@ -1,0 +1,21 @@
+Charles Schwab Bank
+Account: SCHWAB BANK HIGH YIELD INVESTOR CHECKING ****8800
+Statement Period: 03/01/2026 - 03/31/2026
+
+Beginning Balance: $4,100.00
+
+Date       Description                                      Amount       Balance
+03/01/2026 ELECTRONIC DEPOSIT PAYROLL INVESTMENT ADVISORS +2,200.00    6,300.00
+03/03/2026 DEBIT CARD PURCHASE GROCERY STORE              -68.90       6,231.10
+03/05/2026 ONLINE BILL PAY UTILITIES                      -112.00      6,119.10
+03/07/2026 DEBIT CARD PURCHASE GAS STATION                -40.75       6,078.35
+03/10/2026 ELECTRONIC DEPOSIT PAYROLL INVESTMENT ADVISORS +2,200.00    8,278.35
+03/12/2026 DEBIT CARD PURCHASE RESTAURANT                 -31.50       8,246.85
+03/15/2026 TRANSFER TO SCHWAB BROKERAGE                   -1,000.00    7,246.85
+03/18/2026 DEBIT CARD PURCHASE AIRLINE TICKET             -245.00      7,001.85
+03/20/2026 DEBIT CARD PURCHASE HOTEL                      -178.00      6,823.85
+03/22/2026 ATM FEE REBATE                                 +3.00        6,826.85
+03/25/2026 DEBIT CARD PURCHASE COFFEE SHOP                -6.75        6,820.10
+03/31/2026 INTEREST PAID                                  +0.12        6,820.22
+
+Ending Balance: $6,820.22

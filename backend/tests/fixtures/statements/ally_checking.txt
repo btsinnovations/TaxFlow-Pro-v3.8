@@ -1,0 +1,21 @@
+Ally Bank
+Account: INTEREST CHECKING ****0123
+Statement Period: 02/01/2026 - 02/28/2026
+
+Beginning Balance: $5,640.00
+
+Date       Description                                      Amount       Balance
+02/01/2026 Ally eCheck Deposit PAYROLL TECHWORKS LLC      +1,920.00    7,560.00
+02/03/2026 Debit Card Purchase GROCERY OUTLET             -52.18       7,507.82
+02/05/2026 Online Transfer TO ALLY SAVINGS                -600.00      6,907.82
+02/07/2026 Bill Pay INTERNET PROVIDER                     -74.99       6,832.83
+02/10/2026 Ally eCheck Deposit PAYROLL TECHWORKS LLC      +1,920.00    8,752.83
+02/12/2026 Debit Card Purchase GAS STATION                -39.55       8,713.28
+02/15/2026 Debit Card Purchase RESTAURANT                 -28.75       8,684.53
+02/18/2026 ACH Automatic Payment RENT                     -1,350.00    7,334.53
+02/20/2026 Debit Card Purchase ONLINE RETAILER            -45.00       7,289.53
+02/22/2026 Interest Paid                                  +1.12        7,290.65
+02/25/2026 Debit Card Purchase COFFEE SHOP                -5.75        7,284.90
+02/27/2026 Debit Card Purchase PHARMACY                   -12.40       7,272.50
+
+Ending Balance: $7,272.50

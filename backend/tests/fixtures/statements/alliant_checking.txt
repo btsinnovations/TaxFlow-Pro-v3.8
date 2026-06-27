@@ -1,0 +1,21 @@
+Alliant Credit Union
+Account: FREE CHECKING ****4321
+Statement Period: 01/01/2026 - 01/31/2026
+
+Beginning Balance: $3,450.00
+
+Date       Description                                      Amount       Balance
+01/02/2026 DIRECT DEPOSIT PAYROLL CLOUDTECH INC           +1,825.00    5,275.00
+01/04/2026 DEBIT CARD PURCHASE SUPERMARKET               -65.40       5,209.60
+01/06/2026 ONLINE BILL PAY ELECTRIC COMPANY              -82.50       5,127.10
+01/09/2026 DEBIT CARD PURCHASE GAS STATION               -41.30       5,085.80
+01/12/2026 DIRECT DEPOSIT PAYROLL CLOUDTECH INC           +1,825.00    6,910.80
+01/14/2026 ATM WITHDRAWAL ALLIANT                         -100.00      6,810.80
+01/16/2026 DEBIT CARD PURCHASE RESTAURANT                -29.75       6,781.05
+01/18/2026 TRANSFER TO ALLIANT SAVINGS                   -500.00      6,281.05
+01/20/2026 DEBIT CARD PURCHASE ONLINE RETAILER            -38.00       6,243.05
+01/23/2026 ACH AUTOMATIC PAYMENT INTERNET                 -59.99       6,183.06
+01/26/2026 DEBIT CARD PURCHASE COFFEE SHOP               -6.25        6,176.81
+01/31/2026 INTEREST PAID                                  +0.15        6,176.96
+
+Ending Balance: $6,176.96

@@ -45,6 +45,15 @@ def fixture_map() -> dict[str, Path]:
         "BECU": "becu.txt",
         "Discover Bank": "discover_bank.txt",
         "Marcus by Goldman Sachs": "marcus.txt",
+        "American Express": "amex.txt",
+        "USAA": "usaa.txt",
+        "PenFed": "penfed.txt",
+        "Alliant Credit Union": "alliant.txt",
+        "Synchrony Bank": "synchrony.txt",
+        "Huntington Bank": "huntington.txt",
+        "Citizens Bank": "citizens.txt",
+        "Capital One": "capital_one.txt",
+        "Charles Schwab Bank": "schwab.txt",
     }
     return {name: FIXTURES_DIR / filename for name, filename in slug_map.items()}
 

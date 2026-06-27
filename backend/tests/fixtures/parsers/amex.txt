@@ -1,0 +1,7 @@
+American Express
+Credit Card Statement
+Statement Period: 01/01/2026 - 01/31/2026
+Date    Description               Amount      Balance
+01/05   GROCERY STORE              85.40       85.40
+01/12   GAS STATION                42.10       127.50
+01/31   PAYMENT RECEIVED          -230.99         0.00

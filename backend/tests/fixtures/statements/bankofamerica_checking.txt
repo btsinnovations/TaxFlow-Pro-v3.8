@@ -1,0 +1,21 @@
+Bank of America
+Account: CHECKING ****1234
+Statement Period: 01/01/2026 - 01/31/2026
+
+Beginning Balance: $1,250.00
+
+Date       Description                                      Amount       Running Balance
+01/02/2026 DEPOSIT PAYROLL EMPLOYER INC                     +2,100.00    3,350.00
+01/05/2026 PAYMENT THANK YOU ACH TRANSFER                   -450.00      2,900.00
+01/08/2026 POS PURCHASE GROCERY MART #142                   -87.34       2,812.66
+01/10/2026 ATM WITHDRAWAL BANK OF AMERICA ATM              -200.00      2,612.66
+01/12/2026 BILL PAY ELECTRIC COMPANY                       -145.50      2,467.16
+01/15/2026 DEPOSIT PAYROLL EMPLOYER INC                     +2,100.00    4,567.16
+01/18/2026 POS PURCHASE FUEL STATION                       -52.20       4,514.96
+01/20/2026 TRANSFER TO SAVINGS XXXX5678                    -500.00      4,014.96
+01/22/2026 POS PURCHASE PHARMACY PLUS                      -23.45       3,991.51
+01/25/2026 BILL PAY INTERNET SERVICES                      -79.99       3,911.52
+01/28/2026 POS PURCHASE RESTAURANT GROUP                   -36.80       3,874.72
+01/30/2026 MAINTENANCE FEE                                 -12.00       3,862.72
+
+Ending Balance: $3,862.72

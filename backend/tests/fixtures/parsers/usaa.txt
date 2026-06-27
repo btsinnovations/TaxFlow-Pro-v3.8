@@ -1,0 +1,9 @@
+USAA Federal Savings Bank
+Checking Account Statement
+Statement Period: January 1, 2026 - January 31, 2026
+Date    Description               Debit       Credit      Balance
+01/03   MILITARY PAY                            3,500.00   3,500.00
+01/10   AUTO INSURANCE              185.00               3,315.00
+01/17   GROCERY STORE                78.20               3,236.80
+01/24   GAS STATION                  48.50               3,188.30
+01/31   TRANSFER                     200.00               2,988.30
