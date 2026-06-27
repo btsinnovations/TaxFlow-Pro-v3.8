@@ -38,10 +38,10 @@ from .local.crypto import (
 )
 from .security.timing_safe import constant_time_verify_password
 from .local.keyring_secret import (
-    LOCAL_SECRET_FILE,
     retrieve_secret,
     store_secret,
     migrate_file_secret,
+    _local_secret_file,
 )
 
 
@@ -75,13 +75,17 @@ def get_local_secret() -> str:
     if env_secret:
         return env_secret
 
+    # Resolve the secret file at call time because the packaged launcher sets
+    # TAXFLOW_LOCAL_ROOT at runtime after module import.
+    secret_file = _local_secret_file()
+
     # Migrate a pre-existing plaintext secret into the credential store. If the
     # credential store is unavailable the file is kept as the fallback.
-    if LOCAL_SECRET_FILE.exists():
+    if secret_file.exists():
         migrated = migrate_file_secret()
         if migrated:
             return migrated
-        return LOCAL_SECRET_FILE.read_text().strip()
+        return secret_file.read_text().strip()
 
     # Credential store is the default store after migration / first boot.
     secret = retrieve_secret()
