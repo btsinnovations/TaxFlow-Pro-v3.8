@@ -292,3 +292,139 @@ def auth_client(client: TestClient) -> TestClient:
     authed_client = TestClient(app)
     authed_client.headers.update({"Authorization": f"Bearer {token}"})
     return authed_client
+
+
+# -----------------------------------------------------------------------------
+# v3.11.6 Track 1 — New fixtures for tenant/role/PostgreSQL testing
+# -----------------------------------------------------------------------------
+
+import base64 as _b64
+import secrets as _secrets
+
+
+def _create_test_tenant(db, name: str = "Bundle Tenant"):
+    """Create a User + Client pair and return the Client (tenant)."""
+    user = models.User(
+        username=f"tenant_{name.lower().replace(' ', '_')}",
+        email=f"{name.lower().replace(' ', '_')}@example.com",
+        hashed_password=get_password_hash(_TEST_PASSWORD),
+        is_active=True,
+        encryption_salt=_b64.b64encode(_secrets.token_bytes(16)).decode("ascii"),
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    client = models.Client(name=name, user_id=user.id)
+    db.add(client)
+    db.commit()
+    db.refresh(client)
+    return client
+
+
+def _create_user_with_role(db, tenant, role: str = "viewer", username: str = None):
+    """Create a User, assign them a role on the given tenant (Client), and return (User, Membership)."""
+    from backend.local.roles import Role, set_role
+
+    if username is None:
+        username = f"{role}_{tenant.name.lower().replace(' ', '_')}"
+    user = models.User(
+        username=username,
+        email=f"{username}@example.com",
+        hashed_password=get_password_hash(_TEST_PASSWORD),
+        is_active=True,
+        encryption_salt=_b64.b64encode(_secrets.token_bytes(16)).decode("ascii"),
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    role_enum = Role[role] if isinstance(role, str) else role
+    membership = set_role(db, user.id, tenant.id, role_enum, actor_user_id=tenant.user_id)
+    return user, membership
+
+
+@pytest.fixture(scope="function")
+def tenant(db):
+    """Return a seeded Client (tenant) for bundle tests."""
+    return _create_test_tenant(db, name="Bundle Tenant")
+
+
+@pytest.fixture(scope="function")
+def viewer_member(db, tenant):
+    """Return (User, Membership) with viewer role on the tenant."""
+    return _create_user_with_role(db, tenant, role="viewer")
+
+
+@pytest.fixture(scope="function")
+def admin_member(db, tenant):
+    """Return (User, Membership) with admin role on the tenant."""
+    return _create_user_with_role(db, tenant, role="admin")
+
+
+def switch_profile(client: TestClient, profile_id: int) -> None:
+    """Switch the active tenant/profile for multi-tenant tests.
+
+    Sets the X-Profile-Id header so subsequent requests are scoped to the
+    given profile/tenant.
+    """
+    client.headers.update({"X-Profile-Id": str(profile_id)})
+
+
+# -----------------------------------------------------------------------------
+# Optional PostgreSQL test fixture for native RLS validation
+# -----------------------------------------------------------------------------
+
+@pytest.fixture(scope="class")
+def postgres_client(request):
+    """Yield a TestClient backed by a live PostgreSQL database.
+
+    Reads TEST_DATABASE_URL from the environment. If not set, the entire
+    test class is skipped. When set, the fixture:
+      1. Creates a fresh schema
+      2. Runs Base.metadata.create_all()
+      3. Yields a TestClient
+      4. Drops all tables after the test class completes
+    """
+    db_url = os.environ.get("TEST_DATABASE_URL")
+    if not db_url:
+        pytest.skip("TEST_DATABASE_URL not set; skipping PostgreSQL RLS tests")
+        return  # unreachable but keeps type checkers happy
+
+    from sqlalchemy import create_engine as _pg_create_engine
+    from sqlalchemy.orm import sessionmaker as _pg_sessionmaker
+
+    pg_engine = _pg_create_engine(db_url, pool_pre_ping=True)
+
+    # Create schema from current models
+    Base.metadata.create_all(bind=pg_engine)
+
+    PgSessionLocal = _pg_sessionmaker(autocommit=False, autoflush=False, bind=pg_engine)
+
+    def _pg_override_get_db():
+        db = PgSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = _pg_override_get_db
+
+    with TestClient(app) as pg_test_client:
+        ctx = _TestContext(
+            engine=pg_engine,
+            SessionLocal=PgSessionLocal,
+            override_get_db=_pg_override_get_db,
+            client=pg_test_client,
+            db_url=db_url,
+        )
+        _set_context(ctx)
+        try:
+            yield pg_test_client
+        finally:
+            _set_context(None)
+
+    app.dependency_overrides.pop(get_db, None)
+
+    # Clean up: drop all tables
+    Base.metadata.drop_all(bind=pg_engine)
+    pg_engine.dispose()
