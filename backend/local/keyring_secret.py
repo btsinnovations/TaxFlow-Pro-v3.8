@@ -21,21 +21,39 @@ from .settings import get_local_path
 
 logger = logging.getLogger(__name__)
 
-# Resolve the local secret file inside the configured local root. On a fresh
-# first boot this directory may not exist yet, so we ensure parents on write.
+# Legacy default; callers should use _local_secret_file() at runtime so that
+# TAXFLOW_LOCAL_ROOT is respected even when it is set after module import.
 DEFAULT_LOCAL_SECRET_FILE = get_local_path(".local_secret")
-LOCAL_SECRET_FILE = Path(os.environ.get("TAXFLOW_LOCAL_SECRET_FILE", str(DEFAULT_LOCAL_SECRET_FILE)))
+LOCAL_SECRET_FILE = DEFAULT_LOCAL_SECRET_FILE
 DEFAULT_SERVICE = "TaxFlow-Pro"
 DEFAULT_ACCOUNT = "local_secret"
 
 
+def _local_secret_file() -> Path:
+    """Return the current local secret file path.
+
+    This is evaluated at call time because the packaged launcher sets
+    TAXFLOW_LOCAL_ROOT at runtime before importing the rest of the app. Using
+    a dynamic path prevents the secret from being written to the install
+    directory or a stale project root.
+    """
+    env_path = os.environ.get("TAXFLOW_LOCAL_SECRET_FILE", "").strip()
+    if env_path:
+        return Path(env_path)
+    env_root = os.environ.get("TAXFLOW_LOCAL_ROOT", "").strip()
+    if env_root:
+        return Path(env_root).resolve() / ".local_secret"
+    return DEFAULT_LOCAL_SECRET_FILE
+
+
 def _read_file_secret() -> Optional[str]:
-    if not LOCAL_SECRET_FILE.exists():
+    path = _local_secret_file()
+    if not path.exists():
         return None
     try:
-        return LOCAL_SECRET_FILE.read_text().strip()
+        return path.read_text().strip()
     except Exception as exc:
-        logger.warning("Failed to read fallback secret file %s: %s", LOCAL_SECRET_FILE, exc)
+        logger.warning("Failed to read fallback secret file %s: %s", path, exc)
         return None
 
 
@@ -87,20 +105,22 @@ def _set_secret_file_permissions(path: Path) -> None:
 
 
 def _write_file_secret(secret: str) -> None:
+    path = _local_secret_file()
     try:
-        LOCAL_SECRET_FILE.parent.mkdir(parents=True, exist_ok=True)
-        LOCAL_SECRET_FILE.write_text(secret)
-        _set_secret_file_permissions(LOCAL_SECRET_FILE)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(secret)
+        _set_secret_file_permissions(path)
     except Exception as exc:
-        logger.warning("Failed to write fallback secret file %s: %s", LOCAL_SECRET_FILE, exc)
+        logger.warning("Failed to write fallback secret file %s: %s", path, exc)
 
 
 def _delete_file_secret() -> None:
+    path = _local_secret_file()
     try:
-        if LOCAL_SECRET_FILE.exists():
-            LOCAL_SECRET_FILE.unlink()
+        if path.exists():
+            path.unlink()
     except Exception as exc:
-        logger.warning("Failed to delete fallback secret file %s: %s", LOCAL_SECRET_FILE, exc)
+        logger.warning("Failed to delete fallback secret file %s: %s", path, exc)
 
 
 def store_secret(
