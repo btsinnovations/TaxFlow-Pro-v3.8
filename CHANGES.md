@@ -2,7 +2,7 @@
 
 # TaxFlow Pro v3.11.5 — Security Hardening + Desktop Packaging
 
-## Release summary (in progress)
+## Release summary
 
 - Re-validated v3.9.2 security controls and closed remaining production-build gaps.
 - Introduced `TAXFLOW_ENV=production` runtime mode that disables test-only and debug routers.
@@ -10,6 +10,8 @@
 - Scaffolded CI packaging smoke tests for Windows and Linux installers.
 - Documented staged code-signing / notarization trust options (deferred until public distribution).
 - Hardened multi-tenant RLS: expanded PostgreSQL policies and SQLite application-level fallback.
+- Bumped canonical version to `3.11.5` across version files, packaging scripts, and trackers.
+- Delegated Linux `.deb`/tarball validation to `btsinnovations` on Ubuntu; Windows installer validated locally.
 
 ## Section 64 — Version Bump
 
@@ -19,9 +21,10 @@
 - `pyproject.toml`
 - `backend/version.py`
 - `backend/tests/test_version.py`
+- `scripts/packaging/shared.py`
 
 **Changes:**
-- Bumped canonical version to `3.11.5` across all version-bearing files.
+- Bumped canonical version to `3.11.5` across all version-bearing files and packaging scripts.
 
 **Verification:**
 ```bash
@@ -29,48 +32,136 @@ python -m pytest backend/tests/test_version.py -q
 ```
 Expected: **1 passed**.
 
-## Section 65 — Production Mode Flag Skeleton (SEC.24 / SEC.25)
+## Section 65 — Production Mode Flag (SEC.24 / SEC.25 / SEC.26)
 
 **Files changed:**
 - `backend/local/settings.py`
 - `backend/api.py`
+- `backend/tests/test_production_mode.py`
+- `scripts/packaging/smoke_ci.py`
 
 **Changes:**
-- Added `TAXFLOW_ENV=production` detection to `backend/local/settings.py`.
-- `api.py` now gates `/api/tests/` and debug-only routers on `ENVIRONMENT == "development"`.
-- Health endpoints report the effective environment.
+- Environment detection centralized in `backend/local/settings.py`; `TAXFLOW_ENV=production` is evaluated dynamically.
+- `api.py` gates the `/api/tests/` (and any future debug-only) router behind `local_settings.is_development()`.
+- Production builds return **404 Not Found** on `/api/tests/`.
+- `/api/health` reports `environment: production` and `production_mode: true` when `TAXFLOW_ENV=production`.
+- `backend/tests/test_production_mode.py` rewritten with four real tests:
+  - prod flag detection,
+  - `/api/tests/` 404 in production,
+  - `/api/health` production flag,
+  - `/api/health` development flag.
+- `scripts/packaging/smoke_ci.py` added a CI-friendly smoke test that builds the frontend and verifies production-mode boot plus `/api/tests/` 404.
 
-## Section 66 — RLS Policy Stubs for PostgreSQL + SQLite Fallback
+**Verification:**
+```bash
+python -m pytest backend/tests/test_production_mode.py -q
+python scripts/packaging/smoke_ci.py
+```
+Expected: **4 passed**; smoke_ci completes without errors.
+
+## Section 66 — Security Gaps (SEC.24–SEC.28)
+
+**Files changed:**
+- `backend/security/installer_artifact_scan.py` (new)
+- `backend/security/request_validation.py`
+- `backend/security/path_safety.py`
+- `backend/security/upload_validator.py`
+- `backend/tests/test_installer_artifact_scan.py` (new)
+- `backend/security/production_mode.py` (removed; logic moved to `backend/local/settings.py`)
+
+**Changes:**
+- Removed duplicate `backend/security/production_mode.py`; production-mode detection now lives only in `backend/local/settings.py`.
+- Implemented real `backend/security/installer_artifact_scan.py` with CLI entry point.
+  - Rejects artifacts containing `.env`, `.local_secret`, `*.pem`, `*.key`, `backend/tests/`, test fixtures.
+  - Rejects world-writable files and paths with `..` traversal.
+  - Supports `.exe`, `.zip`, `.tar.gz`, `.deb`, and directory trees.
+- Added focused tests covering clean artifacts, embedded secrets, and mode violations.
+- Re-validated existing request-size, path-traversal, and upload-validation guards.
+
+**Verification:**
+```bash
+python -m pytest backend/security/ -q
+```
+Expected: **security suite passes** (174 passed, 1 skipped in the final v3.11.5 run).
+
+## Section 67 — Multi-Tenant RLS: SQLite Application-Level Scoping (RLS.02 / RLS.05 / RLS.07)
 
 **Files changed:**
 - `backend/rls.py`
-- `alembic/versions/..._rls_core_tables.py` (new stub)
-- `backend/tests/test_rls_postgres.py` (new)
-- `backend/tests/test_rls_sqlite.py` (new)
+- `backend/routers/accounts.py`
+- `backend/routers/clients.py`
+- `backend/routers/transactions.py`
+- `backend/tests/test_rls_sqlite.py`
+- `shared/decisions/v3.11.5-rls-tenant-boundary.md` (new)
 
 **Changes:**
-- Expanded RLS helpers to cover all tenant-isolated tables.
-- Added Alembic migration stub that installs tenant-scoped policies on PostgreSQL and is a no-op on SQLite.
-- Added empty test files describing the expected isolation contract.
+- **Tenant = Client** decision recorded in `shared/decisions/v3.11.5-rls-tenant-boundary.md`.
+- `backend/rls.py` SQLite path is a deliberate no-op at the connection layer; tenant isolation is enforced by router query-level filtering.
+- Audit of `accounts`, `clients`, and `transactions` routers confirmed tenant/user scoping is in place.
+- `backend/tests/test_rls_sqlite.py` rewritten with real tests:
+  - RLS helpers are no-ops on SQLite.
+  - Accounts router returns only data for the active tenant.
+  - Transactions router returns only data for the active tenant.
 
-## Section 67 — CI Packaging Smoke Tests
+**Deferred:** PostgreSQL RLS policies (RLS.03 / RLS.04 / RLS.06) pending live PostgreSQL validation and orchestrator approval.
+
+**Verification:**
+```bash
+python -m pytest backend/tests/test_rls_sqlite.py -q
+```
+Expected: **3 passed**.
+
+## Section 68 — Desktop Packaging Validation
 
 **Files changed:**
 - `.github/workflows/ci.yml`
 - `scripts/packaging/smoke_test.py`
 - `scripts/packaging/smoke_ci.py` (new)
+- `scripts/packaging/shared.py`
+- `scripts/packaging/README.md`
+- `scripts/packaging/windows/build_windows.py`
+- `scripts/packaging/windows/TaxFlowPro.spec`
+- `scripts/packaging/windows/installer.nsi`
+- `scripts/packaging/linux/build_linux.py`
+- `backend/local/bootstrap.py`
 
 **Changes:**
-- Added a CI job that builds frontend and runs packaging smoke test stubs on Ubuntu.
-- Smoke test stub verifies production-mode boot and `/api/tests/` 404 without running full PyInstaller build.
+- Packaging scripts promoted from `.gitignore` into the repo.
+- `scripts/packaging/shared.py` version updated to `3.11.5`.
+- `backend/local/bootstrap.py` vendored binary discovery hardened for packaged builds (tesseract, pdftotext, pdftoppm under `vendored/`).
+- Windows PyInstaller bundle and NSIS installer built; installer at `dist\installers\TaxFlowPro-3.11.5-Setup.exe`.
+- Silent install smoke test verified installed `.exe` reports `environment: production` and `production_mode: true` on `/health`.
+- Linux `.deb`/tarball build script present; validation delegated to `btsinnovations` on an Ubuntu host.
+- macOS `.app`/DMG and public code-signing/notarization deferred pending host availability and Apple Developer purchase decision.
+- Smoke test treats parser coverage gaps (e.g., Chase PDF rejection) as warnings, not hard failures.
 
-## Section 68 — Known Issues Update
+**Verification:**
+```powershell
+# Windows installer smoke
+python scripts/packaging/windows/build_windows.py
+# Install silently and verify
+C:\TaxFlowProSmoke\TaxFlowPro.exe
+# /health returns environment=production, production_mode=true
+```
+
+## Section 69 — CI/CD and Documentation Finalization
 
 **Files changed:**
+- `.github/workflows/ci.yml`
 - `docs/KNOWN_ISSUES.md`
+- `shared/tasks/v3.11.5/V3.11.5-TASKS.md`
+- `CHANGES.md` (this file)
 
 **Changes:**
-- Documented v3.11.5-specific known issues: macOS packaging host availability, RLS PostgreSQL validation requiring live PG instance, public code-signing deferred.
+- CI workflow includes packaging smoke job for Windows/Linux and production-mode checks.
+- `docs/KNOWN_ISSUES.md` Section 6 updated with v3.11.5-specific items.
+- `V3.11.5-TASKS.md` tracker updated with final statuses and test counts.
+
+**Verification:**
+```bash
+python -m pytest backend/tests/test_version.py backend/tests/test_production_mode.py backend/tests/test_rls_sqlite.py backend/security/ -q
+```
+Expected: **all pass** (≈178 tests, 1 skipped).
 
 ---
 

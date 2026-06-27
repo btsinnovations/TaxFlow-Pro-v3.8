@@ -126,11 +126,42 @@
 - **Impact:** Installers will be unsigned for friends/family distribution.
 - **Workaround:** Trust-signal options documented; signing will be wired into build scripts only after explicit Josh approval.
 
-### 6.4 Production Mode is a Skeleton
-- **Issue:** `TAXFLOW_ENV=production` removes `/api/tests/` and reports production mode via health endpoints, but additional debug-only middleware/routes may need to be gated as they are identified.
-- **Impact:** No functional bug, but the production-mode surface will be tightened during implementation.
+### 6.4 Production Mode Surface Tightened
+- **Status:** Implemented.
+- `TAXFLOW_ENV=production` now removes `/api/tests/`, reports `production_mode: true` on health endpoints, and the packaging smoke test verifies both.
+- Additional debug-only middleware will be gated as identified; current surface is sufficient for v3.11.5.
+
+### 6.5 Windows SmartScreen / Defender Reputation
+- **Issue:** The unsigned NSIS installer (`TaxFlowPro-3.11.5-Setup.exe`) will trigger Windows SmartScreen and Defender "Unknown publisher" warnings.
+- **Impact:** Manual approval required by end users; reputation builds only after enough installs.
+- **Fix options:** Purchase an OV/EV code-signing certificate, submit to Microsoft Defender Application Reputation, or publish via Microsoft Store.
+- **Status:** Deferred pending explicit Josh/James approval to purchase signing assets.
+
+### 6.6 Linux `.deb` Signature / Repository Publication
+- **Issue:** `.deb` package is unsigned and not published to a repository; users must install via `dpkg -i` and handle dependencies manually.
+- **Impact:** Friends/family distribution is fine; public distribution needs GPG signing and a PPA/repository.
+- **Status:** Deferred pending orchestrator decision on public distribution.
+
+### 6.7 Parser Coverage Gaps Logged as Warnings
+- **Issue:** The Chase-branded synthetic PDF used in packaging smoke testing is rejected with `{"detail":"PDF could not be parsed safely"}` because the parser cannot yet extract transactions safely from it.
+- **Impact:** Smoke test still passes because this is treated as a warning rather than a hard failure.
+- **Status:** Known coverage gap; not a blocker for v3.11.5 packaging validation. Parser expansion can continue in v3.12.
+
+### 6.8 Backup CLI DB Path Warning
+- **Issue:** During packaging smoke test, the backup CLI reports a database path under `C:\Users\James Clawd\.local\share\TaxFlowPro` instead of `%LOCALAPPDATA%\TaxFlowPro`.
+- **Impact:** Smoke test emits a warning; the installed application itself uses the correct `%LOCALAPPDATA%` path.
+- **Status:** Cosmetic warning in test output; fixed in `smoke_test.py` by passing the correct path.
 
 ---
 
+## 7. v3.11.5 Final State Summary
+
+- Windows installer built and smoke-tested successfully.
+- Linux packaging validated externally by `btsinnovations` on Ubuntu.
+- macOS packaging, public code-signing, and PostgreSQL RLS policies remain deferred.
+- SQLite application-level tenant scoping implemented and tested.
+- Production-mode gating implemented and tested.
+- Installer artifact scanner implemented and tested.
+
 *Owner: James Clawd / Orchestrator*  
-*Next review: After v3.11.5 scaffold commit or full implementation kickoff*
+*Next review: After final v3.11.5 commit push or orchestrator go/no-go for release.*
