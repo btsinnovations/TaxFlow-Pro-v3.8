@@ -1,9 +1,10 @@
 """Linux packaging build for TaxFlow Pro.
 
 Produces:
-- dist/pyinstaller/TaxFlowPro/              (onedir bundle)
-- dist/installers/TaxFlowPro-3.10.0-linux.tar.gz   (portable tarball)
-- dist/installers/TaxFlowPro-3.10.0-x86_64.AppImage (if appimagetool is available)
+- dist/pyinstaller/TaxFlowPro/                     (onedir bundle)
+- dist/installers/TaxFlowPro-{VERSION}-linux.tar.gz  (portable tarball)
+- dist/installers/TaxFlowPro-{VERSION}.deb           (Debian package)
+- dist/installers/TaxFlowPro-{VERSION}-x86_64.AppImage (if appimagetool is available)
 
 Data directory: ~/.local/share/TaxFlowPro
 """
@@ -16,6 +17,7 @@ import platform
 import shutil
 import stat
 import subprocess
+import string
 import sys
 import tarfile
 from pathlib import Path
@@ -45,6 +47,8 @@ ICON_PATH = resource_path("assets", "icon.svg")
 APPRUN_PATH = resource_path("linux", "AppRun")
 DESKTOP_PATH = resource_path("linux", "taxflowpro.desktop")
 RUN_WRAPPER = resource_path("linux", "run.sh")
+DEB_NAME = f"TaxFlowPro-{VERSION}.deb"
+DEB_STAGING = DIST_ROOT / "deb" / "taxflowpro"
 
 
 def _pyinstaller_available() -> bool:
@@ -247,6 +251,8 @@ def _run_pyinstaller() -> None:
         "PyInstaller",
         "--clean",
         "--noconfirm",
+        "--distpath", str(PYINSTALLER_DIR),
+        "--workpath", str(PROJECT_ROOT / "build" / "linux"),
         str(spec),
     ]
     subprocess.run(cmd, check=True, cwd=PROJECT_ROOT)
@@ -294,6 +300,8 @@ def _build_tarball() -> None:
     if tarball.exists():
         tarball.unlink()
     _write_desktop_file()
+    if not BUNDLE_DIR.exists():
+        fail(f"PyInstaller bundle not found at {BUNDLE_DIR}")
     _write_run_wrapper()
     shutil.copy2(DESKTOP_PATH, BUNDLE_DIR / "taxflowpro.desktop")
     shutil.copy2(RUN_WRAPPER, BUNDLE_DIR / "run.sh")
@@ -303,6 +311,76 @@ def _build_tarball() -> None:
     with tarfile.open(tarball, "w:gz") as tf:
         tf.add(BUNDLE_DIR, arcname=BUNDLE_NAME)
     print(f"[linux] tarball produced: {tarball}")
+
+
+def _build_deb() -> None:
+    """Build a Debian .deb package from the PyInstaller bundle."""
+    deb = INSTALLER_DIR / DEB_NAME
+    if deb.exists():
+        deb.unlink()
+    if DEB_STAGING.exists():
+        shutil.rmtree(DEB_STAGING)
+    DEB_STAGING.mkdir(parents=True)
+
+    # Package metadata
+    (DEB_STAGING / "DEBIAN").mkdir(parents=True)
+    control = f"""Package: taxflowpro
+Version: {VERSION}
+Section: office
+Priority: optional
+Architecture: amd64
+Depends: python3 (>= 3.10)
+Maintainer: TaxFlow Pro contributors
+Description: Local-first tax and accounting pipeline
+ TaxFlow Pro is a desktop-first bookkeeping, tax, and document
+ processing application.
+"""
+    (DEB_STAGING / "DEBIAN" / "control").write_text(control, encoding="utf-8")
+
+    # postinst: symlink launcher into PATH
+    postinst = """#!/bin/sh
+set -e
+chmod +x /opt/taxflowpro/TaxFlowPro
+ln -sf /opt/taxflowpro/TaxFlowPro /usr/local/bin/taxflowpro || true
+exit 0
+"""
+    (DEB_STAGING / "DEBIAN" / "postinst").write_text(postinst, encoding="utf-8")
+    (DEB_STAGING / "DEBIAN" / "postinst").chmod(
+        (DEB_STAGING / "DEBIAN" / "postinst").stat().st_mode
+        | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+    )
+
+    # Application bundle
+    opt_dir = DEB_STAGING / "opt" / "taxflowpro"
+    shutil.copytree(BUNDLE_DIR, opt_dir)
+
+    # Desktop integration
+    apps_dir = DEB_STAGING / "usr" / "share" / "applications"
+    apps_dir.mkdir(parents=True)
+    desktop = f"""[Desktop Entry]
+Name={APP_NAME}
+Comment=Local-first tax and accounting pipeline
+Exec=/opt/taxflowpro/TaxFlowPro
+Icon=/opt/taxflowpro/icon_256.png
+Type=Application
+Terminal=false
+Categories=Office;Finance;
+"""
+    (apps_dir / "taxflowpro.desktop").write_text(desktop, encoding="utf-8")
+
+    # Icons
+    icon_dir = DEB_STAGING / "usr" / "share" / "icons" / "hicolor" / "256x256" / "apps"
+    icon_dir.mkdir(parents=True)
+    icon_src = ICON_PATH.parent / "icon_256.png"
+    if icon_src.exists():
+        shutil.copy2(icon_src, icon_dir / "taxflowpro.png")
+
+    subprocess.run(
+        ["dpkg-deb", "--build", str(DEB_STAGING), str(deb)],
+        check=True,
+        cwd=PROJECT_ROOT,
+    )
+    print(f"[linux] .deb produced: {deb}")
 
 
 def _build_appimage() -> None:
@@ -345,6 +423,7 @@ def main() -> int:
             fail(f"--skip-pyinstaller requested but {BUNDLE_DIR} does not exist")
 
     _build_tarball()
+    _build_deb()
     if args.appimage:
         _build_appimage()
     return 0
