@@ -27,11 +27,27 @@ ENVIRONMENT = local_settings.ENVIRONMENT
 
 def run_migrations():
     """Run Alembic migrations against the configured database engine."""
-    alembic_cfg = Config(os.environ.get("ALEMBIC_CONFIG", "alembic.ini"))
+    import sys
+    alembic_cfg_path = os.environ.get("ALEMBIC_CONFIG", "alembic.ini")
+    alembic_cfg = Config(alembic_cfg_path)
     # Ensure migrations target the same database URL the app uses
     db_url = str(engine.url)
     alembic_cfg.set_main_option("sqlalchemy.url", db_url)
-    command.upgrade(alembic_cfg, "head")
+
+    # In a PyInstaller frozen bundle, CWD may not be the project root.
+    # Alembic resolves script_location relative to the config file's directory,
+    # so we set CWD to the project root (where alembic/ lives) when frozen.
+    original_cwd = os.getcwd()
+    restore_cwd = False
+    if getattr(sys, "frozen", False):
+        project_root = str(Path(sys._MEIPASS))
+        os.chdir(project_root)
+        restore_cwd = True
+    try:
+        command.upgrade(alembic_cfg, "head")
+    finally:
+        if restore_cwd:
+            os.chdir(original_cwd)
 
 
 def _check_local_secret_permissions():

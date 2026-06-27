@@ -294,7 +294,10 @@ def _run_migrations(local_root: Path) -> int:
             command.upgrade(cfg, "head")
             print("[launcher] migrations complete")
         finally:
-            os.chdir(original_cwd)
+            # When frozen, keep CWD at project root so that backend.api's
+            # module-level run_migrations() can find the alembic/ directory.
+            if not getattr(sys, "frozen", False):
+                os.chdir(original_cwd)
         return 0
     except Exception as exc:
         print(f"[launcher] migration failed: {exc}", file=sys.stderr)
