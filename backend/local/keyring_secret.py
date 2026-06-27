@@ -128,19 +128,21 @@ def store_secret(
     service: str = DEFAULT_SERVICE,
     account: str = DEFAULT_ACCOUNT,
 ) -> bool:
-    """Store secret in the OS credential store, falling back to file.
+    """Store secret in the OS credential store, always keeping a fallback file.
 
-    Returns True if the secret was stored in the keyring, False if the file
-    fallback was used.
+    The plaintext fallback is written first so the local app remains usable on
+    headless/container systems where the OS credential store is unavailable or
+    returns transient failures. Returns True if the secret was also stored in
+    the keyring.
     """
+    _write_file_secret(secret)
     try:
         if keyring is None:
             raise RuntimeError("keyring module not available")
         keyring.set_password(service, account, secret)
         return True
     except Exception as exc:
-        logger.debug("Keyring store failed, using file fallback: %s", exc)
-        _write_file_secret(secret)
+        logger.debug("Keyring store failed, using file fallback only: %s", exc)
         return False
 
 
@@ -148,7 +150,10 @@ def retrieve_secret(
     service: str = DEFAULT_SERVICE,
     account: str = DEFAULT_ACCOUNT,
 ) -> Optional[str]:
-    """Retrieve secret from OS credential store, falling back to file."""
+    """Retrieve secret from the fallback file first, then the credential store."""
+    file_secret = _read_file_secret()
+    if file_secret:
+        return file_secret
     try:
         if keyring is None:
             raise RuntimeError("keyring module not available")
@@ -156,8 +161,8 @@ def retrieve_secret(
         if secret:
             return secret
     except Exception as exc:
-        logger.debug("Keyring retrieve failed, using file fallback: %s", exc)
-    return _read_file_secret()
+        logger.debug("Keyring retrieve failed: %s", exc)
+    return None
 
 
 def delete_secret(
