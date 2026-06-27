@@ -2,8 +2,20 @@
 
 **Date:** 2026-06-27  
 **Orchestrator:** James Clawd  
+**Builder / Persistent Agent:** Jane Clawd  
+**Validator (spawned per bundle):** glm-5.1 subagent  
 **Branch:** `v3.11.6-dev` (cut from `v3.11.5` tag at `eeb1001`, roadmap cherry-picked to `1284342`)  
 **Baseline:** `v3.11.5-dev` reset to `eeb1001` and frozen.
+
+---
+
+## Team Shape for v3.11.6
+
+| Role | Agent | Responsibility |
+|------|-------|----------------|
+| Orchestrator | James Clawd | Strategic decisions, merge approval, blocker escalation, final tag/release. |
+| Builder / Persistent Agent | Jane Clawd | Executes implementation across all bundles; may spawn specialist subagents for focused tasks. Reports status to James. |
+| Validator | glm-5.1 subagent (spawned per bundle or phase) | Independent review, edge-case testing, packaging smoke tests, hardening validation. |
 
 ---
 
@@ -158,11 +170,11 @@ This confirms the existing v3.11 backend modules are already functional enough t
 
 ## Recommended Next Actions (after this report)
 
-1. Create the API contract doc as part of B1 kickoff.
-2. Provision PostgreSQL test instance.
-3. Decide the 5 open architectural questions above.
-4. Spawn B1 subagent with a focused brief: "complete COA/roles/migration/RLS contract and implementation, no other bundles touched."
-5. Postpone frontend-heavy B6 until B1 and at least B2 deliver real endpoints.
+1. **Jane Clawd reads the Phase 1 plan and bundle specs** (`V3.11.6-ROADMAP.md`, `SUBAGENT_PROTOCOL.md`, `TEST_HARNESS.md`, `BUNDLE-B1-foundation.md`, `PHASE-1-MASTERPLAN.md`).
+2. **Jane executes Track 1** (Test Harness) herself or by spawning a specialist subagent.
+3. **Jane validates Track 1** and reports back to James.
+4. **Jane executes Track 2** (B1 Foundation) after Track 1 is green.
+5. **James reviews and approves merge** to `v3.11.6-dev`.
 
 ---
 
