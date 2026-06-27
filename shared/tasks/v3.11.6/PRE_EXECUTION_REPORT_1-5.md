@@ -80,14 +80,17 @@ Not a greenfield build.
 2. **SQLite remains default offline DB.** PostgreSQL is optional production. RLS on SQLite is application-level; PostgreSQL gets native RLS.
 3. **COA migration strategy:** existing `GLAccount` table is reused conceptually as `coa_accounts`. Data preservation path exists but needs validation in v3.11.6.
 
-### Still needs Josh/James confirmation before execution
-1. Should v3.11.6 replace `accounts` table entirely with `coa_accounts`, or keep `accounts` as bank/credit-card-specific and `GLAccount` as COA?
-2. Do we need a true chart-of-accounts renumbering/migration, or is the existing `GLAccount` model sufficient?
-3. Is multi-currency home-currency conversion required for v3.11.6 reports, or is storing foreign amount enough?
-4. macOS packaging — is a macOS host available, or defer to v3.11.7?
-5. Code signing / trust signals — any cert/key purchase planned, or document-only again?
+### Decisions confirmed by Josh 2026-06-27
+1. **Replace `accounts` table with COA** — `accounts` becomes the bank/credit-card view of COA, not a separate entity.
+2. **True COA renumbering migration** — migrate `GLAccount` into a proper `coa_accounts` table with hierarchy.
+3. **Multi-currency conversion required in reports** — home-currency conversion must work in registers and reports.
+4. **macOS host** — **defer** to v3.11.7.
+5. **Code signing / trust signals** — **document only** for v3.11.6.
 
-These should be decided before B1 migration design is finalized.
+### Still needs orchestrator detail
+- Exact numbering scheme for default small-business COA.
+- Whether to preserve old `Account` records as migration source or drop them.
+- Default home currency (USD assumed unless stated otherwise).
 
 ---
 
