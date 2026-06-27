@@ -326,10 +326,38 @@ def _open_browser(url: str, delay_seconds: float = 1.5) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _redirect_console_to_log(local_root: Path) -> None:
+    """When PyInstaller runs with console=False, sys.stdout/stderr are None.
+
+    Re-open them pointing at a launcher log file so print(), traceback,
+    and uvicorn logging have a valid stream. This keeps the app usable as a
+    GUI-only executable on Windows.
+    """
+    if getattr(sys, "frozen", False) and sys.stdout is None:
+        log_dir = local_root / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_path = log_dir / "launcher.log"
+        try:
+            # Use line-buffered text mode so messages appear promptly.
+            stream = open(log_path, "a", encoding="utf-8", buffering=1)
+            sys.stdout = stream
+            sys.stderr = stream
+            print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] [launcher] console output redirected to {log_path}")
+        except Exception as exc:
+            # Last-resort fallback: attach to the devnull-like null writer so
+            # the process at least does not crash when something prints.
+            import io
+
+            sys.stdout = io.StringIO()
+            sys.stderr = io.StringIO()
+            print(f"[launcher] failed to redirect console to log: {exc}", file=sys.stderr)
+
+
 def main() -> int:
     """Launch the TaxFlow Pro local application."""
     local_root = _local_root()
     _ensure_dirs(local_root)
+    _redirect_console_to_log(local_root)
 
     # Limit BLAS/LAPACK threads to reduce memory pressure on low-RAM machines
     # when heavy numeric libraries are imported by ML/parser code paths.
