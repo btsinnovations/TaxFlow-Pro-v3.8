@@ -87,10 +87,15 @@ Not a greenfield build.
 4. **macOS host** — **defer** to v3.11.7.
 5. **Code signing / trust signals** — **document only** for v3.11.6.
 
-### Still needs orchestrator detail
-- Exact numbering scheme for default small-business COA.
-- Whether to preserve old `Account` records as migration source or drop them.
-- Default home currency (USD assumed unless stated otherwise).
+### Still needs orchestrator detail — RESOLVED
+- **Default small-business COA numbering scheme:**  
+  - Assets: 1000–1999  
+  - Liabilities: 2000–2999  
+  - Equity: 3000–3999  
+  - Income/Revenue: 4000–4999  
+  - Expenses: 5000–9999  
+- **Old `Account` records:** **DROP**. Migration does not preserve legacy `Account` rows; users must re-add bank/credit card accounts as COA entries.
+- **Default home currency:** **USD**.
 
 ---
 
