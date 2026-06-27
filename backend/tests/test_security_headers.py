@@ -78,19 +78,21 @@ def test_hsts_absent_in_development(client):
 
 
 def test_hsts_present_in_production(monkeypatch):
-    """Reload the app factory with TAXFLOW_ENVIRONMENT=production and verify HSTS.
+    """Verify HSTS header is added in production mode.
 
-    We import inside the test and patch the environment before creating a new
-    FastAPI instance so the production-only header path is exercised.
+    We monkeypatch the environment reader used by the settings module so
+    is_production() returns True, then create a fresh FastAPI instance to
+    pick up the new behaviour.  Importing api inside the test avoids stale
+    module state from earlier tests.
     """
     from fastapi.testclient import TestClient
 
-    monkeypatch.setenv("TAXFLOW_ENVIRONMENT", "production")
-    # Re-import settings so ENVIRONMENT picks up the new env value.
+    # Patch the dynamic env reader before importing/creating the app.
     from backend import local
     import importlib
 
-    importlib.reload(local.settings)
+    monkeypatch.setattr(local.settings, "_read_env", lambda: "production")
+    monkeypatch.setenv("TAXFLOW_ENVIRONMENT", "production")
 
     # Rebuild the app to capture the new settings.
     from backend import api
