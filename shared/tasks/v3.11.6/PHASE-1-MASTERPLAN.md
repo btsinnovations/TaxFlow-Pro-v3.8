@@ -209,6 +209,12 @@ Jane may do this herself or spawn a specialist subagent. If spawning, include:
 10. James approves merges to `v3.11.6-dev`.
 11. Phase 1 complete.
 
+## Phase 1 Exit Criteria
+
+- [ ] Track 1 merged to `v3.11.6-dev`.
+- [ ] Track 2 merged to `v3.11.6-dev`.
+- [ ] Track 3 branch is green and ready for merge (may merge in parallel with Track 2 or after).
+
 ---
 
 ## Blocker Escalation Format

@@ -47,28 +47,44 @@ Only 4 institution-specific parsers exist:
 
 ## v3.11.6 Goal
 
-Add dedicated statement parsers for **all remaining detected institutions** so that every bank in the registry has a real parser path, not just generic fallback.
+Add dedicated statement parsers for **every single institution identified in the Stage 1 research**, including Tier 1 recommended additions and Tier 2 investigated-but-deferred candidates.
+
+**Total new parsers required:** 23 institutions.
 
 ---
 
-## Target Institutions for New Parsers
+## Full Research-Derived Target List
 
-| # | Institution | Priority | Notes |
-|---|-------------|----------|-------|
-| 1 | **Bank of America** | High | Very common; checking + credit card layouts. |
-| 2 | **Chase** | High | Very common; multiple layout variants. |
-| 3 | **Wells Fargo** | High | Common; checking/savings/credit. |
-| 4 | **Navy Federal** | High | Credit union; running balance column. |
-| 5 | **U.S. Bank** | High | Multi-column statements. |
-| 6 | **Cash App** | Medium | Already in phase3; port to backend. |
-| 7 | **Citibank** | Medium | Checking vs credit ambiguity; needs primary source fixture. |
-| 8 | **PNC Bank** | Medium | Virtual Wallet vs standard checking. |
-| 9 | **Ally Bank** | Medium | Online-only bank; simpler layout. |
-| 10 | **SoFi** | Medium | Neobank; SoFi Money layout. |
-| 11 | **Truist** | Medium | Possible legacy BB&T/SunTrust markers. |
-| 12 | **BECU** | Medium | Credit union share-draft layout. |
-| 13 | **Discover Bank** | Medium | Credit-card-first terminology. |
-| 14 | **Marcus by Goldman Sachs** | Low | Sparse high-yield savings statements. |
+| # | Institution | Tier | Priority | Notes |
+|---|-------------|------|----------|-------|
+| 1 | **Bank of America** | 1 | High | Very common; checking + credit card layouts. |
+| 2 | **Chase** | 1 | High | Very common; multiple layout variants. |
+| 3 | **Wells Fargo** | 1 | High | Common; checking/savings/credit. |
+| 4 | **Navy Federal** | 1 | High | Credit union; running balance column. |
+| 5 | **U.S. Bank** | 1 | High | Multi-column statements. |
+| 6 | **Citibank** | 1 | Medium | Checking vs credit ambiguity; needs primary source fixture. |
+| 7 | **PNC Bank** | 1 | Medium | Virtual Wallet vs standard checking. |
+| 8 | **Ally Bank** | 1 | Medium | Online-only bank; simpler layout. |
+| 9 | **BECU** | 1 | Medium | Credit union share-draft layout. |
+| 10 | **SoFi** | 1 | Medium | Neobank; SoFi Money layout. |
+| 11 | **Truist** | 1 | Medium | Possible legacy BB&T/SunTrust markers. |
+| 12 | **Discover Bank** | 1 | Medium | Credit-card-first terminology. |
+| 13 | **Marcus by Goldman Sachs** | 1 | Low | Sparse high-yield savings statements. |
+| 14 | **Cash App** | Legacy | Medium | Port from phase3 pipeline. |
+| 15 | **American Express** | 2 | Medium | Investigated; 403/blocked sources; needs primary-source fixture. |
+| 16 | **USAA** | 2 | Medium | Investigated; sources limited; military-focused bank. |
+| 17 | **PenFed** | 2 | Medium | Pentagon Federal Credit Union; credit union layout. |
+| 18 | **Alliant Credit Union** | 2 | Medium | Online credit union. |
+| 19 | **Synchrony Bank** | 2 | Medium | Online savings / co-branded credit cards. |
+| 20 | **Huntington Bank** | 2 | Medium | Regional Midwest bank. |
+| 21 | **Citizens Bank** | 2 | Medium | Regional Northeast bank. |
+| 22 | **Capital One** | 2 | Medium | 360 checking/savings + credit cards. |
+| 23 | **Charles Schwab Bank** | 2 | Medium | Brokerage-linked checking. |
+
+### Tier definitions
+- **Tier 1:** Explicitly recommended in Stage 1 research as primary v3.9+ targets.
+- **Tier 2:** Investigated during Stage 1 but deferred due to 403/404/lack of public samples. Added to v3.11.6 to ensure no parser is missed from research.
+- **Legacy:** Existing phase3 parser that needs backend port.
 
 ---
 
@@ -110,22 +126,54 @@ Each parser must:
 - `backend/parsers/discover.py`
 - `backend/parsers/marcus.py`
 
-### Step 4 — Wire parsers into institution.py dispatch
-- Update `_INSTITUTION_REGISTRY` or a new dispatch table so `parse_statement_pdf()` calls the correct dedicated parser.
+### Step 4 — Build Tier 2 parsers
+- `backend/parsers/amex.py`
+- `backend/parsers/usaa.py`
+- `backend/parsers/penfed.py`
+- `backend/parsers/alliant.py`
+- `backend/parsers/synchrony.py`
+- `backend/parsers/huntington.py`
+- `backend/parsers/citizens.py`
+- `backend/parsers/capitalone.py`
+- `backend/parsers/schwab.py`
+
+Tier 2 parsers may be more conservative: they must detect the institution and parse a known/simple layout, but may raise `ParserError` for ambiguous layouts where no public sample pattern exists.
+
+### Step 5 — Update institution detection registry
+- Add Tier 2 detection strings to `backend/parsers/institution.py`.
+- Add account-type hints where known (checking, savings, credit card).
+
+### Step 6 — Wire parsers into dispatch
+- Update dispatch table so `parse_statement_pdf()` calls the correct dedicated parser.
 - Fall back to `GenericPDFParser` only when the dedicated parser raises `ParserError` or returns empty.
 
-### Step 5 — Add synthetic fixtures
-Create one synthetic PDF-text fixture per parser in `backend/tests/fixtures/statements/`:
+### Step 7 — Add synthetic fixtures
+Create one synthetic fixture per parser in `backend/tests/fixtures/statements/`:
 - `bankofamerica_checking.txt`
 - `chase_checking.txt`
 - `wellsfargo_checking.txt`
 - `navyfederal_share_draft.txt`
 - `usbank_checking.txt`
-- etc.
+- `citibank_checking.txt`
+- `pnc_checking.txt`
+- `ally_checking.txt`
+- `sofi_checking.txt`
+- `truist_checking.txt`
+- `becu_share_draft.txt`
+- `discover_checking.txt`
+- `marcus_savings.txt`
+- `cashapp.txt`
+- `amex_credit.txt`
+- `usaa_checking.txt`
+- `penfed_share_draft.txt`
+- `alliant_checking.txt`
+- `synchrony_savings.txt`
+- `huntington_checking.txt`
+- `citizens_checking.txt`
+- `capitalone_checking.txt`
+- `schwab_checking.txt`
 
-Each fixture must be representative of the institution's typical statement layout.
-
-### Step 6 — Test matrix
+### Step 8 — Test matrix
 For each parser, tests must cover:
 - Parse valid statement → returns expected transactions.
 - Detect correct institution.
@@ -154,6 +202,15 @@ For each parser, tests must cover:
 | `backend/parsers/becu.py` | BECU parser |
 | `backend/parsers/discover.py` | Discover Bank parser |
 | `backend/parsers/marcus.py` | Marcus parser |
+| `backend/parsers/amex.py` | American Express parser |
+| `backend/parsers/usaa.py` | USAA parser |
+| `backend/parsers/penfed.py` | PenFed parser |
+| `backend/parsers/alliant.py` | Alliant Credit Union parser |
+| `backend/parsers/synchrony.py` | Synchrony Bank parser |
+| `backend/parsers/huntington.py` | Huntington Bank parser |
+| `backend/parsers/citizens.py` | Citizens Bank parser |
+| `backend/parsers/capitalone.py` | Capital One parser |
+| `backend/parsers/schwab.py` | Charles Schwab Bank parser |
 | `backend/tests/test_bank_parsers.py` | Unified bank parser test suite |
 | `backend/tests/fixtures/statements/*.txt` | Synthetic statement fixtures |
 
@@ -161,13 +218,14 @@ For each parser, tests must cover:
 
 ## Acceptance Criteria
 
-- [ ] All 14 new parsers exist and are importable.
-- [ ] `parse_statement_pdf()` dispatches to the correct parser for all 18 detected institutions.
-- [ ] At least one synthetic fixture test passes for each new parser.
-- [ ] `backend/tests/test_bank_parsers.py` has ≥40 tests total.
-- [ ] Full backend test suite still passes: 0 failures.
+- [ ] All 23 new parsers exist and are importable.
+- [ ] Institution detection registry updated with Tier 2 detection strings.
+- [ ] At least one synthetic fixture test passes for each parser.
+- [ ] `parse_statement_pdf()` dispatches correctly for all detected institutions.
+- [ ] Full backend suite still passes: 0 failures.
 - [ ] Generic parser fallback still works for unknown institutions.
 - [ ] No real customer statements or credentials used in tests or fixtures.
+- [ ] `backend/tests/test_bank_parsers.py` has ≥70 tests total.
 
 ---
 
@@ -182,6 +240,8 @@ This workstream runs **in parallel with Phase 1** (test harness + B1 Foundation)
 
 ## Risk Notes
 
-- Synthetic fixtures may not match every real-world layout variant. Document known limitations.
-- PNC Virtual Wallet and Citibank checking vs credit have open layout questions; initial parsers may be conservative and raise `ParserError` for ambiguous layouts.
+- Synthetic fixtures may not match every real-world layout variant. Document known limitations per parser.
+- Tier 2 institutions (Amex, USAA, PenFed, Alliant, Synchrony, Huntington, Citizens, Capital One, Schwab) had limited public sources. Their parsers will start conservative and raise `ParserError` for ambiguous layouts.
+- Citibank, PNC, and BECU already had open layout questions in Tier 1 research. Same conservative approach applies.
 - No live credentials or real statements will be used.
+- Total parser work is large; consider splitting into two validator passes (Tier 1 first, then Tier 2).
