@@ -163,7 +163,7 @@ def test_trial_balance_debits_equal_credits(db: Session):
         description="Revenue",
         amount=Decimal("500.00"),
         tx_type="credit",
-        gl_account_id=revenue["id"],
+        coa_account_id=revenue["id"],
     )
     _seed_statement_and_txn(
         db, account.id, client.id, user.id,
@@ -171,7 +171,7 @@ def test_trial_balance_debits_equal_credits(db: Session):
         description="Expense",
         amount=Decimal("120.00"),
         tx_type="debit",
-        gl_account_id=expense["id"],
+        coa_account_id=expense["id"],
     )
     _seed_statement_and_txn(
         db, account.id, client.id, user.id,
@@ -179,7 +179,7 @@ def test_trial_balance_debits_equal_credits(db: Session):
         description="Cash deposit",
         amount=Decimal("500.00"),
         tx_type="debit",
-        gl_account_id=cash["id"],
+        coa_account_id=cash["id"],
     )
 
     rows = trial_balance(db, client.id, user.id, date(2026, 1, 31))
@@ -249,7 +249,7 @@ def test_api_trial_balance(auth_client: TestClient, db: Session):
         description="Cash in",
         amount=Decimal("300.00"),
         tx_type="debit",
-        gl_account_id=cash["id"],
+        coa_account_id=cash["id"],
     )
 
     resp = auth_client.post("/api/reports/trial-balance", params={"as_of": "2026-05-31"}, json={})

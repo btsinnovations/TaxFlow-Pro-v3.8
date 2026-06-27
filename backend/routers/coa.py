@@ -1,4 +1,4 @@
-"""Chart of Accounts API endpoints for TaxFlow Pro v3.11."""
+"""Chart of Accounts API endpoints for TaxFlow Pro v3.11.6."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -10,6 +10,9 @@ from backend.accounting.coa import (
     delete_account as delete_coa_account,
     get_accounts as get_coa_accounts,
     update_account as update_coa_account,
+    seed_standard_coa as seed_coa,
+    renumber_account as renumber_coa_account,
+    reassign_parent as reassign_coa_parent,
 )
 from backend.database import get_db
 from backend.routers.auth import get_current_user
@@ -121,3 +124,50 @@ def delete_account(
         user_id=current_user.id,
     )
     return {"ok": True}
+
+
+@router.post("/coa/seed", response_model=list[COAAccountTree])
+def seed_standard_coa(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Seed a standard small-business COA for the current tenant."""
+    tenant_id = _wrap_tenant(request, db, current_user)
+    return seed_coa(db=db, tenant_id=tenant_id, user_id=current_user.id)
+
+
+@router.patch("/coa/{account_id}/renumber", response_model=COAAccountTree)
+def renumber_account(
+    request: Request,
+    account_id: int,
+    new_number: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Renumber an existing COA account."""
+    tenant_id = _wrap_tenant(request, db, current_user)
+    return renumber_coa_account(
+        db=db,
+        account_id=account_id,
+        tenant_id=tenant_id,
+        new_number=new_number,
+    )
+
+
+@router.patch("/coa/{account_id}/parent", response_model=COAAccountTree)
+def reassign_parent(
+    request: Request,
+    account_id: int,
+    new_parent_id: int | None = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Reassign the parent of a COA account."""
+    tenant_id = _wrap_tenant(request, db, current_user)
+    return reassign_coa_parent(
+        db=db,
+        account_id=account_id,
+        tenant_id=tenant_id,
+        new_parent_id=new_parent_id,
+    )

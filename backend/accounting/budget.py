@@ -60,7 +60,7 @@ def budget_vs_actual(
     for line in lines:
         actual = Decimal("0")
         txns = db.query(models.Transaction).filter(
-            models.Transaction.gl_account_id == line.account_id,
+            models.Transaction.coa_account_id == line.account_id,
             models.Transaction.date >= start,
             models.Transaction.date < end,
         ).all()

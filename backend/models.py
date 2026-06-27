@@ -232,6 +232,39 @@ class Period(Base):
     owner = relationship("User", back_populates="periods")
 
 
+class CoaAccount(Base):
+    """Chart of Accounts entry — the v3.11.6 replacement for GLAccount.
+
+    Supports hierarchical COA with parent_id self-reference, integer account
+    numbers, and the five canonical bookkeeping types.
+    """
+    __tablename__ = "coa_accounts"
+    __table_args__ = (
+        Index("ix_coa_accounts_tenant_id", "tenant_id"),
+        Index("ix_coa_accounts_tenant_number", "tenant_id", "number", unique=True),
+        Index("ix_coa_accounts_parent_id", "parent_id"),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    parent_id = Column(Integer, ForeignKey("coa_accounts.id", ondelete="SET NULL"), nullable=True)
+    number = Column(Integer, nullable=False)
+    name = Column(String, nullable=False)
+    type = Column(String, nullable=False, default="expense")
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=lambda: datetime.now(timezone.utc))
+
+    parent = relationship("CoaAccount", remote_side=[id], backref="children")
+
+    # Cross-references — these mirror the GLAccount relationships so the COA
+    # service can guard against deletion when transactions or ledger entries
+    # reference the account.
+    transactions = relationship("Transaction", back_populates="coa_account", foreign_keys="Transaction.coa_account_id")
+    ledger_entries_debit = relationship("GeneralLedgerEntry", back_populates="debit_coa_account", foreign_keys="GeneralLedgerEntry.debit_coa_account_id")
+    ledger_entries_credit = relationship("GeneralLedgerEntry", back_populates="credit_coa_account", foreign_keys="GeneralLedgerEntry.credit_coa_account_id")
+    categorization_rules = relationship("CategorizationRule", back_populates="coa_account", foreign_keys="CategorizationRule.coa_account_id")
+
+
 class GLAccount(Base):
     __tablename__ = "gl_accounts"
     __table_args__ = (
@@ -264,11 +297,13 @@ class CategorizationRule(Base):
     form = Column(String, nullable=True)
     line = Column(String, nullable=True)
     gl_account_id = Column(Integer, ForeignKey("gl_accounts.id", ondelete="CASCADE"), nullable=False)
+    coa_account_id = Column(Integer, ForeignKey("coa_accounts.id", ondelete="SET NULL"), nullable=True)
     priority = Column(Integer, default=0)
     enabled = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())
 
     gl_account = relationship("GLAccount", back_populates="categorization_rules")
+    coa_account = relationship("CoaAccount", back_populates="categorization_rules")
 
 
 class GeneralLedgerEntry(Base):
@@ -284,6 +319,8 @@ class GeneralLedgerEntry(Base):
     description = Column(String)
     debit_account_id = Column(Integer, ForeignKey("gl_accounts.id", ondelete="SET NULL"), nullable=True)
     credit_account_id = Column(Integer, ForeignKey("gl_accounts.id", ondelete="SET NULL"), nullable=True)
+    debit_coa_account_id = Column(Integer, ForeignKey("coa_accounts.id", ondelete="SET NULL"), nullable=True)
+    credit_coa_account_id = Column(Integer, ForeignKey("coa_accounts.id", ondelete="SET NULL"), nullable=True)
     amount = Column(Numeric(12, 2), nullable=False)
     memo = Column(String)
     workpaper_ref = Column(String, nullable=True)
@@ -291,6 +328,8 @@ class GeneralLedgerEntry(Base):
 
     transaction = relationship("Transaction", back_populates="ledger_entries")
     flags = relationship("Flag", back_populates="journal_entry")
+    debit_coa_account = relationship("CoaAccount", back_populates="ledger_entries_debit", foreign_keys=[debit_coa_account_id])
+    credit_coa_account = relationship("CoaAccount", back_populates="ledger_entries_credit", foreign_keys=[credit_coa_account_id])
 
 
 class Flag(Base):
@@ -324,6 +363,7 @@ class Transaction(Base):
     tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     gl_account_id = Column(Integer, ForeignKey("gl_accounts.id", ondelete="SET NULL"), nullable=True)
+    coa_account_id = Column(Integer, ForeignKey("coa_accounts.id", ondelete="SET NULL"), nullable=True)
     date = Column(Date)
     description = Column(String)
     amount = Column(Numeric(12, 2))
@@ -337,6 +377,7 @@ class Transaction(Base):
     created_at = Column(DateTime, server_default=func.now())
     statement = relationship("Statement", back_populates="transactions")
     gl_account = relationship("GLAccount", back_populates="transactions")
+    coa_account = relationship("CoaAccount", back_populates="transactions")
     ledger_entries = relationship("GeneralLedgerEntry", back_populates="transaction")
     flags = relationship("Flag", back_populates="transaction")
 
@@ -501,7 +542,7 @@ class BudgetLine(Base):
     id = Column(Integer, primary_key=True, index=True)
     tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    account_id = Column(Integer, ForeignKey("gl_accounts.id", ondelete="CASCADE"), nullable=False)
+    account_id = Column(Integer, ForeignKey("coa_accounts.id", ondelete="CASCADE"), nullable=False)
     period = Column(String, nullable=False)
     budget_amount = Column(Numeric(12, 2), nullable=False, default=0)
     actual_amount = Column(Numeric(12, 2), nullable=False, default=0)
@@ -513,7 +554,7 @@ class TaxLineMapping(Base):
     id = Column(Integer, primary_key=True, index=True)
     tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    coa_account_id = Column(Integer, ForeignKey("gl_accounts.id", ondelete="CASCADE"), nullable=False)
+    coa_account_id = Column(Integer, ForeignKey("coa_accounts.id", ondelete="CASCADE"), nullable=False)
     form = Column(String, nullable=False)
     line = Column(String, nullable=False)
     description = Column(String, nullable=True)
