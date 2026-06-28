@@ -649,3 +649,120 @@ When `DATABASE_URL` points to PostgreSQL and `TAXFLOW_SINGLE_USER=false`:
 - Native RLS policies enforce tenant isolation at the database level
 - Service-role bypass available for migrations and admin operations
 - `taxflow.tenant_id` session variable set per-request by middleware
+
+---
+
+## B2 — Transaction Engine Endpoints (v3.11.6)
+
+### B2.01 — Unified Register
+
+#### `GET /api/transactions/`
+List transactions with enhanced filters, sorting, and pagination.
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `account_id` | int | Filter by bank/credit account |
+| `tenant_id` | int | Tenant override (admin) |
+| `q` | string | Case-insensitive description search |
+| `start_date` | date | Inclusive date range start |
+| `end_date` | date | Inclusive date range end |
+| `min_amount` | float | Minimum transaction amount |
+| `max_amount` | float | Maximum transaction amount |
+| `tags` | string | Comma-separated tag filter (any match) |
+| `status` | string | `pending` \| `cleared` \| `reconciled` |
+| `sort_by` | string | `date` \| `amount` \| `description` \| `account` |
+| `sort_order` | string | `asc` \| `desc` |
+| `limit` | int | Page size (default 100) |
+| `offset` | int | Page offset (default 0) |
+
+**Response:** `200 OK` — array of Transaction objects with `splits`, `tags`, `status` fields.
+
+#### `POST /api/transactions/bulk-delete`
+Bulk delete transactions.
+**Body:** `{"transaction_ids": [int, ...]}`
+**Response:** `{"deleted": int}`
+
+#### `POST /api/transactions/bulk-tag`
+Bulk add tags to transactions.
+**Body:** `{"transaction_ids": [int, ...], "tags": [string, ...]}`
+**Response:** `{"updated": int}`
+
+#### `POST /api/transactions/bulk-status`
+Bulk change status on transactions.
+**Body:** `{"transaction_ids": [int, ...], "status": string}`
+**Response:** `{"updated": int}`
+
+#### `PATCH /api/transactions/{id}/status`
+Set transaction status.
+**Body:** `{"status": "pending"|"cleared"|"reconciled"}`
+**Response:** `{"id": int, "status": string}`
+
+### B2.02 — Transaction Splits
+
+#### `GET /api/transactions/{id}/splits`
+Get the splits for a transaction.
+**Response:** `200 OK` — array of split objects: `{"account_id": int, "amount": float, "memo": string?}`
+
+#### `PUT /api/transactions/{id}/splits`
+Set splits on a transaction after validation.
+**Body:** `{"splits": [{"account_id": int, "amount": float, "memo": string?, "category": string?}]}`
+**Validation:** Sum of split amounts must equal transaction total. No empty accounts, no zero amounts, no duplicate splits.
+**Response:** `{"id": int, "splits": [...]}`
+
+#### `POST /api/transactions/{id}/splits/migrate`
+Migrate a single-line transaction to have a one-entry split.
+**Response:** `{"id": int, "splits": [...]}`
+
+### B2.03 — Recurring / Scheduled Transactions
+
+#### `POST /api/recurring/{rule_id}/generate?target_date=YYYY-MM-DD`
+Generate pending occurrences for a recurring rule up to `target_date`. Idempotent — calling twice with the same date produces no duplicates.
+**Response:** `{"occurrences": [{"scheduled_date": string, "description": string, "amount": float, "status": "pending", "rule_id": int}], "count": int}`
+
+#### `POST /api/recurring/{rule_id}/materialize?as_of=YYYY-MM-DD`
+Materialize real transaction(s) from a recurring rule.
+**Response:** `{"materialized": int, "transactions": [...]}`
+
+**Frequencies supported:** daily, weekly, biweekly, monthly, quarterly, yearly.
+
+### B2.04 — Check Register
+
+#### `POST /api/checks/`
+Record a new check.
+**Body:** `{"account_id": int, "check_number": string, "payee": string, "amount": float, "date": date, "memo": string?, "transaction_id": int?}`
+**Response:** `201 Created` — Check object.
+**Errors:** `409 Conflict` — Duplicate check number for account.
+
+#### `GET /api/checks/`
+List checks with optional filters.
+**Query Parameters:** `account_id`, `start_number`, `end_number`, `status`
+**Response:** `200 OK` — array of Check objects.
+
+#### `GET /api/checks/{check_id}`
+Get a single check by ID.
+
+#### `PUT /api/checks/{check_id}`
+Update a check entry.
+**Body:** `{"payee": string?, "amount": float?, "date": date?, "memo": string?, "status": string?, "transaction_id": int?}`
+
+#### `PATCH /api/checks/{check_id}/clear`
+Mark a check as cleared.
+
+#### `PATCH /api/checks/{check_id}/reconcile`
+Mark a check as reconciled.
+
+#### `PATCH /api/checks/{check_id}/void`
+Void a check.
+**Body:** `{"reason": string?}`
+
+#### `DELETE /api/checks/{check_id}`
+Delete a check entry.
+
+#### `GET /api/checks/search/range?account_id=int&start=string&end=string`
+Search checks by check number range (inclusive).
+
+#### `POST /api/checks/issue`
+Legacy: Issue a check (creates both a Check record and a Transaction).
+**Body:** `{"account_id": int, "payee": string, "amount": float, "date": date, "memo": string?, "check_number": string?}`
+**Response:** `201 Created` — Transaction object.
