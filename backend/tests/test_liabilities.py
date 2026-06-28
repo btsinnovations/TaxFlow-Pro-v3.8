@@ -134,20 +134,38 @@ def test_loan_schedule_invalid_account(db: Session):
 
 
 # ---------------------------------------------------------------------------
-# Credit line stub
+# Credit line tests
 # ---------------------------------------------------------------------------
 
-def test_credit_line_available_stub(db: Session):
+def test_create_credit_line(db: Session):
     user, client, account = _seed_user_and_account(db, account_type="credit_card")
-    account.account_number_masked = "5000"
-    db.commit()
-    available = credit_line_available(db, account_id=account.id, user_id=user.id)
-    assert available == Decimal("5000.00")
+    from backend.accounting.liabilities import create_credit_line
+    cl = create_credit_line(
+        db, tenant_id=client.id, user_id=user.id, account_id=account.id,
+        credit_limit=Decimal("5000.00"), annual_rate=Decimal("0.12"),
+        start_date=date(2026, 1, 1),
+    )
+    assert cl.id is not None
+    assert cl.credit_limit == Decimal("5000.00")
+    assert cl.current_balance == Decimal("0")
 
 
-def test_credit_line_invalid_account(db: Session):
-    with pytest.raises(LiabilityError, match="Account not found"):
-        credit_line_available(db, account_id=999999, user_id=1)
+def test_credit_line_draw_and_available(db: Session):
+    user, client, account = _seed_user_and_account(db, account_type="credit_card")
+    from backend.accounting.liabilities import create_credit_line, credit_line_draw, credit_line_available
+    cl = create_credit_line(
+        db, tenant_id=client.id, user_id=user.id, account_id=account.id,
+        credit_limit=Decimal("5000.00"),
+    )
+    credit_line_draw(db, cl.id, client.id, user.id, Decimal("2000.00"), date(2026, 1, 15))
+    available = credit_line_available(db, cl.id, client.id)
+    assert available == Decimal("3000.00")
+
+
+def test_credit_line_not_found(db: Session):
+    from backend.accounting.liabilities import credit_line_available
+    with pytest.raises(LiabilityError, match="Credit line not found"):
+        credit_line_available(db, credit_line_id=99999, tenant_id=1)
 
 
 # ---------------------------------------------------------------------------
@@ -217,19 +235,32 @@ def test_api_amortization(auth_client: TestClient, db: Session):
         assert row["interest"] == 0.0
 
 
-def test_api_available_credit(auth_client: TestClient, db: Session):
+def test_api_create_credit_line(auth_client: TestClient, db: Session):
     _, _, account = _ensure_auth_user_has_account(db, "credit_card")
-    account.account_number_masked = "2500"
-    db.commit()
-    resp = auth_client.get(f"/api/liabilities/{account.id}/available-credit")
-    assert resp.status_code == 200, resp.text
+    resp = auth_client.post("/api/liabilities/credit-lines", json={
+        "account_id": account.id,
+        "credit_limit": 5000.00,
+        "annual_rate": 0.12,
+    })
+    assert resp.status_code == 201, resp.text
     body = resp.json()
-    assert body["account_id"] == account.id
-    assert body["available_credit"] == 2500.00
+    assert body["credit_limit"] == 5000.00
+    assert body["current_balance"] == 0.0
 
 
-def test_api_available_credit_invalid_account(auth_client: TestClient, db: Session):
-    _ensure_auth_user_has_account(db)
-    resp = auth_client.get("/api/liabilities/999999/available-credit")
-    assert resp.status_code == 404
-    assert "Account not found" in resp.json()["detail"]
+def test_api_credit_line_draw_and_available(auth_client: TestClient, db: Session):
+    _, _, account = _ensure_auth_user_has_account(db, "credit_card")
+    resp = auth_client.post("/api/liabilities/credit-lines", json={
+        "account_id": account.id,
+        "credit_limit": 5000.00,
+        "annual_rate": 0.0,
+    })
+    cl_id = resp.json()["id"]
+    resp = auth_client.post(f"/api/liabilities/credit-lines/{cl_id}/draw", json={
+        "amount": 2000.00,
+        "draw_date": "2026-01-15",
+    })
+    assert resp.status_code == 200, resp.text
+    resp = auth_client.get(f"/api/liabilities/credit-lines/{cl_id}/available")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["available_credit"] == 3000.00
