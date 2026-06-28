@@ -1,4 +1,4 @@
-"""Financial reports domain logic for TaxFlow Pro v3.11."""
+"""Financial reports domain logic for TaxFlow Pro v3.11.6."""
 from __future__ import annotations
 
 from datetime import date
@@ -47,15 +47,14 @@ def trial_balance(
     user_id: int,
     as_of: date,
 ) -> list[dict]:
-    """Return trial balance by GL account."""
-    accounts = db.query(models.GLAccount).filter(
-        models.GLAccount.tenant_id == tenant_id,
-        models.GLAccount.user_id == user_id,
+    """Return trial balance by COA account."""
+    accounts = db.query(models.CoaAccount).filter(
+        models.CoaAccount.tenant_id == tenant_id,
     ).all()
     rows = []
     for acct in accounts:
         txns = db.query(models.Transaction).filter(
-            models.Transaction.gl_account_id == acct.id,
+            models.Transaction.coa_account_id == acct.id,
             models.Transaction.date <= as_of,
         ).all()
         debit = Decimal("0")
@@ -68,7 +67,7 @@ def trial_balance(
                 credit += amt
         rows.append({
             "account_id": acct.id,
-            "code": acct.code,
+            "code": str(acct.number),
             "name": acct.name,
             "debit": float(debit),
             "credit": float(credit),

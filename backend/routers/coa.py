@@ -1,4 +1,4 @@
-"""Chart of Accounts API endpoints for TaxFlow Pro v3.11."""
+"""Chart of Accounts API endpoints for TaxFlow Pro v3.11.6."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -10,12 +10,16 @@ from backend.accounting.coa import (
     delete_account as delete_coa_account,
     get_accounts as get_coa_accounts,
     update_account as update_coa_account,
+    seed_standard_coa as seed_coa,
+    renumber_account as renumber_coa_account,
+    reassign_parent as reassign_coa_parent,
 )
 from backend.database import get_db
 from backend.routers.auth import get_current_user
 from backend.schemas import COAAccountCreate, COAAccountTree, COAAccountUpdate
 from backend.rls import is_postgres, resolve_user_tenant_id, set_tenant_id
 from backend.local import settings as local_settings
+from backend.local.roles import Role, has_role
 from backend import models
 
 router = APIRouter(tags=["coa"])
@@ -59,8 +63,13 @@ def create_account(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    """Create a new chart of accounts entry."""
+    """Create a new chart of accounts entry.
+
+    Requires bookkeeper role or higher on the active profile/tenant.
+    """
     tenant_id = _wrap_tenant(request, db, current_user)
+    if not has_role(db, current_user.id, tenant_id, Role.bookkeeper):
+        raise HTTPException(status_code=403, detail="Insufficient profile role (bookkeeper required)")
     return create_coa_account(
         db=db,
         tenant_id=tenant_id,
@@ -81,8 +90,13 @@ def update_account(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    """Update an existing chart of accounts entry."""
+    """Update an existing chart of accounts entry.
+
+    Requires bookkeeper role or higher on the active profile/tenant.
+    """
     tenant_id = _wrap_tenant(request, db, current_user)
+    if not has_role(db, current_user.id, tenant_id, Role.bookkeeper):
+        raise HTTPException(status_code=403, detail="Insufficient profile role (bookkeeper required)")
     data = payload.model_dump(exclude_unset=True)
     type_value = data.get("type")
     account_type = None
@@ -112,8 +126,13 @@ def delete_account(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    """Delete a COA account if it is not referenced elsewhere."""
+    """Delete a COA account if it is not referenced elsewhere.
+
+    Requires admin role or higher on the active profile/tenant.
+    """
     tenant_id = _wrap_tenant(request, db, current_user)
+    if not has_role(db, current_user.id, tenant_id, Role.admin):
+        raise HTTPException(status_code=403, detail="Insufficient profile role (admin required)")
     delete_coa_account(
         db=db,
         account_id=account_id,
@@ -121,3 +140,65 @@ def delete_account(
         user_id=current_user.id,
     )
     return {"ok": True}
+
+
+@router.post("/coa/seed", response_model=list[COAAccountTree])
+def seed_standard_coa(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Seed a standard small-business COA for the current tenant.
+
+    Requires admin role or higher on the active profile/tenant.
+    """
+    tenant_id = _wrap_tenant(request, db, current_user)
+    if not has_role(db, current_user.id, tenant_id, Role.admin):
+        raise HTTPException(status_code=403, detail="Insufficient profile role (admin required)")
+    return seed_coa(db=db, tenant_id=tenant_id, user_id=current_user.id)
+
+
+@router.patch("/coa/{account_id}/renumber", response_model=COAAccountTree)
+def renumber_account(
+    request: Request,
+    account_id: int,
+    new_number: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Renumber an existing COA account.
+
+    Requires admin role or higher on the active profile/tenant.
+    """
+    tenant_id = _wrap_tenant(request, db, current_user)
+    if not has_role(db, current_user.id, tenant_id, Role.admin):
+        raise HTTPException(status_code=403, detail="Insufficient profile role (admin required)")
+    return renumber_coa_account(
+        db=db,
+        account_id=account_id,
+        tenant_id=tenant_id,
+        new_number=new_number,
+    )
+
+
+@router.patch("/coa/{account_id}/parent", response_model=COAAccountTree)
+def reassign_parent(
+    request: Request,
+    account_id: int,
+    new_parent_id: int | None = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Reassign the parent of a COA account.
+
+    Requires admin role or higher on the active profile/tenant.
+    """
+    tenant_id = _wrap_tenant(request, db, current_user)
+    if not has_role(db, current_user.id, tenant_id, Role.admin):
+        raise HTTPException(status_code=403, detail="Insufficient profile role (admin required)")
+    return reassign_coa_parent(
+        db=db,
+        account_id=account_id,
+        tenant_id=tenant_id,
+        new_parent_id=new_parent_id,
+    )

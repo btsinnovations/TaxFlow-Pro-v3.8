@@ -107,7 +107,7 @@ def test_budget_vs_actual(db: Session):
         description="Ad spend",
         amount=Decimal("300.00"),
         tx_type="debit",
-        gl_account_id=coa["id"],
+        coa_account_id=coa["id"],
     )
 
     result = budget_vs_actual(db, client.id, user.id, "2026-06")
@@ -129,7 +129,7 @@ def test_budget_vs_actual_respects_period(db: Session):
         description="May utility",
         amount=Decimal("80.00"),
         tx_type="debit",
-        gl_account_id=coa["id"],
+        coa_account_id=coa["id"],
     )
 
     result = budget_vs_actual(db, client.id, user.id, "2026-06")
@@ -205,7 +205,7 @@ def test_api_budget_vs_actual(auth_client: TestClient, db: Session):
         description="Spend",
         amount=Decimal("150.00"),
         tx_type="debit",
-        gl_account_id=coa["id"],
+        coa_account_id=coa["id"],
     )
     resp = auth_client.get("/api/budget/2026-08/vs-actual")
     assert resp.status_code == 200, resp.text
