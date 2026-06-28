@@ -69,10 +69,11 @@ Scrape DocuClipper's full supported-banks list and implement dedicated parsers f
 
 ```
 Phase 1: B1 Foundation          ✅ Done
-Phase 2: B2 + B3 Engine         ✅ Done (merged into v3.11.6-dev)
-Phase 3: B4 + B5 Operations    → Tracks 6 + 7 (in parallel)
-Phase 4: B6 Frontend             → after Phase 3
-Phase 5: B7 Packaging/Hardening → after Phase 4
+Phase 2: B2 + B3 Engine         ✅ Done
+Phase 3: B4 + B5 Operations   ✅ Done
+Phase 4: B6 Frontend            ✅ Done
+Phase 4.5: PostgreSQL RLS Hardening ✅ Done
+Phase 5: B7 Packaging/Hardening → Next
 Phase 6: Validation + Tag        → after Phase 5
 Phase 7: B8 Full Parser Expansion → end of cycle
 ```
