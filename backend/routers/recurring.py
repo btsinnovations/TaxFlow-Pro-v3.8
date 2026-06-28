@@ -1,5 +1,7 @@
-"""Recurring / scheduled transaction rule API endpoints for TaxFlow Pro v3.11."""
 from __future__ import annotations
+
+from typing import Optional
+"""Recurring / scheduled transaction rule API endpoints for TaxFlow Pro v3.11."""
 
 from datetime import date, datetime, timezone
 from decimal import Decimal
@@ -169,7 +171,7 @@ def delete_recurring(
 def materialize_recurring(
     request: Request,
     rule_id: int,
-    as_of: date | None = None,
+    as_of: Optional[date] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):

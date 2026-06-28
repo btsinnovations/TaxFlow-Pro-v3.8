@@ -734,6 +734,7 @@ class TransactionTag(Base):
         Index("ix_transaction_tags_transaction_id", "transaction_id"),
     )
     id = Column(Integer, primary_key=True, index=True)
+    transaction = relationship("Transaction", back_populates="project_tags")
     transaction_id = Column(Integer, ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False)
     tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)

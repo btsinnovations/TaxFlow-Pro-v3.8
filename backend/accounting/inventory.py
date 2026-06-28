@@ -71,12 +71,12 @@ def update_item(
     db: Session,
     item_id: int,
     tenant_id: int,
-    sku: str | None = None,
-    name: str | None = None,
-    cogs_account_id: int | None = None,
-    income_account_id: int | None = None,
-    asset_account_id: int | None = None,
-    valuation_method: str | None = None,
+    sku: Optional[str] = None,
+    name: Optional[str] = None,
+    cogs_account_id: Optional[int] = None,
+    income_account_id: Optional[int] = None,
+    asset_account_id: Optional[int] = None,
+    valuation_method: Optional[str] = None,
 ) -> models.InventoryItem:
     """Update an inventory item."""
     item = get_item(db, item_id, tenant_id)

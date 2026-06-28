@@ -14,6 +14,7 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from typing import Optional
 
 from backend.database import get_db
 from backend.routers.auth import get_current_user
@@ -76,30 +77,30 @@ class RecordCheckRequest(BaseModel):
     payee: str
     amount: float
     date: date
-    memo: str | None = None
-    transaction_id: int | None = None
+    memo: Optional[str] = None
+    transaction_id: Optional[int] = None
 
 
 class UpdateCheckRequest(BaseModel):
-    payee: str | None = None
-    amount: float | None = None
-    date: date | None = None
-    memo: str | None = None
-    status: str | None = None
-    transaction_id: int | None = None
+    payee: Optional[str] = None
+    amount: Optional[float] = None
+    date: Optional[date] = None
+    memo: Optional[str] = None
+    status: Optional[str] = None
+    transaction_id: Optional[int] = None
 
 
 class VoidCheckRequest(BaseModel):
-    reason: str | None = None
+    reason: Optional[str] = None
 
 
 @router.get("/", response_model=list[dict])
 def list_checks_route(
     request: Request,
-    account_id: int | None = None,
-    start_number: str | None = None,
-    end_number: str | None = None,
-    status: str | None = None,
+    account_id: Optional[int] = None,
+    start_number: Optional[str] = None,
+    end_number: Optional[str] = None,
+    status: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -311,8 +312,8 @@ class IssueCheckRequest(BaseModel):
     payee: str
     amount: float
     date: date
-    memo: str | None = None
-    check_number: str | None = None
+    memo: Optional[str] = None
+    check_number: Optional[str] = None
 
 
 @router.post("/issue", response_model=dict, status_code=201)

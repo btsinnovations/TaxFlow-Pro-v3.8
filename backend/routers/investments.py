@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from typing import Optional
 """Investment lot API endpoints for TaxFlow Pro v3.11.
 
 B3.02 — Full endpoints:
@@ -11,7 +14,6 @@ B3.02 — Full endpoints:
 - POST /investments/prices — add price snapshot
 - GET  /investments/{account_id}/events — list investment events
 """
-from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
@@ -80,7 +82,7 @@ class DividendRequest(BaseModel):
     ex_date: date
     amount: float
     shares: float = 0
-    description: str | None = None
+    description: Optional[str] = None
 
 
 class SplitRequest(BaseModel):
@@ -265,7 +267,7 @@ def get_unrealized(
     account_id: int,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
-    as_of: date | None = None,
+    as_of: Optional[date] = None,
 ):
     _wrap_tenant(request, db, current_user)
     return unrealized_gains(db, user_id=current_user.id, account_id=account_id, as_of=as_of)
@@ -277,7 +279,7 @@ def get_cost_basis(
     account_id: int,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
-    year: int | None = None,
+    year: Optional[int] = None,
 ):
     _wrap_tenant(request, db, current_user)
     return cost_basis_report(db, user_id=current_user.id, account_id=account_id, year=year)
@@ -289,7 +291,7 @@ def get_events(
     account_id: int,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
-    symbol: str | None = None,
+    symbol: Optional[str] = None,
 ):
     tenant_id = _wrap_tenant(request, db, current_user)
     events = list_events(db, tenant_id=tenant_id, account_id=account_id, symbol=symbol)

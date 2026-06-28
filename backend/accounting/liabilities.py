@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from typing import Optional
 """Loans / credit lines / liability domain logic for TaxFlow Pro v3.11.
 
 B3.01 — Full implementation:
@@ -6,7 +9,6 @@ B3.01 — Full implementation:
 - Credit line: limit, balance, simple interest accrual, draws, payments.
 - Generate upcoming payment transactions from amortization schedule.
 """
-from __future__ import annotations
 
 import json
 from datetime import date, timedelta
@@ -253,7 +255,7 @@ def create_credit_line(
     account_id: int,
     credit_limit: Decimal,
     annual_rate: Decimal = Decimal("0"),
-    start_date: date | None = None,
+    start_date: Optional[date] = None,
 ) -> models.CreditLine:
     """Create a revolving credit line attached to an account."""
     account = db.query(models.Account).filter(

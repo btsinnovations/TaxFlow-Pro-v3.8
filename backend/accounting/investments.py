@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from typing import Optional
 """Investment lot tracking domain logic for TaxFlow Pro v3.11.
 
 B3.02 — Full implementation:
@@ -8,7 +11,6 @@ B3.02 — Full implementation:
 - Unrealized gain/loss calculation.
 - Cost-basis reporting for tax exports.
 """
-from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
@@ -160,7 +162,7 @@ def record_dividend(
     ex_date: date,
     amount: Decimal,
     shares: Decimal = Decimal("0"),
-    description: str | None = None,
+    description: Optional[str] = None,
 ) -> models.InvestmentEvent:
     """Record a dividend event."""
     event = models.InvestmentEvent(
@@ -272,8 +274,8 @@ def get_latest_price(
     db: Session,
     tenant_id: int,
     symbol: str,
-    as_of: date | None = None,
-) -> Decimal | None:
+    as_of: Optional[date] = None,
+) -> Optional[Decimal]:
     """Get the most recent price snapshot for a symbol."""
     query = db.query(models.PriceSnapshot).filter(
         models.PriceSnapshot.tenant_id == tenant_id,
@@ -295,7 +297,7 @@ def unrealized_gains(
     db: Session,
     user_id: int,
     account_id: int,
-    as_of: date | None = None,
+    as_of: Optional[date] = None,
 ) -> list[dict]:
     """Calculate unrealized gains for all open holdings.
 
@@ -348,7 +350,7 @@ def cost_basis_report(
     db: Session,
     user_id: int,
     account_id: int,
-    year: int | None = None,
+    year: Optional[int] = None,
 ) -> dict:
     """Generate a cost-basis report for tax export purposes.
 
@@ -482,7 +484,7 @@ def list_events(
     db: Session,
     tenant_id: int,
     account_id: int,
-    symbol: str | None = None,
+    symbol: Optional[str] = None,
 ) -> list[models.InvestmentEvent]:
     """List investment events for an account."""
     query = db.query(models.InvestmentEvent).filter(

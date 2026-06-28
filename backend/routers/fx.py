@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from typing import Optional
 """Multi-currency FX API endpoints for TaxFlow Pro v3.11.
 
 B3.04 — Full endpoints:
@@ -9,7 +12,6 @@ B3.04 — Full endpoints:
 - POST   /fx/transactions/{id}/settle — calculate FX gain/loss on settlement
 - GET    /fx/report — home-currency report of foreign transactions
 """
-from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
@@ -69,7 +71,7 @@ class FXConvert(BaseModel):
     amount: float
     from_currency: str
     to_currency: str
-    as_of: date | None = None
+    as_of: Optional[date] = None
 
 
 class ForeignCurrencyAttach(BaseModel):
@@ -79,7 +81,7 @@ class ForeignCurrencyAttach(BaseModel):
 
 class FXSettle(BaseModel):
     settlement_date: date
-    settlement_rate: float | None = None
+    settlement_rate: Optional[float] = None
 
 
 # ---------------------------------------------------------------------------
@@ -119,8 +121,8 @@ def create_rate(
 @router.get("/rates", response_model=list[dict])
 def get_rates(
     request: Request,
-    from_currency: str | None = None,
-    to_currency: str | None = None,
+    from_currency: Optional[str] = None,
+    to_currency: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -178,7 +180,7 @@ def convert_get(
     from_currency: str = Query(..., alias="from"),
     to_currency: str = Query(..., alias="to"),
     amount: float = Query(...),
-    as_of: date | None = Query(None),
+    as_of: Optional[date] = Query(None),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -265,8 +267,8 @@ def settle_fx(
 @router.get("/report", response_model=dict)
 def fx_report(
     request: Request,
-    start_date: date | None = None,
-    end_date: date | None = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):

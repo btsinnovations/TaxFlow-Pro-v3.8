@@ -43,7 +43,7 @@ def validate_splits(
     splits: list[dict],
     transaction_total: Decimal | float | str,
     *,
-    tolerance: Decimal | None = None,
+    tolerance: Optional[Decimal] = None,
 ) -> list[dict]:
     """Validate split line items against a transaction total.
 

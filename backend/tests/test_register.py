@@ -250,7 +250,7 @@ def test_running_balance_endpoint(auth_client):
     assert rows[1]["running_balance"] == 125.00
 
 
-def test_running_balance_domain_helper(auth_client):
+def test_running_balance_domain_helper(auth_client, db):
     client = auth_client
     _, tenant_id, account_id, _ = _seed_tenant(client)
     stmt_id = _seed_statement(account_id, tenant_id, 1, opening_balance="0.00")
@@ -278,13 +278,9 @@ def test_running_balance_domain_helper(auth_client):
 
     from backend.accounting.register import compute_running_balance
 
-    db_gen = TestingSessionLocal()
-    try:
-        rows = compute_running_balance(db_gen, account_id)
-        balances = [r["running_balance"] for r in rows]
-        assert balances == [10.00, 7.00, 12.00]
-    finally:
-        db_gen.close()
+    rows = compute_running_balance(db, account_id)
+    balances = [r["running_balance"] for r in rows]
+    assert balances == [10.00, 7.00, 12.00]
 
 
 # ---------------------------------------------------------------------------
@@ -327,7 +323,7 @@ def test_filter_by_amount_range(auth_client):
     assert body[0]["description"] == "Med"
 
 
-def test_filter_by_status(auth_client):
+def test_filter_by_status(auth_client, db):
     """Filter transactions by status."""
     client = auth_client
     _, tenant_id, account_id, _ = _seed_tenant(client)
@@ -335,11 +331,7 @@ def test_filter_by_status(auth_client):
     tx1 = _seed_transaction(stmt_id, tenant_id, 1, date=date(2025, 8, 1), description="P", amount="10", tx_type="debit")
     tx2 = _seed_transaction(stmt_id, tenant_id, 1, date=date(2025, 8, 2), description="C", amount="20", tx_type="debit")
     # Set tx2 to cleared via domain helper
-    db = TestingSessionLocal()
-    try:
-        set_transaction_status(db, tx2, tenant_id, 1, "cleared")
-    finally:
-        db.close()
+    set_transaction_status(db, tx2, tenant_id, 1, "cleared")
 
     resp = client.get("/api/transactions/", params={
         "tenant_id": tenant_id, "status": "cleared"
@@ -376,7 +368,7 @@ def test_bulk_delete(auth_client):
     tx1 = _seed_transaction(stmt_id, tenant_id, 1, date=date(2025, 10, 1), description="BD1", amount="10", tx_type="debit")
     tx2 = _seed_transaction(stmt_id, tenant_id, 1, date=date(2025, 10, 2), description="BD2", amount="20", tx_type="debit")
 
-    resp = client.post("/api/transactions/bulk-delete", json={"transaction_ids": [tx1, tx2]})
+    resp = client.post("/api/transactions/bulk-delete", json={"transaction_ids": [tx1, tx2]}, params={"tenant_id": tenant_id})
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["deleted"] == 2
@@ -395,7 +387,7 @@ def test_bulk_tag(auth_client):
 
     resp = client.post("/api/transactions/bulk-tag", json={
         "transaction_ids": [tx1, tx2], "tags": ["urgent", "review"]
-    })
+    }, params={"tenant_id": tenant_id})
     assert resp.status_code == 200, resp.text
     assert resp.json()["updated"] == 2
 
@@ -419,7 +411,7 @@ def test_bulk_change_status(auth_client):
 
     resp = client.post("/api/transactions/bulk-status", json={
         "transaction_ids": [tx1, tx2], "status": "cleared"
-    })
+    }, params={"tenant_id": tenant_id})
     assert resp.status_code == 200, resp.text
     assert resp.json()["updated"] == 2
 
@@ -438,7 +430,7 @@ def test_set_status_endpoint(auth_client):
     stmt_id = _seed_statement(account_id, tenant_id, 1)
     tx_id = _seed_transaction(stmt_id, tenant_id, 1, date=date(2025, 6, 20), description="Status", amount="10", tx_type="debit")
 
-    resp = client.patch(f"/api/transactions/{tx_id}/status", json={"status": "reconciled"})
+    resp = client.patch(f"/api/transactions/{tx_id}/status", json={"status": "reconciled"}, params={"tenant_id": tenant_id})
     assert resp.status_code == 200, resp.text
     assert resp.json()["status"] == "reconciled"
 
@@ -450,77 +442,68 @@ def test_set_invalid_status_rejected(auth_client):
     stmt_id = _seed_statement(account_id, tenant_id, 1)
     tx_id = _seed_transaction(stmt_id, tenant_id, 1, date=date(2025, 6, 21), description="Bad", amount="10", tx_type="debit")
 
-    resp = client.patch(f"/api/transactions/{tx_id}/status", json={"status": "bogus"})
+    resp = client.patch(f"/api/transactions/{tx_id}/status", json={"status": "bogus"}, params={"tenant_id": tenant_id})
     assert resp.status_code == 400
 
 
-def test_domain_bulk_delete():
+def test_domain_bulk_delete(db):
     """Test bulk_delete domain helper directly."""
-    db = TestingSessionLocal()
-    try:
-        # Use the auth testuser setup
-        user = db.query(models.User).filter(models.User.username == "testuser").first()
-        if user is None:
-            user = models.User(username="testuser", email="t@e.com", hashed_password="x", is_active=True)
-            db.add(user)
-            db.commit()
-            db.refresh(user)
-        c = models.Client(name="Bulk Test", user_id=user.id)
-        db.add(c)
+    user = db.query(models.User).filter(models.User.username == "testuser").first()
+    if user is None:
+        user = models.User(username="testuser", email="t@e.com", hashed_password="x", is_active=True)
+        db.add(user)
         db.commit()
-        db.refresh(c)
-        a = models.Account(name="BK", type="checking", client_id=c.id, tenant_id=c.id, user_id=user.id)
-        db.add(a)
-        db.commit()
-        db.refresh(a)
-        s = models.Statement(account_id=a.id, tenant_id=c.id, user_id=user.id, filename="bk.csv")
-        db.add(s)
-        db.commit()
-        db.refresh(s)
-        t1 = models.Transaction(statement_id=s.id, tenant_id=c.id, user_id=user.id, date=date(2025,1,1), description="X", amount="1", tx_type="debit")
-        t2 = models.Transaction(statement_id=s.id, tenant_id=c.id, user_id=user.id, date=date(2025,1,2), description="Y", amount="2", tx_type="debit")
-        db.add_all([t1, t2])
-        db.commit()
-        count = bulk_delete(db, [t1.id, t2.id], tenant_id=c.id, user_id=user.id)
-        assert count == 2
-    finally:
-        db.close()
+        db.refresh(user)
+    c = models.Client(name="Bulk Test", user_id=user.id)
+    db.add(c)
+    db.commit()
+    db.refresh(c)
+    a = models.Account(name="BK", type="checking", client_id=c.id, tenant_id=c.id, user_id=user.id)
+    db.add(a)
+    db.commit()
+    db.refresh(a)
+    s = models.Statement(account_id=a.id, tenant_id=c.id, user_id=user.id, filename="bk.csv")
+    db.add(s)
+    db.commit()
+    db.refresh(s)
+    t1 = models.Transaction(statement_id=s.id, tenant_id=c.id, user_id=user.id, date=date(2025,1,1), description="X", amount="1", tx_type="debit")
+    t2 = models.Transaction(statement_id=s.id, tenant_id=c.id, user_id=user.id, date=date(2025,1,2), description="Y", amount="2", tx_type="debit")
+    db.add_all([t1, t2])
+    db.commit()
+    count = bulk_delete(db, [t1.id, t2.id], tenant_id=c.id, user_id=user.id)
+    assert count == 2
 
 
-def test_domain_bulk_tag():
+def test_domain_bulk_tag(db):
     """Test bulk_tag domain helper directly."""
-    db = TestingSessionLocal()
-    try:
-        user = db.query(models.User).filter(models.User.username == "testuser").first()
-        if user is None:
-            user = models.User(username="testuser", email="t@e.com", hashed_password="x", is_active=True)
-            db.add(user)
-            db.commit()
-            db.refresh(user)
-        c = models.Client(name="Tag Test", user_id=user.id)
-        db.add(c)
+    user = db.query(models.User).filter(models.User.username == "testuser").first()
+    if user is None:
+        user = models.User(username="testuser", email="t@e.com", hashed_password="x", is_active=True)
+        db.add(user)
         db.commit()
-        db.refresh(c)
-        a = models.Account(name="TG", type="checking", client_id=c.id, tenant_id=c.id, user_id=user.id)
-        db.add(a)
-        db.commit()
-        db.refresh(a)
-        s = models.Statement(account_id=a.id, tenant_id=c.id, user_id=user.id, filename="tg.csv")
-        db.add(s)
-        db.commit()
-        db.refresh(s)
-        t = models.Transaction(statement_id=s.id, tenant_id=c.id, user_id=user.id, date=date(2025,1,1), description="T", amount="1", tx_type="debit")
-        db.add(t)
-        db.commit()
-        count = bulk_tag(db, [t.id], tenant_id=c.id, user_id=user.id, tags=["alpha"])
-        assert count == 1
-        db.refresh(t)
-        assert "alpha" in (t.tags or "")
-    finally:
-        db.close()
+        db.refresh(user)
+    c = models.Client(name="Tag Test", user_id=user.id)
+    db.add(c)
+    db.commit()
+    db.refresh(c)
+    a = models.Account(name="TG", type="checking", client_id=c.id, tenant_id=c.id, user_id=user.id)
+    db.add(a)
+    db.commit()
+    db.refresh(a)
+    s = models.Statement(account_id=a.id, tenant_id=c.id, user_id=user.id, filename="tg.csv")
+    db.add(s)
+    db.commit()
+    db.refresh(s)
+    t = models.Transaction(statement_id=s.id, tenant_id=c.id, user_id=user.id, date=date(2025,1,1), description="T", amount="1", tx_type="debit")
+    db.add(t)
+    db.commit()
+    count = bulk_tag(db, [t.id], tenant_id=c.id, user_id=user.id, tags=["alpha"])
+    assert count == 1
+    db.refresh(t)
+    assert "alpha" in (t.tags or "")
 
 
-def test_tenant_isolation_register(auth_client):
+def test_tenant_isolation_register(auth_client, db):
     """Transactions from one tenant should not be visible to another."""
     client = auth_client
     _, tenant_id, account_id, _ = _seed_tenant(client)
@@ -528,31 +511,27 @@ def test_tenant_isolation_register(auth_client):
     _seed_transaction(stmt_id, tenant_id, 1, date=date(2025, 6, 1), description="Secret", amount="100", tx_type="debit")
 
     # Create a second tenant
-    db = TestingSessionLocal()
-    try:
-        user2 = models.User(username="other", email="o@e.com", hashed_password="x", is_active=True, encryption_salt="x")
-        db.add(user2)
-        db.commit()
-        db.refresh(user2)
-        c2 = models.Client(name="Other", user_id=user2.id)
-        db.add(c2)
-        db.commit()
-        db.refresh(c2)
-        a2 = models.Account(name="O", type="checking", client_id=c2.id, tenant_id=c2.id, user_id=user2.id)
-        db.add(a2)
-        db.commit()
-        db.refresh(a2)
-        s2 = models.Statement(account_id=a2.id, tenant_id=c2.id, user_id=user2.id, filename="o.csv")
-        db.add(s2)
-        db.commit()
-        db.refresh(s2)
-        t2 = models.Transaction(statement_id=s2.id, tenant_id=c2.id, user_id=user2.id, date=date(2025,6,1), description="Other Tx", amount="50", tx_type="debit")
-        db.add(t2)
-        db.commit()
+    user2 = models.User(username="other", email="o@e.com", hashed_password="x", is_active=True, encryption_salt="x")
+    db.add(user2)
+    db.commit()
+    db.refresh(user2)
+    c2 = models.Client(name="Other", user_id=user2.id)
+    db.add(c2)
+    db.commit()
+    db.refresh(c2)
+    a2 = models.Account(name="O", type="checking", client_id=c2.id, tenant_id=c2.id, user_id=user2.id)
+    db.add(a2)
+    db.commit()
+    db.refresh(a2)
+    s2 = models.Statement(account_id=a2.id, tenant_id=c2.id, user_id=user2.id, filename="o.csv")
+    db.add(s2)
+    db.commit()
+    db.refresh(s2)
+    t2 = models.Transaction(statement_id=s2.id, tenant_id=c2.id, user_id=user2.id, date=date(2025,6,1), description="Other Tx", amount="50", tx_type="debit")
+    db.add(t2)
+    db.commit()
 
-        # List transactions for the first tenant
-        txns = list_transactions(db, tenant_id)
-        assert all(tx.tenant_id == tenant_id for tx in txns)
-        assert not any(tx.description == "Other Tx" for tx in txns)
-    finally:
-        db.close()
+    # List transactions for the first tenant
+    txns = list_transactions(db, tenant_id)
+    assert all(tx.tenant_id == tenant_id for tx in txns)
+    assert not any(tx.description == "Other Tx" for tx in txns)

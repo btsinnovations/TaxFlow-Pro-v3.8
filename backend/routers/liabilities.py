@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from typing import Optional
 """Loans / credit lines API endpoints for TaxFlow Pro v3.11.
 
 B3.01 — Full endpoints:
@@ -15,7 +18,6 @@ B3.01 — Full endpoints:
 - GET  /liabilities/credit-lines/{id}/available — available credit
 - POST /liabilities/amortization — compute amortization without saving
 """
-from __future__ import annotations
 
 import json
 from datetime import date
@@ -94,7 +96,7 @@ class CreditLineCreate(BaseModel):
     account_id: int
     credit_limit: float
     annual_rate: float = 0.0
-    start_date: date | None = None
+    start_date: Optional[date] = None
 
 
 class CreditLineDraw(BaseModel):

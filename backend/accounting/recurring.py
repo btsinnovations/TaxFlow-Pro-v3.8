@@ -5,7 +5,7 @@ import json
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from fastapi import HTTPException
 
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 class RecurringRule:
     """Lightweight domain model for a recurring rule."""
 
-    id: int | None = None
+    id: Optional[int] = None
     account_id: int = 0
     tenant_id: int = 0
     user_id: int = 0
@@ -26,10 +26,10 @@ class RecurringRule:
     description: str = ""
     frequency: str = "monthly"  # daily/weekly/monthly/yearly
     start_date: date = field(default_factory=date.today)
-    end_date: date | None = None
-    count: int | None = None
+    end_date: Optional[date] = None
+    count: Optional[int] = None
     splits_json: str = "[]"
-    next_date: date | None = None
+    next_date: Optional[date] = None
     is_active: bool = True
 
     @property
@@ -144,8 +144,8 @@ def generate_occurrences(
     db: "Session",
     rule_id: int,
     target_date: date,
-    tenant_id: int | None = None,
-    user_id: int | None = None,
+    tenant_id: Optional[int] = None,
+    user_id: Optional[int] = None,
 ) -> list[dict]:
     """Generate pending occurrences for a recurring rule up to ``target_date``.
 
@@ -204,8 +204,8 @@ def generate_occurrences(
 def materialize_rule(
     db: "Session",
     rule_id: int,
-    as_of_date: date | None = None,
-    current_user: object | None = None,
+    as_of_date: Optional[date] = None,
+    current_user: Optional[object] = None,
 ) -> list[dict]:
     """Materialize real transaction(s) from a recurring rule as of a date.
 
@@ -325,8 +325,8 @@ def create_rule(
     amount: Decimal | float | str,
     frequency: str,
     start_date: date,
-    end_date: date | None = None,
-    count: int | None = None,
+    end_date: Optional[date] = None,
+    count: Optional[int] = None,
     splits: list[dict] | None = None,
     is_active: bool = True,
 ) -> RecurringRule:
@@ -380,7 +380,7 @@ def create_rule(
     return _model_to_domain(model)
 
 
-def list_rules(db: "Session", tenant_id: int, user_id: int | None = None) -> list[RecurringRule]:
+def list_rules(db: "Session", tenant_id: int, user_id: Optional[int] = None) -> list[RecurringRule]:
     from backend import models
 
     query = db.query(models.RecurringRule).filter(models.RecurringRule.tenant_id == tenant_id)
@@ -389,7 +389,7 @@ def list_rules(db: "Session", tenant_id: int, user_id: int | None = None) -> lis
     return [_model_to_domain(r) for r in query.order_by(models.RecurringRule.id.desc()).all()]
 
 
-def get_rule(db: "Session", rule_id: int, tenant_id: int, user_id: int | None = None) -> RecurringRule | None:
+def get_rule(db: "Session", rule_id: int, tenant_id: int, user_id: Optional[int] = None) -> RecurringRule | None:
     from backend import models
 
     query = db.query(models.RecurringRule).filter(

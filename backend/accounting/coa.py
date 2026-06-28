@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import enum
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from fastapi import HTTPException
 from sqlalchemy import func
@@ -115,7 +115,7 @@ def _coa_account_to_dict(account: "CoaAccount") -> dict:
     }
 
 
-def _set_coa_tenant(db: Session, tenant_id: int | None) -> None:
+def _set_coa_tenant(db: Session, tenant_id: Optional[int]) -> None:
     """Apply PostgreSQL RLS tenant context for COA queries if needed."""
     if is_postgres() and tenant_id is not None:
         set_tenant_id(db, tenant_id)
@@ -124,7 +124,7 @@ def _set_coa_tenant(db: Session, tenant_id: int | None) -> None:
 def get_accounts(
     db: Session,
     tenant_id: int,
-    user_id: int | None = None,
+    user_id: Optional[int] = None,
 ) -> list[dict]:
     """Return all COA accounts for a tenant ordered by type then number."""
     _set_coa_tenant(db, tenant_id)
@@ -138,8 +138,8 @@ def get_account(
     db: Session,
     account_id: int,
     tenant_id: int,
-    user_id: int | None = None,
-) -> dict | None:
+    user_id: Optional[int] = None,
+) -> Optional[dict]:
     """Return a single COA account or None if not found / not owned."""
     _set_coa_tenant(db, tenant_id)
     query = db.query(models.CoaAccount).filter(
@@ -157,7 +157,7 @@ def create_account(
     code: str,
     name: str,
     account_type: str,
-    parent_id: int | None = None,
+    parent_id: Optional[int] = None,
     is_active: bool = True,
 ) -> dict:
     """Create a new COA account.
@@ -228,11 +228,11 @@ def update_account(
     account_id: int,
     tenant_id: int,
     user_id: int,
-    code: str | None = None,
-    name: str | None = None,
-    account_type: str | None = None,
-    parent_id: int | None = None,
-    is_active: bool | None = None,
+    code: Optional[str] = None,
+    name: Optional[str] = None,
+    account_type: Optional[str] = None,
+    parent_id: Optional[int] = None,
+    is_active: Optional[bool] = None,
 ) -> dict:
     """Update an existing COA account."""
     _set_coa_tenant(db, tenant_id)
@@ -390,7 +390,7 @@ def delete_account(
 def seed_standard_coa(
     db: Session,
     tenant_id: int,
-    user_id: int | None = None,
+    user_id: Optional[int] = None,
 ) -> list[dict]:
     """Seed a standard small-business COA for a new profile/tenant.
 
@@ -482,7 +482,7 @@ def reassign_parent(
     db: Session,
     account_id: int,
     tenant_id: int,
-    new_parent_id: int | None,
+    new_parent_id: Optional[int],
 ) -> dict:
     """Reassign the parent of a COA account.
 

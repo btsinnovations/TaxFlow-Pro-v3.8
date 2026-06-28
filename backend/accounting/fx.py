@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from typing import Optional
 """Multi-currency domain logic for TaxFlow Pro v3.11.
 
 B3.04 — Full implementation:
@@ -7,7 +10,6 @@ B3.04 — Full implementation:
 - Home-currency reporting with FX gain/loss tracking.
 - Default home currency = USD.
 """
-from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
@@ -59,8 +61,8 @@ def set_rate(
 def list_rates(
     db: Session,
     tenant_id: int,
-    from_currency: str | None = None,
-    to_currency: str | None = None,
+    from_currency: Optional[str] = None,
+    to_currency: Optional[str] = None,
 ) -> list[models.FXRate]:
     """List FX rates for a tenant, optionally filtered by pair."""
     query = db.query(models.FXRate).filter(
@@ -78,7 +80,7 @@ def get_rate(
     tenant_id: int,
     from_currency: str,
     to_currency: str,
-    as_of: date | None = None,
+    as_of: Optional[date] = None,
 ) -> Decimal:
     """Return the most recent FX rate for a currency pair, including inverse."""
     if from_currency.upper() == to_currency.upper():
@@ -119,7 +121,7 @@ def convert(
     foreign_amount: Decimal,
     from_currency: str,
     to_currency: str,
-    as_of: date | None = None,
+    as_of: Optional[date] = None,
 ) -> Decimal:
     """Convert foreign amount to home currency using stored rate."""
     if from_currency.upper() == to_currency.upper():
@@ -134,7 +136,7 @@ def convert_with_details(
     foreign_amount: Decimal,
     from_currency: str,
     to_currency: str,
-    as_of: date | None = None,
+    as_of: Optional[date] = None,
 ) -> dict:
     """Convert and return full details including the rate used."""
     if from_currency.upper() == to_currency.upper():
@@ -226,7 +228,7 @@ def calculate_fx_gain_loss(
     tenant_id: int,
     transaction_id: int,
     settlement_date: date,
-    settlement_rate: Decimal | None = None,
+    settlement_rate: Optional[Decimal] = None,
 ) -> dict:
     """Calculate FX gain/loss on settlement of a foreign-currency transaction.
 
@@ -273,8 +275,8 @@ def calculate_fx_gain_loss(
 def home_currency_report(
     db: Session,
     tenant_id: int,
-    start_date: date | None = None,
-    end_date: date | None = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
 ) -> dict:
     """Generate a home-currency report of all foreign-currency transactions.
 
