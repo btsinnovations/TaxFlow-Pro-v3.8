@@ -14,10 +14,13 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from backend.database import Base
 from backend import models
 from backend.rls import set_tenant_id, set_service_role, clear_tenant_id
 from backend.routers.auth import get_password_hash
+
+# Import Alembic command and config so the fixture can run real migrations.
+from alembic.config import Config
+from alembic import command
 
 
 pytestmark = pytest.mark.skipif(
@@ -26,15 +29,25 @@ pytestmark = pytest.mark.skipif(
 )
 
 
+def _run_migrations(url: str) -> None:
+    """Run Alembic migrations against the provided PostgreSQL URL."""
+    alembic_cfg = Config("alembic.ini")
+    alembic_cfg.set_main_option("sqlalchemy.url", url)
+    command.upgrade(alembic_cfg, "head")
+
+
 @pytest.fixture(scope="module")
 def pg_engine():
-    """Create a fresh PostgreSQL schema for the test module."""
+    """Create a fresh PostgreSQL schema via Alembic for the test module."""
     url = os.environ["TEST_DATABASE_URL"]
     engine = create_engine(url, pool_pre_ping=True)
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+    # Drop all objects and re-run migrations to ensure RLS policies exist.
+    with engine.connect() as conn:
+        conn.execute(text("DROP SCHEMA public CASCADE"))
+        conn.execute(text("CREATE SCHEMA public"))
+        conn.commit()
+    _run_migrations(url)
     yield engine
-    Base.metadata.drop_all(bind=engine)
     engine.dispose()
 
 

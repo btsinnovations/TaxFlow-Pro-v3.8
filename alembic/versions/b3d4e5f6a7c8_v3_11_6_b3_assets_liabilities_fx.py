@@ -34,10 +34,27 @@ def _table_exists(name: str) -> bool:
 
 
 def _table_columns(table_name: str) -> set:
+    """Return the set of column names for the given table.
+
+    Portable across SQLite (PRAGMA) and PostgreSQL (information_schema).
+    """
     conn = op.get_bind()
+    dialect = conn.dialect.name
+    if dialect == "sqlite":
+        try:
+            rows = conn.execute(text(f"PRAGMA table_info({table_name})")).fetchall()
+            return {row[1] for row in rows}
+        except Exception:
+            return set()
     try:
-        rows = conn.execute(text(f"PRAGMA table_info({table_name})")).fetchall()
-        return {row[1] for row in rows}
+        rows = conn.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = :table_name"
+            ),
+            {"table_name": table_name},
+        ).fetchall()
+        return {row[0] for row in rows}
     except Exception:
         return set()
 
