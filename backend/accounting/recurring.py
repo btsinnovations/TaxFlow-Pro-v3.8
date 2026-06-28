@@ -63,14 +63,16 @@ class RecurringRule:
         }
 
 
-ALLOWED_FREQUENCIES = {"daily", "weekly", "monthly", "yearly"}
+ALLOWED_FREQUENCIES = {"daily", "weekly", "biweekly", "monthly", "quarterly", "yearly"}
 
 
 def _frequency_to_days(freq: str) -> int:
     return {
         "daily": 1,
         "weekly": 7,
+        "biweekly": 14,
         "monthly": 30,
+        "quarterly": 90,
         "yearly": 365,
     }.get(freq, 30)
 
@@ -81,6 +83,8 @@ def _advance_date(current: date, frequency: str) -> date:
         return current + timedelta(days=1)
     if frequency == "weekly":
         return current + timedelta(weeks=1)
+    if frequency == "biweekly":
+        return current + timedelta(weeks=2)
     if frequency == "monthly":
         day = current.day
         if current.month == 12:
@@ -90,11 +94,25 @@ def _advance_date(current: date, frequency: str) -> date:
                 next_date = date(current.year, current.month + 1, day)
             except ValueError:
                 # End of month shorter than current day: clamp to month end.
-                # Move to first of next month, then subtract one day.
                 first_next = date(current.year, current.month + 1, 1)
                 next_date = date(first_next.year, first_next.month, 1) + timedelta(days=32)
                 next_date = next_date.replace(day=1) - timedelta(days=1)
         return next_date
+    if frequency == "quarterly":
+        # Advance 3 months.
+        day = current.day
+        new_month = current.month + 3
+        new_year = current.year
+        while new_month > 12:
+            new_month -= 12
+            new_year += 1
+        try:
+            return date(new_year, new_month, day)
+        except ValueError:
+            # Clamp to month end.
+            import calendar
+            last_day = calendar.monthrange(new_year, new_month)[1]
+            return date(new_year, new_month, last_day)
     if frequency == "yearly":
         return date(current.year + 1, current.month, current.day)
     return current + timedelta(days=_frequency_to_days(frequency))
@@ -120,6 +138,67 @@ def generate_upcoming(rule: RecurringRule, count: int = 5) -> list[date]:
         current = _advance_date(current, rule.frequency)
         generated += 1
     return results
+
+
+def generate_occurrences(
+    db: "Session",
+    rule_id: int,
+    target_date: date,
+    tenant_id: int | None = None,
+    user_id: int | None = None,
+) -> list[dict]:
+    """Generate pending occurrences for a recurring rule up to ``target_date``.
+
+    This is IDEMPOTENT: calling it twice with the same target_date produces
+    no duplicate occurrences. It checks for existing transactions with
+    ``txn_uid`` matching ``recurring:{rule_id}:{date}`` to avoid duplicates.
+
+    Returns a list of occurrence dicts with scheduled_date and status="pending".
+    Does NOT create real transactions — use ``materialize_rule`` for that.
+    """
+    from backend import models
+
+    rule = db.query(models.RecurringRule).filter(models.RecurringRule.id == rule_id).first()
+    if rule is None:
+        raise HTTPException(status_code=404, detail="Recurring rule not found")
+    if tenant_id is not None and rule.tenant_id != tenant_id:
+        raise HTTPException(status_code=404, detail="Recurring rule not found")
+    if user_id is not None and rule.user_id != user_id:
+        raise HTTPException(status_code=404, detail="Recurring rule not found")
+    if not rule.is_active:
+        return []
+
+    domain_rule = _model_to_domain(rule)
+    upcoming = generate_upcoming(domain_rule, count=999)
+
+    # Filter to dates <= target_date.
+    due = [d for d in upcoming if d <= target_date]
+
+    # Check which occurrences already exist (idempotency).
+    existing_uids = set()
+    if due:
+        uids = [f"recurring:{rule.id}:{d.isoformat()}" for d in due]
+        existing = (
+            db.query(models.Transaction.txn_uid)
+            .filter(models.Transaction.txn_uid.in_(uids))
+            .all()
+        )
+        existing_uids = {row[0] for row in existing}
+
+    occurrences = []
+    for scheduled in due:
+        uid = f"recurring:{rule.id}:{scheduled.isoformat()}"
+        if uid in existing_uids:
+            continue  # Already generated — idempotent skip.
+        occurrences.append({
+            "scheduled_date": scheduled.isoformat(),
+            "description": rule.description,
+            "amount": float(rule.amount) if rule.amount is not None else 0.0,
+            "status": "pending",
+            "rule_id": rule.id,
+        })
+
+    return occurrences
 
 
 def materialize_rule(

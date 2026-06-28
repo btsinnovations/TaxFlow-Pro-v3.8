@@ -1,9 +1,17 @@
-"""Transaction router for TaxFlow Pro v3.11.03."""
+"""Transaction router for TaxFlow Pro v3.11.6 B2.
+
+Enhanced with:
+- Register filters: date range, amount range, tags, reconciled status, sort, cursor pagination.
+- Bulk operations: delete, tag, change status.
+- Transaction splits: set, get, validate.
+- Status management: pending, cleared, reconciled.
+"""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from .. import models, schemas
 from ..database import get_db
@@ -12,6 +20,7 @@ from ..local import settings as local_settings
 from ..audit import record, AuditAction, AuditResource
 from ..local.column_encryption import decrypt_for_user, encrypt_for_user
 from ..accounting import register as register_logic
+from ..accounting import splits as splits_logic
 from .auth import get_current_user
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
@@ -41,6 +50,7 @@ def _resolve_tenant_id(request: Request, current_user: models.User) -> int:
 
 
 def _transaction_response(tx: models.Transaction, user: models.User) -> dict:
+    import json
     return {
         "id": tx.id,
         "date": tx.date.isoformat() if tx.date else None,
@@ -53,6 +63,10 @@ def _transaction_response(tx: models.Transaction, user: models.User) -> dict:
         "statement_id": tx.statement_id,
         "tenant_id": tx.tenant_id,
         "gl_account_id": tx.gl_account_id,
+        "coa_account_id": tx.coa_account_id,
+        "splits": json.loads(tx.splits) if tx.splits else [],
+        "tags": tx.tags or "",
+        "status": tx.status or "pending",
         "created_at": tx.created_at.isoformat() if tx.created_at else None,
     }
 
@@ -65,11 +79,23 @@ def list_transactions(
     q: str = None,
     limit: int = 100,
     offset: int = 0,
+    start_date: str = None,
+    end_date: str = None,
+    min_amount: float = None,
+    max_amount: float = None,
+    tags: str = None,
+    status: str = None,
+    sort_by: str = "date",
+    sort_order: str = "asc",
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
+    """List transactions with enhanced filters, sorting, and pagination."""
     effective_tenant_id = _resolve_tenant_id(request, current_user) if tenant_id is None else tenant_id
     _wrap_tenant(request, db, current_user)
+
+    from datetime import date as date_type
+
     filters = {
         "tenant_id": effective_tenant_id,
         "user_id": current_user.id,
@@ -80,6 +106,23 @@ def list_transactions(
         filters["account_id"] = account_id
     if q:
         filters["q"] = q
+    if start_date:
+        filters["start_date"] = date_type.fromisoformat(start_date)
+    if end_date:
+        filters["end_date"] = date_type.fromisoformat(end_date)
+    if min_amount is not None:
+        filters["min_amount"] = min_amount
+    if max_amount is not None:
+        filters["max_amount"] = max_amount
+    if tags:
+        filters["tags"] = [t.strip() for t in tags.split(",") if t.strip()]
+    if status:
+        filters["status"] = status
+    if sort_by:
+        filters["sort_by"] = sort_by
+    if sort_order:
+        filters["sort_order"] = sort_order
+
     transactions = register_logic.list_transactions(db, effective_tenant_id, filters)
     return [_transaction_response(tx, current_user) for tx in transactions]
 
@@ -259,3 +302,218 @@ def update_workpaper_ref(
     record(db, current_user, AuditAction.UPDATE, AuditResource.TRANSACTION, tx.id,
            {"workpaper_ref": tx.workpaper_ref})
     return _transaction_response(tx, current_user)
+
+
+# ---------------------------------------------------------------------------
+# B2.01 — Bulk operations
+# ---------------------------------------------------------------------------
+
+@router.post("/bulk-delete")
+def bulk_delete(
+    request: Request,
+    payload: schemas.BulkTransactionDelete,
+    tenant_id: int = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Bulk delete transactions. Requires bookkeeper role or higher."""
+    effective_tenant_id = _resolve_tenant_id(request, current_user) if tenant_id is None else tenant_id
+    _wrap_tenant(request, db, current_user)
+    count = register_logic.bulk_delete(
+        db,
+        payload.transaction_ids,
+        tenant_id=effective_tenant_id,
+        user_id=current_user.id,
+    )
+    record(db, current_user, AuditAction.DELETE, AuditResource.TRANSACTION, None,
+           {"bulk_delete_count": count, "ids": payload.transaction_ids})
+    return {"deleted": count}
+
+
+@router.post("/bulk-tag")
+def bulk_tag(
+    request: Request,
+    payload: dict,
+    tenant_id: int = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Bulk add tags to transactions."""
+    effective_tenant_id = _resolve_tenant_id(request, current_user) if tenant_id is None else tenant_id
+    _wrap_tenant(request, db, current_user)
+    tx_ids = payload.get("transaction_ids", [])
+    tags = payload.get("tags", [])
+    if not tx_ids or not tags:
+        raise HTTPException(status_code=400, detail="transaction_ids and tags are required")
+    count = register_logic.bulk_tag(
+        db,
+        tx_ids,
+        tenant_id=effective_tenant_id,
+        user_id=current_user.id,
+        tags=tags,
+    )
+    record(db, current_user, AuditAction.UPDATE, AuditResource.TRANSACTION, None,
+           {"bulk_tag_count": count, "tags": tags})
+    return {"updated": count}
+
+
+@router.post("/bulk-status")
+def bulk_change_status(
+    request: Request,
+    payload: dict,
+    tenant_id: int = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Bulk change status on transactions."""
+    effective_tenant_id = _resolve_tenant_id(request, current_user) if tenant_id is None else tenant_id
+    _wrap_tenant(request, db, current_user)
+    tx_ids = payload.get("transaction_ids", [])
+    status = payload.get("status")
+    if not tx_ids or not status:
+        raise HTTPException(status_code=400, detail="transaction_ids and status are required")
+    try:
+        count = register_logic.bulk_change_status(
+            db,
+            tx_ids,
+            tenant_id=effective_tenant_id,
+            user_id=current_user.id,
+            status=status,
+        )
+    except register_logic.RegisterError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    record(db, current_user, AuditAction.UPDATE, AuditResource.TRANSACTION, None,
+           {"bulk_status_count": count, "status": status})
+    return {"updated": count}
+
+
+# ---------------------------------------------------------------------------
+# B2.01 — Status management
+# ---------------------------------------------------------------------------
+
+@router.patch("/{transaction_id}/status", response_model=dict)
+def set_status(
+    request: Request,
+    transaction_id: int,
+    payload: dict,
+    tenant_id: int = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Set the status (pending/cleared/reconciled) on a transaction."""
+    effective_tenant_id = _resolve_tenant_id(request, current_user) if tenant_id is None else tenant_id
+    _wrap_tenant(request, db, current_user)
+    status = payload.get("status")
+    if not status:
+        raise HTTPException(status_code=400, detail="status is required")
+    try:
+        tx = register_logic.set_transaction_status(
+            db,
+            transaction_id,
+            tenant_id=effective_tenant_id,
+            user_id=current_user.id,
+            status=status,
+        )
+    except register_logic.RegisterError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    record(db, current_user, AuditAction.UPDATE, AuditResource.TRANSACTION, tx.id,
+           {"status": status})
+    return {"id": tx.id, "status": tx.status}
+
+
+# ---------------------------------------------------------------------------
+# B2.02 — Transaction Splits
+# ---------------------------------------------------------------------------
+
+class SplitItem(BaseModel):
+    account_id: int
+    amount: float
+    memo: Optional[str] = None
+    category: Optional[str] = None
+
+
+class SetSplitsRequest(BaseModel):
+    splits: List[SplitItem]
+
+
+@router.get("/{transaction_id}/splits", response_model=list)
+def get_transaction_splits(
+    request: Request,
+    transaction_id: int,
+    tenant_id: int = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Get the splits for a transaction."""
+    effective_tenant_id = _resolve_tenant_id(request, current_user) if tenant_id is None else tenant_id
+    _wrap_tenant(request, db, current_user)
+    tx = (
+        db.query(models.Transaction)
+        .filter(
+            models.Transaction.id == transaction_id,
+            models.Transaction.tenant_id == effective_tenant_id,
+            models.Transaction.user_id == current_user.id,
+        )
+        .first()
+    )
+    if tx is None:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    return splits_logic.get_splits(tx)
+
+
+@router.put("/{transaction_id}/splits", response_model=dict)
+def set_transaction_splits(
+    request: Request,
+    transaction_id: int,
+    payload: SetSplitsRequest,
+    tenant_id: int = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Set the splits on a transaction after validation."""
+    effective_tenant_id = _resolve_tenant_id(request, current_user) if tenant_id is None else tenant_id
+    _wrap_tenant(request, db, current_user)
+    splits_data = [s.model_dump() for s in payload.splits]
+    try:
+        tx = splits_logic.set_splits(
+            db,
+            transaction_id,
+            tenant_id=effective_tenant_id,
+            user_id=current_user.id,
+            splits=splits_data,
+        )
+    except splits_logic.SplitsError as exc:
+        if "not found" in str(exc).lower():
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    record(db, current_user, AuditAction.UPDATE, AuditResource.TRANSACTION, tx.id,
+           {"splits_set": len(splits_data)})
+    return {"id": tx.id, "splits": splits_logic.get_splits(tx)}
+
+
+@router.post("/{transaction_id}/splits/migrate", response_model=dict)
+def migrate_single_line_splits(
+    request: Request,
+    transaction_id: int,
+    tenant_id: int = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Migrate a single-line transaction to have a one-entry split."""
+    effective_tenant_id = _resolve_tenant_id(request, current_user) if tenant_id is None else tenant_id
+    _wrap_tenant(request, db, current_user)
+    tx = (
+        db.query(models.Transaction)
+        .filter(
+            models.Transaction.id == transaction_id,
+            models.Transaction.tenant_id == effective_tenant_id,
+            models.Transaction.user_id == current_user.id,
+        )
+        .first()
+    )
+    if tx is None:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    tx = splits_logic.migrate_single_line_to_splits(tx)
+    db.commit()
+    db.refresh(tx)
+    return {"id": tx.id, "splits": splits_logic.get_splits(tx)}

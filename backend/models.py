@@ -1,5 +1,5 @@
 from datetime import date, datetime, timezone
-from sqlalchemy import Column, Integer, String, Numeric, Boolean, DateTime, Date, ForeignKey, Index
+from sqlalchemy import Column, Integer, String, Numeric, Boolean, DateTime, Date, ForeignKey, Index, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -374,12 +374,20 @@ class Transaction(Base):
     txn_uid = Column(String, nullable=True)
     fitid = Column(String, nullable=True, index=True)
     import_source = Column(String, nullable=True)
+    # B3.04 — Multi-currency fields
+    foreign_amount = Column(Numeric(12, 2), nullable=True)
+    foreign_currency = Column(String, nullable=True)
+    fx_rate_snapshot = Column(Numeric(18, 8), nullable=True)
+    splits = Column(Text, default="[]")  # JSON array of split line items
+    tags = Column(String, default="")  # comma-separated tags
+    status = Column(String, default="pending")  # pending, cleared, reconciled
     created_at = Column(DateTime, server_default=func.now())
     statement = relationship("Statement", back_populates="transactions")
     gl_account = relationship("GLAccount", back_populates="transactions")
     coa_account = relationship("CoaAccount", back_populates="transactions")
     ledger_entries = relationship("GeneralLedgerEntry", back_populates="transaction")
     flags = relationship("Flag", back_populates="transaction")
+    project_tags = relationship("TransactionTag", back_populates="transaction", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Transaction(id={self.id}, date={self.date}, amount={self.amount})>"
@@ -397,9 +405,16 @@ class Transaction(Base):
             "statement_id": self.statement_id,
             "tenant_id": self.tenant_id,
             "gl_account_id": self.gl_account_id,
+            "coa_account_id": self.coa_account_id,
             "workpaper_ref": self.workpaper_ref,
             "txn_uid": self.txn_uid,
             "import_source": self.import_source,
+            "splits": self.splits or "[]",
+            "tags": self.tags or "",
+            "status": self.status or "pending",
+            "foreign_amount": float(self.foreign_amount) if self.foreign_amount is not None else None,
+            "foreign_currency": self.foreign_currency,
+            "fx_rate_snapshot": float(self.fx_rate_snapshot) if self.fx_rate_snapshot is not None else None,
         }
 
 
@@ -583,6 +598,27 @@ class RecurringRule(Base):
     created_at = Column(DateTime, server_default=func.now())
 
 
+class Check(Base):
+    """Physical check register entry — tracks issued checks per account."""
+    __tablename__ = "checks"
+    __table_args__ = (
+        Index("ix_checks_tenant_id", "tenant_id"),
+        Index("ix_checks_account_number", "account_id", "check_number", unique=True),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    check_number = Column(String, nullable=False)
+    payee = Column(String, nullable=False)
+    amount = Column(Numeric(12, 2), nullable=False)
+    date = Column(Date, nullable=False)
+    memo = Column(String, nullable=True)
+    status = Column(String, default="pending")  # pending, cleared, reconciled, void
+    transaction_id = Column(Integer, ForeignKey("transactions.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+
 class TrainedModel(Base):
     __tablename__ = "trained_models"
     __table_args__ = (
@@ -604,3 +640,102 @@ class TrainedModel(Base):
     is_active = Column(Boolean, default=True)
 
     owner = relationship("User", back_populates="trained_models")
+
+
+class LoanPayment(Base):
+    """B3.01 — Track individual loan payments with principal/interest allocation."""
+    __tablename__ = "loan_payments"
+    __table_args__ = (
+        Index("ix_loan_payments_tenant_id", "tenant_id"),
+        Index("ix_loan_payments_schedule_id", "schedule_id"),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    schedule_id = Column(Integer, ForeignKey("loan_schedules.id", ondelete="CASCADE"), nullable=False)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    payment_date = Column(Date, nullable=False)
+    payment_amount = Column(Numeric(12, 2), nullable=False)
+    principal_paid = Column(Numeric(12, 2), nullable=False)
+    interest_paid = Column(Numeric(12, 2), nullable=False)
+    remaining_principal = Column(Numeric(14, 2), nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class CreditLine(Base):
+    """B3.01 — Revolving credit line with simple interest accrual."""
+    __tablename__ = "credit_lines"
+    __table_args__ = (
+        Index("ix_credit_lines_tenant_id", "tenant_id"),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    credit_limit = Column(Numeric(14, 2), nullable=False)
+    current_balance = Column(Numeric(14, 2), nullable=False, default=0)
+    annual_rate = Column(Numeric(6, 4), nullable=False, default=0)
+    last_interest_date = Column(Date, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class CreditLineTransaction(Base):
+    """B3.01 — Individual draw/payment on a credit line."""
+    __tablename__ = "credit_line_transactions"
+    id = Column(Integer, primary_key=True, index=True)
+    credit_line_id = Column(Integer, ForeignKey("credit_lines.id", ondelete="CASCADE"), nullable=False)
+    date = Column(Date, nullable=False)
+    amount = Column(Numeric(12, 2), nullable=False)  # positive = draw, negative = payment
+    type = Column(String, nullable=False)  # "draw" or "payment"
+    interest_charge = Column(Numeric(12, 2), nullable=False, default=0)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class InvestmentEvent(Base):
+    """B3.02 — Dividend, split, and other investment events."""
+    __tablename__ = "investment_events"
+    __table_args__ = (
+        Index("ix_investment_events_tenant_id", "tenant_id"),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    symbol = Column(String, nullable=False)
+    event_type = Column(String, nullable=False)  # "dividend", "split", "buy", "sell"
+    event_date = Column(Date, nullable=False)
+    shares = Column(Numeric(14, 6), nullable=False, default=0)
+    amount = Column(Numeric(14, 4), nullable=False, default=0)
+    split_ratio = Column(String, nullable=True)  # e.g. "2:1"
+    description = Column(String, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class PriceSnapshot(Base):
+    """B3.02 — Manual price snapshot for unrealized gain calculation."""
+    __tablename__ = "price_snapshots"
+    __table_args__ = (
+        Index("ix_price_snapshots_tenant_id", "tenant_id"),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    symbol = Column(String, nullable=False)
+    price = Column(Numeric(14, 4), nullable=False)
+    snapshot_date = Column(Date, nullable=False)
+    source = Column(String, nullable=False, default="manual")
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class TransactionTag(Base):
+    """B3.03 — Project tags attached to transactions."""
+    __tablename__ = "transaction_tags"
+    __table_args__ = (
+        Index("ix_transaction_tags_tenant_id", "tenant_id"),
+        Index("ix_transaction_tags_transaction_id", "transaction_id"),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    transaction_id = Column(Integer, ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False)
+    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    tag = Column(String, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())

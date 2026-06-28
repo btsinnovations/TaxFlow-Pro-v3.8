@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from backend.accounting.recurring import (
     create_rule,
     delete_rule,
+    generate_occurrences,
     get_rule,
     list_rules,
     materialize_rule,
@@ -187,3 +188,27 @@ def materialize_recurring(
         {"rule_id": rule_id, "materialized": len(created)},
     )
     return {"materialized": len(created), "transactions": created}
+
+
+@router.post("/{rule_id}/generate")
+def generate_recurring(
+    request: Request,
+    rule_id: int,
+    target_date: date,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Generate pending occurrences for a recurring rule up to ``target_date``.
+
+    This is IDEMPOTENT: calling it twice with the same target_date produces
+    no duplicate occurrences.
+    """
+    tenant_id = _wrap_tenant(request, db, current_user)
+    occurrences = generate_occurrences(
+        db,
+        rule_id=rule_id,
+        target_date=target_date,
+        tenant_id=tenant_id,
+        user_id=current_user.id,
+    )
+    return {"occurrences": occurrences, "count": len(occurrences)}
