@@ -14,8 +14,13 @@ from backend.accounting.invoicing import (
     aging_report,
     create_bill,
     create_invoice,
+    delete_invoice,
+    get_invoice,
     list_invoices,
     record_payment,
+    reverse_payment,
+    update_invoice,
+    void_invoice,
 )
 
 
@@ -250,3 +255,234 @@ def test_api_aging_report(auth_client: TestClient, db: Session):
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["buckets"]["30"] == 250.0
+
+
+# ---------------------------------------------------------------------------
+# Expanded domain tests
+# ---------------------------------------------------------------------------
+
+def test_void_invoice(db: Session):
+    user, client = _seed_user_and_tenant(db)
+    invoice = create_invoice(
+        db, client.id, user.id, "VoidMe", "INV-VOID", date(2026, 1, 1), date(2026, 2, 1),
+        [{"description": "X", "qty": 1, "rate": 100.0}],
+    )
+    voided = void_invoice(db, invoice.id, user.id)
+    assert voided.status == "void"
+
+
+def test_void_already_voided_fails(db: Session):
+    user, client = _seed_user_and_tenant(db)
+    invoice = create_invoice(
+        db, client.id, user.id, "VoidTwice", "INV-VOID2", date(2026, 1, 1), date(2026, 2, 1),
+        [{"description": "X", "qty": 1, "rate": 100.0}],
+    )
+    void_invoice(db, invoice.id, user.id)
+    with pytest.raises(InvoicingError, match="already voided"):
+        void_invoice(db, invoice.id, user.id)
+
+
+def test_payment_on_void_fails(db: Session):
+    user, client = _seed_user_and_tenant(db)
+    invoice = create_invoice(
+        db, client.id, user.id, "VoidPay", "INV-VP", date(2026, 1, 1), date(2026, 2, 1),
+        [{"description": "X", "qty": 1, "rate": 100.0}],
+    )
+    void_invoice(db, invoice.id, user.id)
+    with pytest.raises(InvoicingError, match="void invoice"):
+        record_payment(db, invoice.id, user.id, Decimal("50.00"), date(2026, 1, 15))
+
+
+def test_reverse_payment(db: Session):
+    user, client = _seed_user_and_tenant(db)
+    invoice = create_invoice(
+        db, client.id, user.id, "Reverse", "INV-REV", date(2026, 1, 1), date(2026, 2, 1),
+        [{"description": "X", "qty": 1, "rate": 200.0}],
+    )
+    record_payment(db, invoice.id, user.id, Decimal("200.00"), date(2026, 1, 10))
+    assert invoice.status == "paid"
+    payment_id = invoice.payments[0].id
+    updated = reverse_payment(db, invoice.id, payment_id, user.id)
+    assert updated.amount_paid == Decimal("0.00")
+    assert updated.status in ("open", "overdue")
+
+
+def test_reverse_payment_not_found(db: Session):
+    user, client = _seed_user_and_tenant(db)
+    invoice = create_invoice(
+        db, client.id, user.id, "NoRev", "INV-NR", date(2026, 1, 1), date(2026, 2, 1),
+        [{"description": "X", "qty": 1, "rate": 100.0}],
+    )
+    with pytest.raises(InvoicingError, match="Payment not found"):
+        reverse_payment(db, invoice.id, 99999, user.id)
+
+
+def test_delete_invoice_draft(db: Session):
+    user, client = _seed_user_and_tenant(db)
+    invoice = create_invoice(
+        db, client.id, user.id, "Delete", "INV-DEL", date(2026, 1, 1), date(2026, 2, 1),
+        [{"description": "X", "qty": 1, "rate": 50.0}],
+    )
+    assert delete_invoice(db, invoice.id, user.id) is True
+    assert get_invoice(db, invoice.id, user.id) is None
+
+
+def test_delete_invoice_with_payment_fails(db: Session):
+    user, client = _seed_user_and_tenant(db)
+    invoice = create_invoice(
+        db, client.id, user.id, "NoDelete", "INV-ND", date(2026, 1, 1), date(2026, 2, 1),
+        [{"description": "X", "qty": 1, "rate": 100.0}],
+    )
+    record_payment(db, invoice.id, user.id, Decimal("100.00"), date(2026, 1, 10))
+    # Invoice is now 'paid' — delete should fail on status check
+    with pytest.raises(InvoicingError, match="Cannot delete invoice in 'paid' status"):
+        delete_invoice(db, invoice.id, user.id)
+
+
+def test_update_invoice_line_items(db: Session):
+    user, client = _seed_user_and_tenant(db)
+    invoice = create_invoice(
+        db, client.id, user.id, "Update", "INV-UPD", date(2026, 1, 1), date(2026, 2, 1),
+        [{"description": "Old", "qty": 1, "rate": 100.0}],
+    )
+    updated = update_invoice(
+        db, invoice.id, user.id,
+        line_items=[
+            {"description": "New A", "qty": 2, "rate": 50.0},
+            {"description": "New B", "qty": 1, "rate": 25.0},
+        ],
+    )
+    assert updated.total == Decimal("125.00")
+    assert len(updated.line_items) == 2
+
+
+def test_update_invoice_contact(db: Session):
+    user, client = _seed_user_and_tenant(db)
+    invoice = create_invoice(
+        db, client.id, user.id, "OldName", "INV-CN", date(2026, 1, 1), date(2026, 2, 1),
+        [{"description": "X", "qty": 1, "rate": 100.0}],
+    )
+    updated = update_invoice(db, invoice.id, user.id, contact_name="NewName")
+    assert updated.contact_name == "NewName"
+
+
+def test_list_invoices_status_filter(db: Session):
+    user, client = _seed_user_and_tenant(db)
+    create_invoice(
+        db, client.id, user.id, "Open", "INV-F1", date(2026, 1, 1), date(2026, 3, 1),
+        [{"description": "X", "qty": 1, "rate": 100.0}],
+    )
+    inv2 = create_invoice(
+        db, client.id, user.id, "Paid", "INV-F2", date(2026, 1, 1), date(2026, 3, 1),
+        [{"description": "X", "qty": 1, "rate": 200.0}],
+    )
+    record_payment(db, inv2.id, user.id, Decimal("200.00"), date(2026, 1, 10))
+    open_only = list_invoices(db, user.id, is_bill=False, status="open")
+    paid_only = list_invoices(db, user.id, is_bill=False, status="paid")
+    assert all(r["status"] == "open" for r in open_only)
+    assert all(r["status"] == "paid" for r in paid_only)
+    assert any(r["invoice_number"] == "INV-F1" for r in open_only)
+    assert any(r["invoice_number"] == "INV-F2" for r in paid_only)
+
+
+def test_negative_payment_fails(db: Session):
+    user, client = _seed_user_and_tenant(db)
+    invoice = create_invoice(
+        db, client.id, user.id, "Neg", "INV-NEG", date(2026, 1, 1), date(2026, 2, 1),
+        [{"description": "X", "qty": 1, "rate": 100.0}],
+    )
+    with pytest.raises(InvoicingError, match="positive"):
+        record_payment(db, invoice.id, user.id, Decimal("-50.00"), date(2026, 1, 10))
+
+
+# ---------------------------------------------------------------------------
+# Expanded API tests
+# ---------------------------------------------------------------------------
+
+def test_api_get_single_invoice(auth_client: TestClient, db: Session):
+    auth_user, client = _ensure_auth_user(db)
+    invoice = create_invoice(
+        db, client.id, auth_user.id, "Single", "API-SINGLE-001",
+        date(2026, 5, 1), date(2026, 6, 1),
+        [{"description": "Service", "qty": 1, "rate": 300.0}],
+    )
+    resp = auth_client.get(f"/api/invoicing/{invoice.id}")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["id"] == invoice.id
+    assert body["total"] == 300.0
+    assert len(body["line_items"]) == 1
+
+
+def test_api_void_invoice(auth_client: TestClient, db: Session):
+    auth_user, client = _ensure_auth_user(db)
+    invoice = create_invoice(
+        db, client.id, auth_user.id, "VoidAPI", "API-VOID-001",
+        date(2026, 5, 1), date(2026, 6, 1),
+        [{"description": "X", "qty": 1, "rate": 150.0}],
+    )
+    resp = auth_client.post(f"/api/invoicing/{invoice.id}/void")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["status"] == "void"
+
+
+def test_api_delete_invoice(auth_client: TestClient, db: Session):
+    auth_user, client = _ensure_auth_user(db)
+    invoice = create_invoice(
+        db, client.id, auth_user.id, "DelAPI", "API-DEL-001",
+        date(2026, 5, 1), date(2026, 6, 1),
+        [{"description": "X", "qty": 1, "rate": 75.0}],
+    )
+    resp = auth_client.delete(f"/api/invoicing/{invoice.id}")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["ok"] is True
+
+
+def test_api_reverse_payment(auth_client: TestClient, db: Session):
+    auth_user, client = _ensure_auth_user(db)
+    invoice = create_invoice(
+        db, client.id, auth_user.id, "RevAPI", "API-REV-001",
+        date(2026, 5, 1), date(2026, 6, 1),
+        [{"description": "X", "qty": 1, "rate": 250.0}],
+    )
+    pay_resp = auth_client.post(f"/api/invoicing/{invoice.id}/payments", json={
+        "amount": 250.0, "payment_date": "2026-05-10",
+    })
+    assert pay_resp.status_code == 200
+    payment_id = invoice.payments[0].id
+    resp = auth_client.delete(f"/api/invoicing/{invoice.id}/payments/{payment_id}")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["amount_paid"] == 0.0
+    assert body["status"] in ("open", "overdue")
+
+
+def test_api_list_invoices_with_filter(auth_client: TestClient, db: Session):
+    auth_user, client = _ensure_auth_user(db)
+    create_invoice(
+        db, client.id, auth_user.id, "Filter", "API-FILT-001",
+        date(2026, 5, 1), date(2026, 6, 1),
+        [{"description": "X", "qty": 1, "rate": 100.0}],
+    )
+    resp = auth_client.get("/api/invoicing/invoices", params={"status": "open"})
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert all(r["status"] == "open" for r in body)
+
+
+def test_api_update_invoice(auth_client: TestClient, db: Session):
+    auth_user, client = _ensure_auth_user(db)
+    invoice = create_invoice(
+        db, client.id, auth_user.id, "UpdAPI", "API-UPD-001",
+        date(2026, 5, 1), date(2026, 6, 1),
+        [{"description": "Old", "qty": 1, "rate": 100.0}],
+    )
+    resp = auth_client.put(f"/api/invoicing/{invoice.id}", json={
+        "contact_name": "Updated Contact",
+        "line_items": [
+            {"description": "New", "qty": 2, "rate": 50.0}
+        ],
+    })
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["total"] == 100.0
