@@ -392,14 +392,201 @@ Create or update a match.
 }
 ```
 
+### `POST /api/reconciliation/{import_id}/manual-match`
+Manually match a ledger transaction to a statement transaction.
+
+**Request:**
+```json
+{
+  "ledger_tx_id": 42,
+  "statement_tx_id": "STMT-001"
+}
+```
+
+**Response:** `{ "match_id": 1, "status": "matched" }`
+
+### `POST /api/reconciliation/{import_id}/unmatch`
+Remove a match.
+
+**Request:**
+```json
+{
+  "match_id": 1
+}
+```
+
+**Response:** `{ "ok": true }`
+
+### `GET /api/reconciliation/{import_id}/unmatched`
+List unmatched statement transactions for the import.
+
+**Response:** `[{ "id": "STMT-001", "date": "2026-01-15", "amount": 120.00, "description": "Coffee" }]`
+
+### `GET /api/reconciliation/{import_id}/matches`
+List existing matches.
+
+**Response:** `[{ "match_id": 1, "ledger_tx_id": 42, "statement_tx_id": "STMT-001", "status": "matched" }]`
+
 ---
 
-## 8. Reports
+## 8. Tax Exports (B4.02)
+
+### `GET /api/tax-exports/lines`
+List available Schedule C line codes.
+
+**Response:**
+```json
+{
+  "form": "Schedule C",
+  "lines": {
+    "income": "1",
+    "advertising": "8",
+    "office": "18",
+    "other_expenses": "27a"
+  }
+}
+```
+
+### `POST /api/tax-exports/mappings`
+Map a COA account to a tax form line.
+
+**Request:**
+```json
+{
+  "coa_account_id": 1,
+  "form": "Schedule C",
+  "line": "8",
+  "description": "Advertising"
+}
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "form": "Schedule C",
+  "line": "8"
+}
+```
+
+### `GET /api/tax-exports/mappings`
+List existing mappings.
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "coa_account_id": 1,
+    "form": "Schedule C",
+    "line": "8",
+    "description": "Advertising"
+  }
+]
+```
+
+### `DELETE /api/tax-exports/mappings/{id}`
+Delete a mapping. Requires admin role.
+
+**Response:** `{ "ok": true }`
+
+### `POST /api/tax-exports/schedule-c`
+Generate Schedule C totals for a date range.
+
+**Request:**
+```json
+{
+  "start_date": "2026-01-01",
+  "end_date": "2026-01-31"
+}
+```
+
+**Response:**
+```json
+{
+  "form": "Schedule C",
+  "year": 2026,
+  "line_1_gross_receipts": 1000.00,
+  "line_28_total_expenses": 120.00,
+  "line_31_net_profit": 880.00,
+  "lines": {
+    "income": { "1": 1000.00 },
+    "expense": { "8": 120.00 }
+  },
+  "generated_at": "2026-06-28"
+}
+```
+
+### `POST /api/tax-exports/schedule-c?format=csv`
+Returns the same data as a CSV string in `content`.
+
+**Response:** `{ "format": "csv", "content": "..." }`
+
+### `POST /api/tax-exports/1099`
+Return 1099-NEC/MISC candidates for the year.
+
+**Query params:** `year` (default prior year), `threshold` (default 600.00)
+
+**Response:**
+```json
+[
+  {
+    "payee": "ABC Contractor",
+    "form": "1099-NEC",
+    "year": 2026,
+    "amount": 900.00
+  }
+]
+```
+
+### `POST /api/tax-exports/year-end-summary`
+Return a consolidated year-end tax package.
+
+**Query params:** `year` (default prior year)
+
+**Response:**
+```json
+{
+  "year": 2026,
+  "schedule_c": { ... },
+  "form_1099s": [ ... ],
+  "total_reported_1099": 900.00,
+  "generated_at": "2026-06-28"
+}
+```
+
+---
+
+## 9. Reports (B4.01)
+
+### `GET /api/reports/profit-and-loss`
+Generate a P&L report.
+
+**Query params:** `start_date`, `end_date`
+
+**Response:**
+```json
+{
+  "start_date": "2026-01-01",
+  "end_date": "2026-01-31",
+  "income": 1000.00,
+  "expenses": 120.00,
+  "net_income": 880.00,
+  "by_account": [
+    {"account_id": 1, "account_name": "Sales", "amount": 1000.00}
+  ]
+}
+```
+
+### `GET /api/reports/trial-balance`
+Generate a trial balance.
+
+**Query params:** `as_of` (date)
 
 ### `GET /api/reports/balance-sheet`
 Generate a balance sheet report.
 
-**Query params:** `as_of` (date), `tenant_id` (int)
+**Query params:** `as_of` (date)
 
 **Response:**
 ```json
@@ -411,50 +598,124 @@ Generate a balance sheet report.
 }
 ```
 
-### `GET /api/reports/income-statement`
-Generate an income statement (P&L).
-
-**Query params:** `start_date`, `end_date`, `tenant_id`
-
-### `GET /api/reports/trial-balance`
-Generate a trial balance.
-
-**Query params:** `as_of` (date), `tenant_id`
-
 ### `GET /api/reports/cash-flow`
 Generate a cash flow statement.
 
-**Query params:** `start_date`, `end_date`, `tenant_id`
+**Query params:** `start_date`, `end_date`
+
+### `GET /api/reports/coa-hierarchy`
+Return the chart of accounts hierarchy roll-up.
+
+**Response:**
+```json
+{
+  "assets": [{"code": "1000", "name": "Cash", "balance": 5000.00}],
+  "liabilities": [],
+  "equity": [],
+  "income": [],
+  "expenses": []
+}
+```
 
 ---
 
-## 9. Budget
+## 10. Budget & Forecast (B4.04)
 
-### `GET /api/budget`
-List budget lines for the current tenant.
-
-### `POST /api/budget`
-Create a budget line.
+### `POST /api/budget/lines`
+Create or update a budget line for a GL account and period.
 
 **Request:**
 ```json
 {
   "account_id": 1,
-  "period": "2026-01",
-  "budget_amount": 2000.00,
-  "actual_amount": 1850.00
+  "period": "2026-06",
+  "amount": 1000.00
 }
 ```
 
-### `PUT /api/budget/{id}`
-Update a budget line.
+**Response:**
+```json
+{
+  "id": 1,
+  "account_id": 1,
+  "period": "2026-06",
+  "budget_amount": 1000.00
+}
+```
 
-### `DELETE /api/budget/{id}`
-Delete a budget line.
+### `GET /api/budget/{period}/vs-actual`
+Return budget vs actual for the period.
+
+**Response:**
+```json
+[
+  {
+    "account_id": 1,
+    "period": "2026-06",
+    "budget": 1000.00,
+    "actual": 300.00,
+    "variance": 700.00
+  }
+]
+```
+
+### `GET /api/budget/{period}/variance-alerts`
+Return budget lines that exceeded budget by the threshold.
+
+**Query params:** `threshold` (default 0.10 = 10%)
+
+**Response:**
+```json
+[
+  {
+    "account_id": 1,
+    "period": "2026-06",
+    "budget": 100.00,
+    "actual": 150.00,
+    "variance": -50.00,
+    "over_budget_pct": 0.50
+  }
+]
+```
+
+### `GET /api/budget/cash-flow`
+Generate a 6-month cash-flow forecast based on historical net cash flow.
+
+**Query params:** `start`, `months`
+
+**Response:**
+```json
+[
+  {
+    "month": 1,
+    "date": "2026-01-01",
+    "projected_cash": 1000.00
+  }
+]
+```
+
+### `GET /api/budget/cash-flow-13-week`
+Generate a 13-week cash-flow forecast using opening cash, recurring rules, and open invoices/bills.
+
+**Query params:** `start`
+
+**Response:**
+```json
+[
+  {
+    "week": 1,
+    "start_date": "2026-01-01",
+    "end_date": "2026-01-07",
+    "opening_cash": 1000.00,
+    "projected_change": 0.00,
+    "projected_cash": 1000.00
+  }
+]
+```
 
 ---
 
-## 10. Invoices / Bills / Payments
+## 11. Invoices / Bills / Payments
 
 ### `GET /api/invoices`
 List invoices. Filter with `?is_bill=true` for bills (A/P) or `?is_bill=false` for invoices (A/R).
@@ -881,3 +1142,150 @@ Calculate FX gain/loss on settlement.
 
 ### `GET /api/fx/report?start_date=2026-01-01&end_date=2026-12-31`
 Home-currency report of all foreign-currency transactions.
+
+---
+
+## B4.01 — Reports Center
+
+### `POST /api/reports/profit-and-loss`
+Profit & Loss statement for a date range.
+
+**Request:**
+```json
+{
+  "start_date": "2026-01-01",
+  "end_date": "2026-01-31"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "start_date": "2026-01-01",
+  "end_date": "2026-01-31",
+  "income": 1000.0,
+  "expenses": 500.0,
+  "net": 500.0,
+  "by_account": [
+    {
+      "id": 1,
+      "number": "4010",
+      "name": "Sales Revenue",
+      "type": "income",
+      "amount": 1000.0
+    }
+  ]
+}
+```
+
+### `POST /api/reports/trial-balance?as_of=2026-01-31`
+Trial balance as of a date.
+
+**Response:** `200 OK`
+```json
+{
+  "as_of": "2026-01-31",
+  "rows": [
+    {
+      "account_id": 1,
+      "code": "1010",
+      "name": "Cash",
+      "type": "asset",
+      "debit": 500.0,
+      "credit": 0.0,
+      "net": 500.0
+    }
+  ]
+}
+```
+
+### `POST /api/reports/balance-sheet?as_of=2026-01-31`
+Balance sheet as of a date, grouped by COA hierarchy.
+
+**Response:** `200 OK`
+```json
+{
+  "as_of": "2026-01-31",
+  "sections": {
+    "assets": {
+      "total": 500.0,
+      "accounts": [
+        {
+          "id": 1,
+          "number": "1010",
+          "name": "Cash",
+          "type": "asset",
+          "balance": 500.0,
+          "children": []
+        }
+      ]
+    },
+    "liabilities": { "total": 0.0, "accounts": [] },
+    "equity": { "total": 500.0, "accounts": [] }
+  },
+  "total_assets": 500.0,
+  "total_liabilities": 0.0,
+  "total_equity": 500.0,
+  "liabilities_plus_equity": 500.0
+}
+```
+
+### `POST /api/reports/cash-flow`
+Simplified cash flow statement for a date range.
+
+**Request:**
+```json
+{
+  "start_date": "2026-01-01",
+  "end_date": "2026-01-31"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "start_date": "2026-01-01",
+  "end_date": "2026-01-31",
+  "operating": 500.0,
+  "investing": 0.0,
+  "financing": 0.0,
+  "net_change": 500.0,
+  "detail": {
+    "operating": [],
+    "investing": [],
+    "financing": []
+  }
+}
+```
+
+### `GET /api/reports/coa-hierarchy`
+COA hierarchy with optional rolled-up balances.
+
+**Query params:**
+- `with_balances` (bool, default `false`)
+- `as_of` (date, required when `with_balances=true`)
+
+**Response:** `200 OK`
+```json
+[
+  {
+    "id": 1,
+    "number": "1100",
+    "name": "Receivables Parent",
+    "type": "asset",
+    "balance": 400.0,
+    "children": [
+      {
+        "id": 2,
+        "number": "1110",
+        "name": "Customer A",
+        "type": "asset",
+        "balance": 400.0,
+        "children": []
+      }
+    ]
+  }
+]
+```
+
+**Authorization:** All Reports Center endpoints require **viewer** role or higher.

@@ -9,9 +9,15 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.routers.auth import get_current_user
 from backend import models
-from backend.accounting.reports import profit_and_loss, trial_balance
+from backend.accounting.reports import (
+    profit_and_loss,
+    trial_balance,
+    balance_sheet,
+    cash_flow_statement,
+)
 from backend.rls import is_postgres, resolve_user_tenant_id, set_tenant_id
 from backend.local import settings as local_settings
+from backend.local.roles import Role, has_role
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -45,8 +51,15 @@ def pnl_route(
     current_user: models.User = Depends(get_current_user),
 ):
     tenant_id = _wrap_tenant(request, db, current_user)
-    return profit_and_loss(db, tenant_id=tenant_id, user_id=current_user.id,
-                           start_date=payload.start_date, end_date=payload.end_date)
+    if not has_role(db, current_user.id, tenant_id, Role.viewer):
+        raise HTTPException(status_code=403, detail="Insufficient profile role (viewer required)")
+    return profit_and_loss(
+        db,
+        tenant_id=tenant_id,
+        user_id=current_user.id,
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+    )
 
 
 @router.post("/trial-balance")
@@ -57,5 +70,48 @@ def trial_balance_route(
     current_user: models.User = Depends(get_current_user),
 ):
     tenant_id = _wrap_tenant(request, db, current_user)
-    return {"as_of": as_of.isoformat(), "rows": trial_balance(db, tenant_id=tenant_id,
-                                                               user_id=current_user.id, as_of=as_of)}
+    if not has_role(db, current_user.id, tenant_id, Role.viewer):
+        raise HTTPException(status_code=403, detail="Insufficient profile role (viewer required)")
+    return {"as_of": as_of.isoformat(), "rows": trial_balance(
+        db,
+        tenant_id=tenant_id,
+        user_id=current_user.id,
+        as_of=as_of,
+    )}
+
+
+@router.post("/balance-sheet")
+def balance_sheet_route(
+    request: Request,
+    as_of: date,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    tenant_id = _wrap_tenant(request, db, current_user)
+    if not has_role(db, current_user.id, tenant_id, Role.viewer):
+        raise HTTPException(status_code=403, detail="Insufficient profile role (viewer required)")
+    return balance_sheet(
+        db,
+        tenant_id=tenant_id,
+        user_id=current_user.id,
+        as_of=as_of,
+    )
+
+
+@router.post("/cash-flow")
+def cash_flow_route(
+    request: Request,
+    payload: DateRange,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    tenant_id = _wrap_tenant(request, db, current_user)
+    if not has_role(db, current_user.id, tenant_id, Role.viewer):
+        raise HTTPException(status_code=403, detail="Insufficient profile role (viewer required)")
+    return cash_flow_statement(
+        db,
+        tenant_id=tenant_id,
+        user_id=current_user.id,
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+    )
