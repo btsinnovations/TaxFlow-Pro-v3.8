@@ -15,9 +15,15 @@ from backend.accounting.reconciliation import (
     import_statement as import_reconciliation,
     auto_match,
     reconciliation_status,
+    manual_match,
+    unmatch,
+    list_unmatched,
+    get_matches,
 )
 from backend.rls import is_postgres, resolve_user_tenant_id, set_tenant_id
 from backend.local import settings as local_settings
+
+from backend.local.roles import Role, has_role
 
 router = APIRouter(prefix="/reconciliation", tags=["reconciliation"])
 
@@ -38,6 +44,14 @@ def _wrap_tenant(request: Request, db: Session, current_user: models.User) -> in
         raise HTTPException(status_code=400, detail="Invalid X-Tenant-ID header")
 
 
+def _require_role(db: Session, current_user: models.User, tenant_id: int, min_role: Role):
+    if not has_role(db, current_user.id, tenant_id, min_role):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Insufficient profile role ({min_role.name} required)",
+        )
+
+
 class ImportRequest(BaseModel):
     account_id: int
     statement_balance: float
@@ -53,6 +67,7 @@ def import_statement(
     current_user: models.User = Depends(get_current_user),
 ):
     tenant_id = _wrap_tenant(request, db, current_user)
+    _require_role(db, current_user, tenant_id, Role.bookkeeper)
     try:
         ri = import_reconciliation(
             db,
@@ -86,7 +101,8 @@ def auto_match_route(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    _wrap_tenant(request, db, current_user)
+    tenant_id = _wrap_tenant(request, db, current_user)
+    _require_role(db, current_user, tenant_id, Role.bookkeeper)
     try:
         return auto_match(
             db,
@@ -99,6 +115,102 @@ def auto_match_route(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+class ManualMatchRequest(BaseModel):
+    ledger_tx_id: int
+    statement_tx_id: str
+
+
+@router.post("/{import_id}/manual-match", response_model=dict)
+def manual_match_route(
+    request: Request,
+    import_id: int,
+    payload: ManualMatchRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    tenant_id = _wrap_tenant(request, db, current_user)
+    _require_role(db, current_user, tenant_id, Role.bookkeeper)
+    try:
+        m = manual_match(
+            db,
+            import_id=import_id,
+            user_id=current_user.id,
+            ledger_tx_id=payload.ledger_tx_id,
+            statement_tx_id=payload.statement_tx_id,
+        )
+    except ReconciliationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "id": m.id,
+        "ledger_tx_id": m.ledger_tx_id,
+        "statement_tx_id": m.statement_tx_id,
+        "match_type": m.match_type,
+        "status": m.status,
+    }
+
+
+@router.post("/{import_id}/unmatch", response_model=dict)
+def unmatch_route(
+    request: Request,
+    import_id: int,
+    payload: ManualMatchRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    tenant_id = _wrap_tenant(request, db, current_user)
+    _require_role(db, current_user, tenant_id, Role.bookkeeper)
+    try:
+        ok = unmatch(
+            db,
+            import_id=import_id,
+            user_id=current_user.id,
+            statement_tx_id=payload.statement_tx_id,
+        )
+    except ReconciliationError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"ok": ok}
+
+
+@router.get("/{import_id}/unmatched")
+def unmatched_route(
+    request: Request,
+    import_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    tenant_id = _wrap_tenant(request, db, current_user)
+    _require_role(db, current_user, tenant_id, Role.viewer)
+    try:
+        return list_unmatched(db, import_id=import_id, user_id=current_user.id)
+    except ReconciliationError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/{import_id}/matches")
+def matches_route(
+    request: Request,
+    import_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    tenant_id = _wrap_tenant(request, db, current_user)
+    _require_role(db, current_user, tenant_id, Role.viewer)
+    try:
+        rows = get_matches(db, import_id=import_id, user_id=current_user.id)
+    except ReconciliationError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return [
+        {
+            "id": m.id,
+            "ledger_tx_id": m.ledger_tx_id,
+            "statement_tx_id": m.statement_tx_id,
+            "match_type": m.match_type,
+            "status": m.status,
+        }
+        for m in rows
+    ]
+
+
 @router.get("/{import_id}/status")
 def status_route(
     request: Request,
@@ -106,7 +218,8 @@ def status_route(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    _wrap_tenant(request, db, current_user)
+    tenant_id = _wrap_tenant(request, db, current_user)
+    _require_role(db, current_user, tenant_id, Role.viewer)
     try:
         return reconciliation_status(db, import_id=import_id, user_id=current_user.id)
     except ReconciliationError as exc:
