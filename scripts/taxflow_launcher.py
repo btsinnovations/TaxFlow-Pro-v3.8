@@ -397,6 +397,16 @@ def main() -> int:
     if configured.get("POPPLER_PATH"):
         print(f"[launcher] poppler:     {configured['POPPLER_PATH']}")
 
+    # B7.01: Single-instance enforcement
+    try:
+        from backend.local.single_instance import acquire_or_exit, cleanup_on_exit
+    except ImportError:
+        acquire_or_exit = None
+        cleanup_on_exit = None
+
+    if acquire_or_exit and not acquire_or_exit(local_root, host, port):
+        return 0  # Another instance is running — exit cleanly
+
     if _run_migrations(local_root) != 0:
         return 1
 
