@@ -715,13 +715,34 @@ Generate a 13-week cash-flow forecast using opening cash, recurring rules, and o
 
 ---
 
-## 11. Invoices / Bills / Payments
+## 11. Invoicing / A/P / A/R (B5)
 
-### `GET /api/invoices`
-List invoices. Filter with `?is_bill=true` for bills (A/P) or `?is_bill=false` for invoices (A/R).
+### `GET /api/invoicing/invoices`
+List customer invoices (A/R). Supports filters: `?status=open`, `?contact=Acme`, `?start_date=2026-01-01`, `?end_date=2026-06-30`.
 
-### `POST /api/invoices`
-Create an invoice or bill.
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "contact_name": "ABC Corp",
+    "invoice_number": "INV-001",
+    "issue_date": "2026-01-15",
+    "due_date": "2026-02-15",
+    "total": 1500.00,
+    "amount_paid": 500.00,
+    "balance": 1000.00,
+    "status": "open",
+    "aging_bucket": "current"
+  }
+]
+```
+
+### `GET /api/invoicing/bills`
+List vendor bills (A/P). Same filters as invoices.
+
+### `POST /api/invoicing/invoices`
+Create a customer invoice (A/R). Requires `bookkeeper` role.
 
 **Request:**
 ```json
@@ -730,31 +751,83 @@ Create an invoice or bill.
   "invoice_number": "INV-001",
   "issue_date": "2026-01-15",
   "due_date": "2026-02-15",
-  "is_bill": false,
   "line_items": [
-    {"description": "Consulting", "qty": 10, "rate": 150.00, "amount": 1500.00}
+    {"description": "Consulting", "qty": 10, "rate": 150.00}
   ]
 }
 ```
 
-### `GET /api/invoices/{id}`
-Get a single invoice with line items and payments.
+**Response:** `{"id": 1, "total": 1500.00, "status": "open"}`
 
-### `PUT /api/invoices/{id}`
-Update an invoice.
+### `POST /api/invoicing/bills`
+Create a vendor bill (A/P). Same shape as invoice creation.
 
-### `DELETE /api/invoices/{id}`
-Delete an invoice.
+**Response:** `{"id": 2, "total": 800.00, "status": "open", "is_bill": true}`
 
-### `POST /api/invoices/{id}/payments`
-Record a payment against an invoice.
+### `GET /api/invoicing/{invoice_id}`
+Get a single invoice or bill with line items and payments.
+
+**Response:**
+```json
+{
+  "id": 1,
+  "contact_name": "ABC Corp",
+  "invoice_number": "INV-001",
+  "issue_date": "2026-01-15",
+  "due_date": "2026-02-15",
+  "total": 1500.00,
+  "amount_paid": 500.00,
+  "balance": 1000.00,
+  "status": "open",
+  "is_bill": false,
+  "line_items": [{"id": 1, "description": "Consulting", "qty": 10, "rate": 150, "amount": 1500}],
+  "payments": [{"id": 1, "date": "2026-01-20", "amount": 500, "method": "check"}]
+}
+```
+
+### `PUT /api/invoicing/{invoice_id}`
+Update a draft or open invoice. Only `draft` and `open` status can be edited. Requires `bookkeeper` role.
+
+**Request:** `{"contact_name": "Updated", "issue_date": "2026-01-20", "due_date": "2026-02-20", "line_items": [...]}`
+
+### `DELETE /api/invoicing/{invoice_id}`
+Delete a draft or open invoice. Rejects if payments exist. Requires `admin` role.
+
+### `POST /api/invoicing/{invoice_id}/void`
+Void an invoice or bill. Sets status to `void` — record preserved for audit trail. Requires `bookkeeper` role.
+
+**Response:** `{"id": 1, "status": "void"}`
+
+### `POST /api/invoicing/{invoice_id}/payments`
+Record a partial or full payment. Auto-transitions status to `paid` when balance reached. Requires `bookkeeper` role.
 
 **Request:**
 ```json
 {
-  "date": "2026-01-20",
   "amount": 500.00,
+  "payment_date": "2026-01-20",
   "method": "check"
+}
+```
+
+**Response:** `{"id": 1, "total": 1500.00, "amount_paid": 500.00, "status": "open"}`
+
+### `DELETE /api/invoicing/{invoice_id}/payments/{payment_id}`
+Reverse (delete) a payment. Recalculates invoice status. Requires `admin` role.
+
+**Response:** `{"id": 1, "amount_paid": 0.00, "status": "open"}`
+
+### `GET /api/invoicing/aging`
+Aging report for outstanding invoices or bills.
+
+**Query params:** `?is_bill=false` (A/R) or `?is_bill=true` (A/P)
+
+**Response:**
+```json
+{
+  "buckets": {"current": 1000.00, "30": 200.00, "60": 0.00, "90": 0.00, "90+": 0.00},
+  "total_outstanding": 1200.00,
+  "count": 2
 }
 ```
 

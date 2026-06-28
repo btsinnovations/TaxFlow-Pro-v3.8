@@ -28,6 +28,24 @@ def _aging_bucket(days_overdue: int | None) -> str:
     return "90+"
 
 
+def _update_status(invoice: models.Invoice) -> None:
+    """Auto-transition status based on amount_paid and due_date."""
+    if invoice.status == "void":
+        return
+    paid = Decimal(str(invoice.amount_paid or 0))
+    total = Decimal(str(invoice.total or 0))
+    if paid >= total and total > 0:
+        invoice.status = "paid"
+    elif paid > 0:
+        invoice.status = "open"  # partially paid
+    else:
+        today = date.today()
+        if invoice.due_date and today > invoice.due_date:
+            invoice.status = "overdue"
+        else:
+            invoice.status = "open"
+
+
 def create_invoice(
     db: Session,
     tenant_id: int,
@@ -37,8 +55,10 @@ def create_invoice(
     issue_date: date,
     due_date: date,
     line_items: list[dict],
+    is_bill: bool = False,
+    notes: str | None = None,
 ) -> models.Invoice:
-    """Create a customer invoice (A/R)."""
+    """Create a customer invoice (A/R) or vendor bill (A/P)."""
     total = Decimal("0.00")
     for line in line_items:
         qty = Decimal(str(line.get("qty", 1)))
@@ -56,7 +76,7 @@ def create_invoice(
         total=total,
         amount_paid=Decimal("0.00"),
         status="open",
-        is_bill=False,
+        is_bill=is_bill,
     )
     db.add(invoice)
     db.commit()
@@ -86,7 +106,7 @@ def create_bill(
     line_items: list[dict],
 ) -> models.Invoice:
     """Create a vendor bill (A/P)."""
-    invoice = create_invoice(
+    return create_invoice(
         db,
         tenant_id=tenant_id,
         user_id=user_id,
@@ -95,12 +115,92 @@ def create_bill(
         issue_date=issue_date,
         due_date=due_date,
         line_items=line_items,
+        is_bill=True,
     )
-    invoice.is_bill = True
-    invoice.status = "open"
+
+
+def get_invoice(db: Session, invoice_id: int, user_id: int) -> models.Invoice | None:
+    """Fetch a single invoice by ID."""
+    return db.query(models.Invoice).filter(
+        models.Invoice.id == invoice_id,
+        models.Invoice.user_id == user_id,
+    ).first()
+
+
+def update_invoice(
+    db: Session,
+    invoice_id: int,
+    user_id: int,
+    contact_name: str | None = None,
+    issue_date: date | None = None,
+    due_date: date | None = None,
+    line_items: list[dict] | None = None,
+) -> models.Invoice:
+    """Update a draft invoice. Only draft status can be edited."""
+    invoice = get_invoice(db, invoice_id, user_id)
+    if invoice is None:
+        raise InvoicingError("Invoice not found")
+    if invoice.status not in ("draft", "open"):
+        raise InvoicingError(f"Cannot edit invoice in '{invoice.status}' status")
+    if contact_name is not None:
+        invoice.contact_name = contact_name
+    if issue_date is not None:
+        invoice.issue_date = issue_date
+    if due_date is not None:
+        invoice.due_date = due_date
+    if line_items is not None:
+        # Replace line items
+        db.query(models.InvoiceLineItem).filter(
+            models.InvoiceLineItem.invoice_id == invoice_id
+        ).delete()
+        total = Decimal("0.00")
+        for line in line_items:
+            qty = Decimal(str(line.get("qty", 1)))
+            rate = Decimal(str(line.get("rate", 0)))
+            amt = qty * rate
+            total += amt
+            db_line = models.InvoiceLineItem(
+                invoice_id=invoice_id,
+                description=line.get("description", ""),
+                qty=line.get("qty", 1),
+                rate=line.get("rate", 0),
+                amount=float(amt),
+            )
+            db.add(db_line)
+        invoice.total = total
+    _update_status(invoice)
     db.commit()
     db.refresh(invoice)
     return invoice
+
+
+def void_invoice(db: Session, invoice_id: int, user_id: int) -> models.Invoice:
+    """Void an invoice/bill. Keeps the record for audit trail."""
+    invoice = get_invoice(db, invoice_id, user_id)
+    if invoice is None:
+        raise InvoicingError("Invoice not found")
+    if invoice.status == "void":
+        raise InvoicingError("Invoice already voided")
+    invoice.status = "void"
+    db.commit()
+    db.refresh(invoice)
+    return invoice
+
+
+def delete_invoice(db: Session, invoice_id: int, user_id: int) -> bool:
+    """Delete a draft invoice. Only drafts can be deleted."""
+    invoice = get_invoice(db, invoice_id, user_id)
+    if invoice is None:
+        raise InvoicingError("Invoice not found")
+    if invoice.status not in ("draft", "open"):
+        raise InvoicingError(f"Cannot delete invoice in '{invoice.status}' status")
+    if invoice.amount_paid and invoice.amount_paid > 0:
+        raise InvoicingError("Cannot delete invoice with payments")
+    db.query(models.Payment).filter(models.Payment.invoice_id == invoice_id).delete()
+    db.query(models.InvoiceLineItem).filter(models.InvoiceLineItem.invoice_id == invoice_id).delete()
+    db.delete(invoice)
+    db.commit()
+    return True
 
 
 def record_payment(
@@ -110,20 +210,21 @@ def record_payment(
     amount: Decimal,
     payment_date: date,
     method: str = "manual",
+    notes: str | None = None,
 ) -> models.Invoice:
     """Record a partial or full payment against an invoice or bill."""
-    invoice = db.query(models.Invoice).filter(
-        models.Invoice.id == invoice_id,
-        models.Invoice.user_id == user_id,
-    ).first()
+    invoice = get_invoice(db, invoice_id, user_id)
     if invoice is None:
         raise InvoicingError("Invoice not found")
+    if invoice.status == "void":
+        raise InvoicingError("Cannot record payment on void invoice")
     balance = invoice.total - (invoice.amount_paid or Decimal("0.00"))
     if amount > balance:
         raise InvoicingError("Payment exceeds outstanding balance")
+    if amount <= 0:
+        raise InvoicingError("Payment amount must be positive")
     invoice.amount_paid = (invoice.amount_paid or Decimal("0.00")) + amount
-    if invoice.amount_paid >= invoice.total:
-        invoice.status = "paid"
+    _update_status(invoice)
     payment = models.Payment(
         invoice_id=invoice_id,
         date=payment_date,
@@ -136,12 +237,55 @@ def record_payment(
     return invoice
 
 
-def list_invoices(db: Session, user_id: int, is_bill: bool = False) -> list[dict]:
-    """Return invoices or bills with aging."""
-    rows = db.query(models.Invoice).filter(
+def reverse_payment(
+    db: Session,
+    invoice_id: int,
+    payment_id: int,
+    user_id: int,
+) -> models.Invoice:
+    """Reverse (delete) a payment and recalc invoice status."""
+    payment = db.query(models.Payment).filter(
+        models.Payment.id == payment_id,
+        models.Payment.invoice_id == invoice_id,
+    ).first()
+    if payment is None:
+        raise InvoicingError("Payment not found")
+    invoice = get_invoice(db, invoice_id, user_id)
+    if invoice is None:
+        raise InvoicingError("Invoice not found")
+    invoice.amount_paid = (invoice.amount_paid or Decimal("0.00")) - payment.amount
+    if invoice.amount_paid < 0:
+        invoice.amount_paid = Decimal("0.00")
+    db.delete(payment)
+    _update_status(invoice)
+    db.commit()
+    db.refresh(invoice)
+    return invoice
+
+
+def list_invoices(
+    db: Session,
+    user_id: int,
+    is_bill: bool = False,
+    status: str | None = None,
+    contact_name: str | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> list[dict]:
+    """Return invoices or bills with aging, optionally filtered."""
+    q = db.query(models.Invoice).filter(
         models.Invoice.user_id == user_id,
         models.Invoice.is_bill == is_bill,
-    ).order_by(asc(models.Invoice.issue_date)).all()
+    )
+    if status:
+        q = q.filter(models.Invoice.status == status)
+    if contact_name:
+        q = q.filter(models.Invoice.contact_name.ilike(f"%{contact_name}%"))
+    if start_date:
+        q = q.filter(models.Invoice.issue_date >= start_date)
+    if end_date:
+        q = q.filter(models.Invoice.issue_date <= end_date)
+    rows = q.order_by(asc(models.Invoice.issue_date)).all()
     today = date.today()
     result = []
     for inv in rows:
@@ -164,7 +308,7 @@ def list_invoices(db: Session, user_id: int, is_bill: bool = False) -> list[dict
 def aging_report(db: Session, user_id: int, is_bill: bool = False) -> dict:
     """Group outstanding invoices/bills by aging bucket."""
     rows = list_invoices(db, user_id, is_bill=is_bill)
-    outstanding = [r for r in rows if r["status"] != "paid"]
+    outstanding = [r for r in rows if r["status"] not in ("paid", "void")]
     buckets = {"current": 0.0, "30": 0.0, "60": 0.0, "90": 0.0, "90+": 0.0}
     for row in outstanding:
         buckets[row["aging_bucket"]] = buckets.get(row["aging_bucket"], 0.0) + row["balance"]
