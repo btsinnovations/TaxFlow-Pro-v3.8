@@ -10,7 +10,13 @@ from sqlalchemy.orm import Session
 
 from backend import models
 from backend.accounting.coa import create_account
-from backend.accounting.budget import budget_vs_actual, cash_flow_forecast, set_budget_line
+from backend.accounting.budget import (
+    budget_vs_actual,
+    cash_flow_forecast,
+    cash_flow_forecast_13_week,
+    set_budget_line,
+    variance_alerts,
+)
 
 
 def _seed_user_and_tenant(db: Session):
@@ -164,6 +170,72 @@ def test_cash_flow_forecast_returns_projection(db: Session):
     for row in result:
         assert isinstance(row["month"], int)
         assert isinstance(row["projected_cash"], float)
+
+
+def test_cash_flow_forecast_13_week(db: Session):
+    user, client = _seed_user_and_tenant(db)
+    account = _seed_account(db, client.id, user.id)
+    statement = models.Statement(
+        account_id=account.id,
+        tenant_id=client.id,
+        user_id=user.id,
+        filename="open.csv",
+        closing_balance=Decimal("1000.00"),
+    )
+    db.add(statement)
+    db.commit()
+
+    result = cash_flow_forecast_13_week(db, client.id, user.id, date(2026, 1, 1))
+    assert len(result) == 13
+    assert result[0]["opening_cash"] == 1000.0
+    assert result[0]["week"] == 1
+
+
+def test_variance_alerts(db: Session):
+    user, client = _seed_user_and_tenant(db)
+    coa = create_account(db, client.id, user.id, "5500", "Over Budget", "expense")
+    account = _seed_account(db, client.id, user.id)
+    set_budget_line(db, client.id, user.id, coa["id"], "2026-09", Decimal("100.00"))
+    _seed_statement_and_txn(
+        db, account.id, client.id, user.id,
+        date=date(2026, 9, 5),
+        description="Spend",
+        amount=Decimal("150.00"),
+        tx_type="debit",
+        coa_account_id=coa["id"],
+    )
+    alerts = variance_alerts(db, client.id, user.id, "2026-09", threshold=0.1)
+    assert len(alerts) == 1
+    assert alerts[0]["over_budget_pct"] == 0.5
+
+
+def test_api_cash_flow_13_week(auth_client: TestClient, db: Session):
+    _ensure_auth_user(db)
+    resp = auth_client.get("/api/budget/cash-flow-13-week", params={"start": "2026-01-01"})
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert len(body) == 13
+    assert all(isinstance(r["projected_cash"], float) for r in body)
+
+
+def test_api_variance_alerts(auth_client: TestClient, db: Session):
+    auth_user, client = _ensure_auth_user(db)
+    coa = create_account(db, client.id, auth_user.id, "5600", "API Over", "expense")
+    account = _seed_account(db, client.id, auth_user.id)
+    set_budget_line(db, client.id, auth_user.id, coa["id"], "2026-10", Decimal("200.00"))
+    _seed_statement_and_txn(
+        db, account.id, client.id, auth_user.id,
+        date=date(2026, 10, 5),
+        description="Spend",
+        amount=Decimal("300.00"),
+        tx_type="debit",
+        coa_account_id=coa["id"],
+    )
+    resp = auth_client.get("/api/budget/2026-10/variance-alerts", params={"threshold": 0.1})
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert len(body) == 1
+    assert body[0]["over_budget_pct"] == 0.5
 
 
 # ---------------------------------------------------------------------------

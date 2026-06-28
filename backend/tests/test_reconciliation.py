@@ -14,6 +14,10 @@ from backend.accounting.reconciliation import (
     auto_match,
     import_statement,
     reconciliation_status,
+    manual_match,
+    unmatch,
+    list_unmatched,
+    get_matches,
 )
 
 
@@ -204,6 +208,103 @@ def test_reconciliation_status_after_match(db: Session):
     assert status["difference"] == 0.0
 
 
+def test_manual_match_and_unmatch(db: Session):
+    user, client, account = _seed_user_and_account(db)
+    txn = _seed_transaction(
+        db, account.id, client.id, user.id,
+        date=date(2026, 1, 12),
+        description="Manual deposit",
+        amount=Decimal("150.00"),
+        tx_type="debit",
+    )
+    ri = import_statement(
+        db, client.id, user.id, account.id,
+        Decimal("150.00"), date(2026, 1, 31),
+    )
+    m = manual_match(db, ri.id, user.id, txn.id, "stmt-manual-1")
+    assert m.ledger_tx_id == txn.id
+    assert m.match_type == "manual"
+    status = reconciliation_status(db, import_id=ri.id, user_id=user.id)
+    assert status["cleared"] == 150.0
+    assert status["difference"] == 0.0
+
+    ok = unmatch(db, ri.id, user.id, "stmt-manual-1")
+    assert ok is True
+    status = reconciliation_status(db, import_id=ri.id, user_id=user.id)
+    assert status["cleared"] == 0.0
+    assert status["outstanding"] == 150.0
+
+
+def test_list_unmatched(db: Session):
+    user, client, account = _seed_user_and_account(db)
+    txn1 = _seed_transaction(
+        db, account.id, client.id, user.id,
+        date=date(2026, 1, 5),
+        description="Matched",
+        amount=Decimal("100.00"),
+        tx_type="debit",
+    )
+    txn2 = _seed_transaction(
+        db, account.id, client.id, user.id,
+        date=date(2026, 1, 6),
+        description="Unmatched",
+        amount=Decimal("200.00"),
+        tx_type="debit",
+    )
+    ri = import_statement(
+        db, client.id, user.id, account.id,
+        Decimal("300.00"), date(2026, 1, 31),
+    )
+    manual_match(db, ri.id, user.id, txn1.id, "stmt-1")
+    result = list_unmatched(db, ri.id, user.id)
+    unmatched_ids = {t["id"] for t in result["unmatched_ledger"]}
+    assert txn1.id not in unmatched_ids
+    assert txn2.id in unmatched_ids
+    assert "stmt-1" in result["matched_statement_ids"]
+
+
+def test_manual_match_replaces_auto_match(db: Session):
+    user, client, account = _seed_user_and_account(db)
+    txn1 = _seed_transaction(
+        db, account.id, client.id, user.id,
+        date=date(2026, 1, 10),
+        description="Auto candidate",
+        amount=Decimal("100.00"),
+        tx_type="debit",
+    )
+    txn2 = _seed_transaction(
+        db, account.id, client.id, user.id,
+        date=date(2026, 1, 11),
+        description="Better candidate",
+        amount=Decimal("100.00"),
+        tx_type="debit",
+    )
+    ri = import_statement(
+        db, client.id, user.id, account.id,
+        Decimal("100.00"), date(2026, 1, 31),
+    )
+    auto_match(
+        db,
+        import_id=ri.id,
+        user_id=user.id,
+        statement_rows=[{"id": "stmt-1", "date": "2026-01-10", "amount": 100.0}],
+    )
+    matches = get_matches(db, ri.id, user.id)
+    assert matches[0].ledger_tx_id == txn1.id
+
+    manual_match(db, ri.id, user.id, txn2.id, "stmt-1")
+    matches = get_matches(db, ri.id, user.id)
+    assert len(matches) == 1
+    assert matches[0].ledger_tx_id == txn2.id
+    assert matches[0].match_type == "manual"
+
+
+def test_import_not_found_raises(db: Session):
+    user, client, account = _seed_user_and_account(db)
+    with pytest.raises(ReconciliationError, match="Import not found"):
+        reconciliation_status(db, import_id=99999, user_id=user.id)
+
+
 # ---------------------------------------------------------------------------
 # API tests
 # ---------------------------------------------------------------------------
@@ -300,3 +401,44 @@ def test_api_status(auth_client: TestClient, db: Session):
     body = resp.json()
     assert body["statement_balance"] == 75.0
     assert body["outstanding"] == 75.0
+
+
+def test_api_manual_match_and_unmatch(auth_client: TestClient, db: Session):
+    auth_user, _, account = _ensure_auth_user(db)
+    txn = _seed_transaction(
+        db, account.id, account.tenant_id, auth_user.id,
+        date=date(2026, 1, 12),
+        description="Manual item",
+        amount=Decimal("88.00"),
+        tx_type="debit",
+    )
+    payload = {
+        "account_id": account.id,
+        "statement_balance": 88.0,
+        "statement_date": "2026-01-31",
+    }
+    resp = auth_client.post("/api/reconciliation/import", json=payload)
+    import_id = resp.json()["id"]
+
+    resp = auth_client.post(
+        f"/api/reconciliation/{import_id}/manual-match",
+        json={"ledger_tx_id": txn.id, "statement_tx_id": "api-manual-1"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["match_type"] == "manual"
+
+    resp = auth_client.get(f"/api/reconciliation/{import_id}/matches")
+    assert resp.status_code == 200, resp.text
+    assert len(resp.json()) == 1
+
+    resp = auth_client.post(
+        f"/api/reconciliation/{import_id}/unmatch",
+        json={"ledger_tx_id": txn.id, "statement_tx_id": "api-manual-1"},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["ok"] is True
+
+    resp = auth_client.get(f"/api/reconciliation/{import_id}/unmatched")
+    assert resp.status_code == 200, resp.text
+    assert any(u["id"] == txn.id for u in resp.json()["unmatched_ledger"])
