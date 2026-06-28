@@ -21,11 +21,28 @@ def set_tenant_on_connection(dbapi_conn, tenant_id: int) -> None:
         cursor.close()
 
 
+def set_service_role_on_connection(dbapi_conn, enabled: bool = True) -> None:
+    """Set or clear the service-role bypass on a raw DBAPI connection.
+
+    When enabled, RLS policies allow access to all tenant rows. This is used
+    for migrations and admin operations.
+    """
+    cursor = dbapi_conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT set_config('taxflow.service_role', %s, true)",
+            ("on" if enabled else "off",),
+        )
+    finally:
+        cursor.close()
+
+
 def reset_tenant_on_connection(dbapi_conn) -> None:
-    """Reset taxflow.tenant_id at connection check-out when not in an explicit scope."""
+    """Reset taxflow.tenant_id and service_role at connection check-out."""
     cursor = dbapi_conn.cursor()
     try:
         cursor.execute("SELECT set_config('taxflow.tenant_id', '', true)")
+        cursor.execute("SELECT set_config('taxflow.service_role', 'off', true)")
     finally:
         cursor.close()
 
@@ -70,6 +87,32 @@ def clear_tenant_id(session: Session) -> None:
         return
     dbapi_conn = _get_dbapi_connection(session)
     reset_tenant_on_connection(dbapi_conn)
+
+
+def set_service_role(session: Session, enabled: bool = True) -> None:
+    """Enable or disable the service-role RLS bypass for a session.
+
+    When enabled, RLS policies allow access to all tenant rows. Use this for
+    migrations, admin operations, and cross-tenant queries.
+    """
+    if not is_postgres():
+        return
+    dbapi_conn = _get_dbapi_connection(session)
+    set_service_role_on_connection(dbapi_conn, enabled)
+
+
+class ServiceRoleScope:
+    """Context manager to temporarily enable service-role bypass."""
+    def __init__(self, session: Session):
+        self.session = session
+
+    def __enter__(self):
+        set_service_role(self.session, True)
+        return self.session
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        set_service_role(self.session, False)
+        return False
 
 
 def resolve_user_tenant_id(user) -> int:
