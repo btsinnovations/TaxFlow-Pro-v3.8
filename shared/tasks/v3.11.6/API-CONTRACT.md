@@ -649,3 +649,235 @@ When `DATABASE_URL` points to PostgreSQL and `TAXFLOW_SINGLE_USER=false`:
 - Native RLS policies enforce tenant isolation at the database level
 - Service-role bypass available for migrations and admin operations
 - `taxflow.tenant_id` session variable set per-request by middleware
+
+---
+
+## B3.01 — Liabilities (Loans & Credit Lines)
+
+### `POST /api/liabilities/loan-schedule`
+Create a loan with amortization schedule.
+
+**Request:**
+```json
+{
+  "account_id": 1,
+  "original_principal": 24000.00,
+  "annual_rate": 0.0725,
+  "term_months": 24,
+  "start_date": "2026-01-01"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "id": 1,
+  "account_id": 1,
+  "payment_amount": 1075.42,
+  "schedule": [
+    {"month": 1, "date": "2026-02-01", "payment": 1075.42, "interest": 145.00, "principal": 930.42, "balance": 23069.58}
+  ]
+}
+```
+
+### `GET /api/liabilities/loan-schedule`
+List all loan schedules.
+
+### `GET /api/liabilities/loan-schedule/{id}`
+Get a loan schedule with full amortization table.
+
+### `POST /api/liabilities/loan-schedule/{id}/payments`
+Record a loan payment with principal/interest allocation.
+
+**Request:**
+```json
+{"payment_date": "2026-02-01", "payment_amount": 1075.42}
+```
+
+### `GET /api/liabilities/loan-schedule/{id}/payments`
+List all payments for a loan schedule.
+
+### `GET /api/liabilities/loan-schedule/{id}/upcoming?months=3`
+Get upcoming payment details.
+
+### `POST /api/liabilities/credit-lines`
+Create a revolving credit line.
+
+**Request:**
+```json
+{
+  "account_id": 1,
+  "credit_limit": 5000.00,
+  "annual_rate": 0.1899,
+  "start_date": "2026-01-01"
+}
+```
+
+### `GET /api/liabilities/credit-lines`
+List all credit lines.
+
+### `GET /api/liabilities/credit-lines/{id}`
+Get credit line details with transaction history.
+
+### `POST /api/liabilities/credit-lines/{id}/draw`
+Draw on a credit line.
+
+### `POST /api/liabilities/credit-lines/{id}/payment`
+Make a payment on a credit line.
+
+### `GET /api/liabilities/credit-lines/{id}/available`
+Get available credit.
+
+### `POST /api/liabilities/amortization`
+Compute amortization schedule without saving.
+
+---
+
+## B3.02 — Investments
+
+### `POST /api/investments/lots`
+Create an investment lot (buy).
+
+**Request:**
+```json
+{
+  "account_id": 1,
+  "symbol": "AAPL",
+  "shares": 10.5,
+  "cost_basis": 150.00,
+  "acquisition_date": "2025-06-01"
+}
+```
+
+### `POST /api/investments/{account_id}/sell`
+Sell lots using FIFO cost basis.
+
+**Request:**
+```json
+{
+  "symbol": "AAPL",
+  "shares": 3.0,
+  "sale_date": "2026-01-01",
+  "sale_price_per_share": 175.00
+}
+```
+
+### `GET /api/investments/{account_id}/holdings`
+Current open holdings grouped by symbol.
+
+### `GET /api/investments/{account_id}/unrealized`
+Unrealized gains using latest price snapshots.
+
+### `GET /api/investments/{account_id}/cost-basis?year=2026`
+Cost-basis report for tax exports (realized + open positions).
+
+### `POST /api/investments/{account_id}/dividend`
+Record a dividend event.
+
+### `POST /api/investments/{account_id}/split`
+Record a stock split (adjusts all open lots).
+
+### `POST /api/investments/prices`
+Add a manual price snapshot.
+
+### `GET /api/investments/{account_id}/events?symbol=AAPL`
+List investment events.
+
+---
+
+## B3.03 — Inventory & Project Tags
+
+### `POST /api/inventory/`
+Create an inventory item.
+
+**Request:**
+```json
+{
+  "sku": "WIDGET-01",
+  "name": "Widget",
+  "cogs_account_id": null,
+  "income_account_id": null,
+  "asset_account_id": null,
+  "valuation_method": "average"
+}
+```
+
+### `GET /api/inventory/`
+List all inventory items.
+
+### `GET /api/inventory/{id}`
+Get item details.
+
+### `PUT /api/inventory/{id}`
+Update an item.
+
+### `POST /api/inventory/{id}/adjust`
+Record a purchase, sale, or adjustment.
+
+**Request:**
+```json
+{"qty": 10.0, "unit_cost": 5.0, "type": "purchase"}
+```
+
+### `GET /api/inventory/{id}/transactions`
+List inventory transactions for an item.
+
+### `GET /api/inventory/{id}/valuation`
+Current valuation (FIFO or average cost).
+
+### `POST /api/inventory/tags/{transaction_id}`
+Add a project tag to a transaction.
+
+### `DELETE /api/inventory/tags/{transaction_id}?tag=project-alpha`
+Remove a tag.
+
+### `GET /api/inventory/tags`
+List all tags with counts.
+
+### `GET /api/inventory/tags/search?tag=project-alpha`
+Search transactions by tag.
+
+---
+
+## B3.04 — Multi-Currency (FX)
+
+### `POST /api/fx/rates`
+Create a manual FX rate.
+
+**Request:**
+```json
+{
+  "from_currency": "USD",
+  "to_currency": "EUR",
+  "rate": 0.92,
+  "effective_date": "2026-01-01"
+}
+```
+
+### `GET /api/fx/rates?from_currency=USD&to_currency=EUR`
+List FX rates with optional filters.
+
+### `POST /api/fx/convert`
+Convert an amount.
+
+**Request:**
+```json
+{
+  "amount": 500.0,
+  "from_currency": "USD",
+  "to_currency": "GBP",
+  "as_of": "2026-01-15"
+}
+```
+
+### `GET /api/fx/convert?from=USD&to=GBP&amount=500&as_of=2026-01-15`
+Convert via query params.
+
+### `POST /api/fx/transactions/{id}/foreign`
+Attach foreign currency info to a transaction.
+
+### `POST /api/fx/transactions/{id}/settle`
+Calculate FX gain/loss on settlement.
+
+### `GET /api/fx/report?start_date=2026-01-01&end_date=2026-12-31`
+Home-currency report of all foreign-currency transactions.
