@@ -63,30 +63,37 @@ def install_rls_event_listeners() -> None:
         reset_tenant_on_connection(dbapi_conn)
 
 
-def _get_dbapi_connection(session: Session):
-    """Return the raw DBAPI connection from a SQLAlchemy session."""
-    conn = session.connection()
-    # Handle both sync and the future engine/connection stack.
-    raw = getattr(conn, "dbapi_connection", None)
-    if raw is None:
-        raw = conn.connection.dbapi_connection
-    return raw
+def _is_postgres_session(session: Session) -> bool:
+    """Return True when the session's bind is a PostgreSQL dialect."""
+    try:
+        return session.bind.dialect.name == "postgresql"
+    except Exception:
+        return False
 
 
 def set_tenant_id(session: Session, tenant_id: int) -> None:
-    """Set the RLS tenant context for a SQLAlchemy session."""
-    if not is_postgres():
+    """Set the RLS tenant context for a SQLAlchemy session.
+
+    Uses a direct SQL GUC command on the session's active connection so it
+    works reliably across SQLAlchemy versions. The setting is session-level
+    (is_local=false) so it survives transaction boundaries on the same
+    connection.
+    """
+    if not _is_postgres_session(session):
         return
-    dbapi_conn = _get_dbapi_connection(session)
-    set_tenant_on_connection(dbapi_conn, tenant_id)
+    session.execute(
+        text("SELECT set_config('taxflow.tenant_id', :tid, false)"),
+        {"tid": str(tenant_id)},
+    )
 
 
 def clear_tenant_id(session: Session) -> None:
     """Clear the RLS tenant context for a SQLAlchemy session."""
-    if not is_postgres():
+    if not _is_postgres_session(session):
         return
-    dbapi_conn = _get_dbapi_connection(session)
-    reset_tenant_on_connection(dbapi_conn)
+    session.execute(
+        text("SELECT set_config('taxflow.tenant_id', '', false)")
+    )
 
 
 def set_service_role(session: Session, enabled: bool = True) -> None:
@@ -95,10 +102,12 @@ def set_service_role(session: Session, enabled: bool = True) -> None:
     When enabled, RLS policies allow access to all tenant rows. Use this for
     migrations, admin operations, and cross-tenant queries.
     """
-    if not is_postgres():
+    if not _is_postgres_session(session):
         return
-    dbapi_conn = _get_dbapi_connection(session)
-    set_service_role_on_connection(dbapi_conn, enabled)
+    session.execute(
+        text("SELECT set_config('taxflow.service_role', :flag, false)"),
+        {"flag": "on" if enabled else "off"},
+    )
 
 
 class ServiceRoleScope:

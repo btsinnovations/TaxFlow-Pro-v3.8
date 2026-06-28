@@ -37,11 +37,28 @@ def _table_exists(name: str) -> bool:
 
 
 def _table_columns(table_name: str) -> set:
-    """Return the set of column names for the given table."""
+    """Return the set of column names for the given table.
+
+    Portable across SQLite (PRAGMA) and PostgreSQL (information_schema).
+    """
     conn = op.get_bind()
+    dialect = conn.dialect.name
+    if dialect == "sqlite":
+        try:
+            rows = conn.execute(text(f"PRAGMA table_info({table_name})")).fetchall()
+            return {row[1] for row in rows}
+        except Exception:
+            return set()
+    # PostgreSQL information_schema path
     try:
-        rows = conn.execute(text(f"PRAGMA table_info({table_name})")).fetchall()
-        return {row[1] for row in rows}
+        rows = conn.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = :table_name"
+            ),
+            {"table_name": table_name},
+        ).fetchall()
+        return {row[0] for row in rows}
     except Exception:
         return set()
 
@@ -142,21 +159,34 @@ def upgrade() -> None:
                 number = counter
                 tenant_type_counters[key] = counter + 1
 
-            # Insert into coa_accounts
-            conn.execute(text(
-                "INSERT INTO coa_accounts (tenant_id, parent_id, number, name, type, is_active, created_at, updated_at) "
-                "VALUES (:tenant_id, NULL, :number, :name, :type, :is_active, :created_at, :created_at)"
-            ), {
-                "tenant_id": tenant_id,
-                "number": number,
-                "name": name,
-                "type": normalized,
-                "is_active": is_active if is_active is not None else 1,
-                "created_at": created_at,
-            })
-
-            # Map old GL id to new COA id
-            new_id = conn.execute(text("SELECT last_insert_rowid()")).scalar()
+            # Insert into coa_accounts and capture the new id.
+            dialect = conn.dialect.name
+            if dialect == "sqlite":
+                conn.execute(text(
+                    "INSERT INTO coa_accounts (tenant_id, parent_id, number, name, type, is_active, created_at, updated_at) "
+                    "VALUES (:tenant_id, NULL, :number, :name, :type, :is_active, :created_at, :created_at)"
+                ), {
+                    "tenant_id": tenant_id,
+                    "number": number,
+                    "name": name,
+                    "type": normalized,
+                    "is_active": is_active if is_active is not None else 1,
+                    "created_at": created_at,
+                })
+                new_id = conn.execute(text("SELECT last_insert_rowid()")).scalar()
+            else:
+                new_id = conn.execute(text(
+                    "INSERT INTO coa_accounts (tenant_id, parent_id, number, name, type, is_active, created_at, updated_at) "
+                    "VALUES (:tenant_id, NULL, :number, :name, :type, :is_active, :created_at, :created_at) "
+                    "RETURNING id"
+                ), {
+                    "tenant_id": tenant_id,
+                    "number": number,
+                    "name": name,
+                    "type": normalized,
+                    "is_active": is_active if is_active is not None else 1,
+                    "created_at": created_at,
+                }).scalar()
             gl_id_to_coa_id[gl_id] = new_id
 
     # ------------------------------------------------------------------

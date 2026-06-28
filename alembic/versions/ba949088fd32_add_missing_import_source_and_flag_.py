@@ -19,10 +19,25 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def _table_columns(table_name: str) -> set[str]:
-    """Return the set of column names for the given table via SQLite introspection."""
+    """Return the set of column names for the given table.
+
+    SQLite uses PRAGMA table_info; PostgreSQL uses information_schema.columns.
+    This makes the migration portable across the two supported dialects.
+    """
     conn = op.get_bind()
-    rows = conn.execute(sa.text(f"PRAGMA table_info({table_name})")).fetchall()
-    return {row[1] for row in rows}
+    dialect = conn.dialect.name
+    if dialect == "sqlite":
+        rows = conn.execute(sa.text(f"PRAGMA table_info({table_name})")).fetchall()
+        return {row[1] for row in rows}
+    # PostgreSQL information_schema path
+    rows = conn.execute(
+        sa.text(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name = :table_name"
+        ),
+        {"table_name": table_name},
+    ).fetchall()
+    return {row[0] for row in rows}
 
 
 def upgrade() -> None:
