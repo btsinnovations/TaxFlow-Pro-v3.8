@@ -199,7 +199,7 @@
       "path": "/{account_id}",
       "full_path": "/api/accounts/{account_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/accounts"
+      "matched_frontend_route": "/api/accounts/{account_id}"
     },
     {
       "module": "accounts",
@@ -207,7 +207,7 @@
       "path": "/{account_id}",
       "full_path": "/api/accounts/{account_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/accounts"
+      "matched_frontend_route": "/api/accounts/{account_id}"
     },
     {
       "module": "accounts",
@@ -215,7 +215,7 @@
       "path": "/{account_id}",
       "full_path": "/api/accounts/{account_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/accounts"
+      "matched_frontend_route": "/api/accounts/{account_id}"
     },
     {
       "module": "audit",
@@ -231,7 +231,7 @@
       "path": "/logs",
       "full_path": "/api/audit/logs",
       "has_frontend": true,
-      "matched_frontend_route": "/api/audit"
+      "matched_frontend_route": "/api/audit/logs"
     },
     {
       "module": "audit",
@@ -239,7 +239,7 @@
       "path": "/verify",
       "full_path": "/api/audit/verify",
       "has_frontend": true,
-      "matched_frontend_route": "/api/audit/verify"
+      "matched_frontend_route": "/api/audit"
     },
     {
       "module": "auth",
@@ -343,7 +343,7 @@
       "path": "/{period}/vs-actual",
       "full_path": "/api/budget/{period}/vs-actual",
       "has_frontend": true,
-      "matched_frontend_route": "/api/budget/{period}/vs-actual"
+      "matched_frontend_route": "/api/budget/{period}/variance-alerts"
     },
     {
       "module": "budget",
@@ -367,7 +367,7 @@
       "path": "/{period}/variance-alerts",
       "full_path": "/api/budget/{period}/variance-alerts",
       "has_frontend": true,
-      "matched_frontend_route": "/api/budget/{period}/vs-actual"
+      "matched_frontend_route": "/api/budget/{period}/variance-alerts"
     },
     {
       "module": "checks",
@@ -415,7 +415,7 @@
       "path": "/{client_id}",
       "full_path": "/api/clients/{client_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/clients/{client_id}"
+      "matched_frontend_route": "/api/clients"
     },
     {
       "module": "clients",
@@ -423,7 +423,7 @@
       "path": "/{client_id}",
       "full_path": "/api/clients/{client_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/clients/{client_id}"
+      "matched_frontend_route": "/api/clients"
     },
     {
       "module": "clients",
@@ -431,7 +431,7 @@
       "path": "/{client_id}",
       "full_path": "/api/clients/{client_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/clients/{client_id}"
+      "matched_frontend_route": "/api/clients"
     },
     {
       "module": "coa",
@@ -439,7 +439,7 @@
       "path": "/coa",
       "full_path": "/api/coa/coa",
       "has_frontend": true,
-      "matched_frontend_route": "/api/coa"
+      "matched_frontend_route": "/api/coa/coa"
     },
     {
       "module": "coa",
@@ -447,7 +447,7 @@
       "path": "/coa",
       "full_path": "/api/coa/coa",
       "has_frontend": true,
-      "matched_frontend_route": "/api/coa"
+      "matched_frontend_route": "/api/coa/coa"
     },
     {
       "module": "coa",
@@ -471,7 +471,7 @@
       "path": "/coa/seed",
       "full_path": "/api/coa/coa/seed",
       "has_frontend": true,
-      "matched_frontend_route": "/api/coa/coa/seed"
+      "matched_frontend_route": "/api/coa/coa"
     },
     {
       "module": "coa",
@@ -495,7 +495,7 @@
       "path": "/stats",
       "full_path": "/api/dashboard/stats",
       "has_frontend": true,
-      "matched_frontend_route": "/api/dashboard/stats"
+      "matched_frontend_route": "/api/dashboard"
     },
     {
       "module": "dashboard",
@@ -527,7 +527,7 @@
       "path": "/{asset_id}",
       "full_path": "/api/depreciation/{asset_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/depreciation/{asset_id}"
+      "matched_frontend_route": "/api/depreciation"
     },
     {
       "module": "depreciation",
@@ -535,7 +535,7 @@
       "path": "/{asset_id}",
       "full_path": "/api/depreciation/{asset_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/depreciation/{asset_id}"
+      "matched_frontend_route": "/api/depreciation"
     },
     {
       "module": "depreciation",
@@ -543,7 +543,7 @@
       "path": "/{asset_id}",
       "full_path": "/api/depreciation/{asset_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/depreciation/{asset_id}"
+      "matched_frontend_route": "/api/depreciation"
     },
     {
       "module": "export",
@@ -623,7 +623,7 @@
       "path": "/{flag_id}",
       "full_path": "/api/flags/{flag_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/flags"
+      "matched_frontend_route": "/api/flags/{flag_id}"
     },
     {
       "module": "flags",
@@ -631,7 +631,7 @@
       "path": "/{flag_id}/resolve",
       "full_path": "/api/flags/{flag_id}/resolve",
       "has_frontend": true,
-      "matched_frontend_route": "/api/flags"
+      "matched_frontend_route": "/api/flags/{flag_id}"
     },
     {
       "module": "flags",
@@ -639,7 +639,7 @@
       "path": "/{flag_id}",
       "full_path": "/api/flags/{flag_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/flags"
+      "matched_frontend_route": "/api/flags/{flag_id}"
     },
     {
       "module": "fx",
@@ -679,7 +679,7 @@
       "path": "/transactions/{transaction_id}/foreign",
       "full_path": "/api/fx/transactions/{transaction_id}/foreign",
       "has_frontend": true,
-      "matched_frontend_route": "/api/fx/transactions/{transaction_id}/settle"
+      "matched_frontend_route": "/api/fx"
     },
     {
       "module": "fx",
@@ -687,7 +687,7 @@
       "path": "/transactions/{transaction_id}/settle",
       "full_path": "/api/fx/transactions/{transaction_id}/settle",
       "has_frontend": true,
-      "matched_frontend_route": "/api/fx/transactions/{transaction_id}/settle"
+      "matched_frontend_route": "/api/fx"
     },
     {
       "module": "fx",
@@ -695,7 +695,7 @@
       "path": "/report",
       "full_path": "/api/fx/report",
       "has_frontend": true,
-      "matched_frontend_route": "/api/fx/report"
+      "matched_frontend_route": "/api/fx"
     },
     {
       "module": "gl",
@@ -735,7 +735,7 @@
       "path": "/entries/{entry_id}/workpaper-ref",
       "full_path": "/api/ledger/entries/{entry_id}/workpaper-ref",
       "has_frontend": true,
-      "matched_frontend_route": "/api/ledger/entries"
+      "matched_frontend_route": "/api/ledger/entries/{entry_id}/workpaper-ref"
     },
     {
       "module": "gl",
@@ -775,7 +775,7 @@
       "path": "/bootstrap",
       "full_path": "/api/health/bootstrap",
       "has_frontend": true,
-      "matched_frontend_route": "/api/health"
+      "matched_frontend_route": "/api/health/bootstrap"
     },
     {
       "module": "health",
@@ -783,7 +783,7 @@
       "path": "/echo-auth",
       "full_path": "/api/health/echo-auth",
       "has_frontend": true,
-      "matched_frontend_route": "/api/health"
+      "matched_frontend_route": "/api/health/echo-auth"
     },
     {
       "module": "imports",
@@ -807,7 +807,7 @@
       "path": "/tags/{transaction_id}",
       "full_path": "/api/inventory/tags/{transaction_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/inventory/tags"
+      "matched_frontend_route": "/api/inventory/tags/{transaction_id}"
     },
     {
       "module": "inventory",
@@ -815,7 +815,7 @@
       "path": "/tags/{transaction_id}",
       "full_path": "/api/inventory/tags/{transaction_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/inventory/tags"
+      "matched_frontend_route": "/api/inventory/tags/{transaction_id}"
     },
     {
       "module": "inventory",
@@ -831,7 +831,7 @@
       "path": "/tags/search",
       "full_path": "/api/inventory/tags/search",
       "has_frontend": true,
-      "matched_frontend_route": "/api/inventory/tags"
+      "matched_frontend_route": "/api/inventory/tags/search"
     },
     {
       "module": "inventory",
@@ -855,7 +855,7 @@
       "path": "/{item_id}",
       "full_path": "/api/inventory/{item_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/inventory/{item_id}/adjust"
+      "matched_frontend_route": "/api/inventory/tags/{transaction_id}"
     },
     {
       "module": "inventory",
@@ -863,7 +863,7 @@
       "path": "/{item_id}",
       "full_path": "/api/inventory/{item_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/inventory/{item_id}/adjust"
+      "matched_frontend_route": "/api/inventory/tags/{transaction_id}"
     },
     {
       "module": "inventory",
@@ -871,7 +871,7 @@
       "path": "/{item_id}/adjust",
       "full_path": "/api/inventory/{item_id}/adjust",
       "has_frontend": true,
-      "matched_frontend_route": "/api/inventory/{item_id}/adjust"
+      "matched_frontend_route": "/api/inventory/tags/{transaction_id}"
     },
     {
       "module": "inventory",
@@ -879,7 +879,7 @@
       "path": "/{item_id}/transactions",
       "full_path": "/api/inventory/{item_id}/transactions",
       "has_frontend": true,
-      "matched_frontend_route": "/api/inventory/{item_id}/adjust"
+      "matched_frontend_route": "/api/inventory/tags/{transaction_id}"
     },
     {
       "module": "inventory",
@@ -887,7 +887,7 @@
       "path": "/{item_id}/valuation",
       "full_path": "/api/inventory/{item_id}/valuation",
       "has_frontend": true,
-      "matched_frontend_route": "/api/inventory/{item_id}/adjust"
+      "matched_frontend_route": "/api/inventory/tags/{transaction_id}"
     },
     {
       "module": "investments",
@@ -935,7 +935,7 @@
       "path": "/prices",
       "full_path": "/api/investments/prices",
       "has_frontend": true,
-      "matched_frontend_route": "/api/investments/prices"
+      "matched_frontend_route": "/api/investments"
     },
     {
       "module": "investments",
@@ -967,7 +967,7 @@
       "path": "/invoices",
       "full_path": "/api/invoicing/invoices",
       "has_frontend": true,
-      "matched_frontend_route": "/api/invoicing"
+      "matched_frontend_route": "/api/invoicing/invoices"
     },
     {
       "module": "invoicing",
@@ -975,7 +975,7 @@
       "path": "/bills",
       "full_path": "/api/invoicing/bills",
       "has_frontend": true,
-      "matched_frontend_route": "/api/invoicing"
+      "matched_frontend_route": "/api/invoicing/bills"
     },
     {
       "module": "invoicing",
@@ -983,7 +983,7 @@
       "path": "/invoices",
       "full_path": "/api/invoicing/invoices",
       "has_frontend": true,
-      "matched_frontend_route": "/api/invoicing"
+      "matched_frontend_route": "/api/invoicing/invoices"
     },
     {
       "module": "invoicing",
@@ -991,7 +991,7 @@
       "path": "/bills",
       "full_path": "/api/invoicing/bills",
       "has_frontend": true,
-      "matched_frontend_route": "/api/invoicing"
+      "matched_frontend_route": "/api/invoicing/bills"
     },
     {
       "module": "invoicing",
@@ -1007,7 +1007,7 @@
       "path": "/{invoice_id}",
       "full_path": "/api/invoicing/{invoice_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/invoicing"
+      "matched_frontend_route": "/api/invoicing/{invoice_id}/payments/{payment_id}"
     },
     {
       "module": "invoicing",
@@ -1015,7 +1015,7 @@
       "path": "/{invoice_id}",
       "full_path": "/api/invoicing/{invoice_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/invoicing"
+      "matched_frontend_route": "/api/invoicing/{invoice_id}/payments/{payment_id}"
     },
     {
       "module": "invoicing",
@@ -1023,7 +1023,7 @@
       "path": "/{invoice_id}",
       "full_path": "/api/invoicing/{invoice_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/invoicing"
+      "matched_frontend_route": "/api/invoicing/{invoice_id}/payments/{payment_id}"
     },
     {
       "module": "invoicing",
@@ -1031,7 +1031,7 @@
       "path": "/{invoice_id}/void",
       "full_path": "/api/invoicing/{invoice_id}/void",
       "has_frontend": true,
-      "matched_frontend_route": "/api/invoicing"
+      "matched_frontend_route": "/api/invoicing/{invoice_id}/payments/{payment_id}"
     },
     {
       "module": "invoicing",
@@ -1039,7 +1039,7 @@
       "path": "/{invoice_id}/payments",
       "full_path": "/api/invoicing/{invoice_id}/payments",
       "has_frontend": true,
-      "matched_frontend_route": "/api/invoicing"
+      "matched_frontend_route": "/api/invoicing/{invoice_id}/payments/{payment_id}"
     },
     {
       "module": "invoicing",
@@ -1047,7 +1047,7 @@
       "path": "/{invoice_id}/payments/{payment_id}",
       "full_path": "/api/invoicing/{invoice_id}/payments/{payment_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/invoicing"
+      "matched_frontend_route": "/api/invoicing/{invoice_id}/payments/{payment_id}"
     },
     {
       "module": "liabilities",
@@ -1071,7 +1071,7 @@
       "path": "/loan-schedule/{schedule_id}",
       "full_path": "/api/liabilities/loan-schedule/{schedule_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/liabilities/loan-schedule/{schedule_id}"
+      "matched_frontend_route": "/api/liabilities"
     },
     {
       "module": "liabilities",
@@ -1079,7 +1079,7 @@
       "path": "/loan-schedule/{schedule_id}/payments",
       "full_path": "/api/liabilities/loan-schedule/{schedule_id}/payments",
       "has_frontend": true,
-      "matched_frontend_route": "/api/liabilities/loan-schedule/{schedule_id}"
+      "matched_frontend_route": "/api/liabilities"
     },
     {
       "module": "liabilities",
@@ -1087,7 +1087,7 @@
       "path": "/loan-schedule/{schedule_id}/payments",
       "full_path": "/api/liabilities/loan-schedule/{schedule_id}/payments",
       "has_frontend": true,
-      "matched_frontend_route": "/api/liabilities/loan-schedule/{schedule_id}"
+      "matched_frontend_route": "/api/liabilities"
     },
     {
       "module": "liabilities",
@@ -1095,7 +1095,7 @@
       "path": "/loan-schedule/{schedule_id}/upcoming",
       "full_path": "/api/liabilities/loan-schedule/{schedule_id}/upcoming",
       "has_frontend": true,
-      "matched_frontend_route": "/api/liabilities/loan-schedule/{schedule_id}"
+      "matched_frontend_route": "/api/liabilities"
     },
     {
       "module": "liabilities",
@@ -1103,7 +1103,7 @@
       "path": "/credit-lines",
       "full_path": "/api/liabilities/credit-lines",
       "has_frontend": true,
-      "matched_frontend_route": "/api/liabilities/credit-lines"
+      "matched_frontend_route": "/api/liabilities"
     },
     {
       "module": "liabilities",
@@ -1111,7 +1111,7 @@
       "path": "/credit-lines",
       "full_path": "/api/liabilities/credit-lines",
       "has_frontend": true,
-      "matched_frontend_route": "/api/liabilities/credit-lines"
+      "matched_frontend_route": "/api/liabilities"
     },
     {
       "module": "liabilities",
@@ -1119,7 +1119,7 @@
       "path": "/credit-lines/{cl_id}",
       "full_path": "/api/liabilities/credit-lines/{cl_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/liabilities/credit-lines"
+      "matched_frontend_route": "/api/liabilities"
     },
     {
       "module": "liabilities",
@@ -1127,7 +1127,7 @@
       "path": "/credit-lines/{cl_id}/draw",
       "full_path": "/api/liabilities/credit-lines/{cl_id}/draw",
       "has_frontend": true,
-      "matched_frontend_route": "/api/liabilities/credit-lines"
+      "matched_frontend_route": "/api/liabilities"
     },
     {
       "module": "liabilities",
@@ -1135,7 +1135,7 @@
       "path": "/credit-lines/{cl_id}/payment",
       "full_path": "/api/liabilities/credit-lines/{cl_id}/payment",
       "has_frontend": true,
-      "matched_frontend_route": "/api/liabilities/credit-lines"
+      "matched_frontend_route": "/api/liabilities"
     },
     {
       "module": "liabilities",
@@ -1143,7 +1143,7 @@
       "path": "/credit-lines/{cl_id}/available",
       "full_path": "/api/liabilities/credit-lines/{cl_id}/available",
       "has_frontend": true,
-      "matched_frontend_route": "/api/liabilities/credit-lines"
+      "matched_frontend_route": "/api/liabilities"
     },
     {
       "module": "liabilities",
@@ -1151,7 +1151,7 @@
       "path": "/amortization",
       "full_path": "/api/liabilities/amortization",
       "has_frontend": true,
-      "matched_frontend_route": "/api/liabilities/amortization"
+      "matched_frontend_route": "/api/liabilities"
     },
     {
       "module": "mileage",
@@ -1255,7 +1255,7 @@
       "path": "/{profile_id}",
       "full_path": "/api/profiles/{profile_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/profiles"
+      "matched_frontend_route": "/api/profiles/{profile_id}/members/{user_id}"
     },
     {
       "module": "profiles",
@@ -1263,7 +1263,7 @@
       "path": "/{profile_id}/members",
       "full_path": "/api/profiles/{profile_id}/members",
       "has_frontend": true,
-      "matched_frontend_route": "/api/profiles"
+      "matched_frontend_route": "/api/profiles/{profile_id}/members/{user_id}"
     },
     {
       "module": "profiles",
@@ -1271,7 +1271,7 @@
       "path": "/{profile_id}/members",
       "full_path": "/api/profiles/{profile_id}/members",
       "has_frontend": true,
-      "matched_frontend_route": "/api/profiles"
+      "matched_frontend_route": "/api/profiles/{profile_id}/members/{user_id}"
     },
     {
       "module": "profiles",
@@ -1279,7 +1279,7 @@
       "path": "/{profile_id}/members/{user_id}",
       "full_path": "/api/profiles/{profile_id}/members/{user_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/profiles"
+      "matched_frontend_route": "/api/profiles/{profile_id}/members/{user_id}"
     },
     {
       "module": "profiles",
@@ -1287,7 +1287,7 @@
       "path": "/{profile_id}/members/{user_id}",
       "full_path": "/api/profiles/{profile_id}/members/{user_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/profiles"
+      "matched_frontend_route": "/api/profiles/{profile_id}/members/{user_id}"
     },
     {
       "module": "reconciliation",
@@ -1295,7 +1295,7 @@
       "path": "/import",
       "full_path": "/api/reconciliation/import",
       "has_frontend": true,
-      "matched_frontend_route": "/api/reconciliation"
+      "matched_frontend_route": "/api/reconciliation/import"
     },
     {
       "module": "reconciliation",
@@ -1303,7 +1303,7 @@
       "path": "/{import_id}/auto-match",
       "full_path": "/api/reconciliation/{import_id}/auto-match",
       "has_frontend": true,
-      "matched_frontend_route": "/api/reconciliation/{import_id}/matches"
+      "matched_frontend_route": "/api/reconciliation/{import_id}/auto-match"
     },
     {
       "module": "reconciliation",
@@ -1311,7 +1311,7 @@
       "path": "/{import_id}/manual-match",
       "full_path": "/api/reconciliation/{import_id}/manual-match",
       "has_frontend": true,
-      "matched_frontend_route": "/api/reconciliation/{import_id}/matches"
+      "matched_frontend_route": "/api/reconciliation/{import_id}/auto-match"
     },
     {
       "module": "reconciliation",
@@ -1319,7 +1319,7 @@
       "path": "/{import_id}/unmatch",
       "full_path": "/api/reconciliation/{import_id}/unmatch",
       "has_frontend": true,
-      "matched_frontend_route": "/api/reconciliation/{import_id}/matches"
+      "matched_frontend_route": "/api/reconciliation/{import_id}/auto-match"
     },
     {
       "module": "reconciliation",
@@ -1327,7 +1327,7 @@
       "path": "/{import_id}/unmatched",
       "full_path": "/api/reconciliation/{import_id}/unmatched",
       "has_frontend": true,
-      "matched_frontend_route": "/api/reconciliation/{import_id}/matches"
+      "matched_frontend_route": "/api/reconciliation/{import_id}/auto-match"
     },
     {
       "module": "reconciliation",
@@ -1335,7 +1335,7 @@
       "path": "/{import_id}/matches",
       "full_path": "/api/reconciliation/{import_id}/matches",
       "has_frontend": true,
-      "matched_frontend_route": "/api/reconciliation/{import_id}/matches"
+      "matched_frontend_route": "/api/reconciliation/{import_id}/auto-match"
     },
     {
       "module": "reconciliation",
@@ -1343,7 +1343,7 @@
       "path": "/{import_id}/status",
       "full_path": "/api/reconciliation/{import_id}/status",
       "has_frontend": true,
-      "matched_frontend_route": "/api/reconciliation/{import_id}/matches"
+      "matched_frontend_route": "/api/reconciliation/{import_id}/auto-match"
     },
     {
       "module": "reconciliation",
@@ -1351,7 +1351,7 @@
       "path": "/{import_id}/complete",
       "full_path": "/api/reconciliation/{import_id}/complete",
       "has_frontend": true,
-      "matched_frontend_route": "/api/reconciliation/{import_id}/matches"
+      "matched_frontend_route": "/api/reconciliation/{import_id}/auto-match"
     },
     {
       "module": "reconciliation",
@@ -1359,7 +1359,7 @@
       "path": "/{import_id}/reopen",
       "full_path": "/api/reconciliation/{import_id}/reopen",
       "has_frontend": true,
-      "matched_frontend_route": "/api/reconciliation/{import_id}/matches"
+      "matched_frontend_route": "/api/reconciliation/{import_id}/auto-match"
     },
     {
       "module": "recurring",
@@ -1383,7 +1383,7 @@
       "path": "/{rule_id}",
       "full_path": "/api/recurring/{rule_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/recurring"
+      "matched_frontend_route": "/api/recurring/{rule_id}"
     },
     {
       "module": "recurring",
@@ -1391,7 +1391,7 @@
       "path": "/{rule_id}",
       "full_path": "/api/recurring/{rule_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/recurring"
+      "matched_frontend_route": "/api/recurring/{rule_id}"
     },
     {
       "module": "recurring",
@@ -1399,7 +1399,7 @@
       "path": "/{rule_id}/materialize",
       "full_path": "/api/recurring/{rule_id}/materialize",
       "has_frontend": true,
-      "matched_frontend_route": "/api/recurring"
+      "matched_frontend_route": "/api/recurring/{rule_id}"
     },
     {
       "module": "reports",
@@ -1631,7 +1631,7 @@
       "path": "/mappings/{mapping_id}",
       "full_path": "/api/tax-exports/mappings/{mapping_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/tax-exports/mappings/{mapping_id}"
+      "matched_frontend_route": "/api/tax-exports/mappings"
     },
     {
       "module": "tax_exports",
@@ -1733,7 +1733,7 @@
       "path": "/{vendor_id}",
       "full_path": "/api/vendors/{vendor_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/vendors/{vendor_id}"
+      "matched_frontend_route": "/api/vendors"
     },
     {
       "module": "vendors",
@@ -1741,7 +1741,7 @@
       "path": "/{vendor_id}",
       "full_path": "/api/vendors/{vendor_id}",
       "has_frontend": true,
-      "matched_frontend_route": "/api/vendors/{vendor_id}"
+      "matched_frontend_route": "/api/vendors"
     },
     {
       "module": "year_end",
