@@ -254,6 +254,14 @@ async def upload_statement(request: Request,
         apply_rules(imported_transactions, rules)
         db.commit()
 
+    # R1: auto-post GL entries for every uploaded-statement transaction.
+    from backend.accounting.gl_bridge import GLBridge
+    imported_transactions = db.query(models.Transaction).filter(
+        models.Transaction.statement_id == statement.id
+    ).all()
+    bridge = GLBridge(db, tenant_id=statement.tenant_id, user_id=current_user.id)
+    bridge.post_batch(imported_transactions)
+
     warnings = []
     if result.get("needs_review"):
         warnings.append("Statement parser flagged this upload for manual review; institution or layout was not recognized.")

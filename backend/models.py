@@ -324,6 +324,10 @@ class GeneralLedgerEntry(Base):
     amount = Column(Numeric(12, 2), nullable=False)
     memo = Column(String)
     workpaper_ref = Column(String, nullable=True)
+    entry_type = Column(String, nullable=True, default="regular")
+    source_id = Column(String, nullable=True)
+    import_source = Column(String, nullable=True)
+    txn_uid = Column(String, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
     transaction = relationship("Transaction", back_populates="ledger_entries")

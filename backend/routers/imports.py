@@ -183,6 +183,14 @@ async def import_ofx(
 
     db.commit()
 
+    # R1: auto-post GL entries for every OFX transaction imported.
+    from backend.accounting.gl_bridge import GLBridge
+    imported_txns = db.query(models.Transaction).filter(
+        models.Transaction.statement_id == statement.id,
+    ).all()
+    bridge = GLBridge(db, tenant_id=tenant_id, user_id=current_user.id)
+    bridge.post_batch(imported_txns)
+
     return OFXImportResponse(
         statement_id=statement.id,
         account_id=account.id,

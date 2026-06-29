@@ -19,6 +19,7 @@ from backend.audit import record, AuditAction, AuditResource
 from backend.database import get_db
 from backend.routers.auth import get_current_user
 from backend import models, schemas
+from backend.accounting.gl_bridge import GLBridge
 from backend.rls import is_postgres, resolve_user_tenant_id, set_tenant_id
 from backend.local import settings as local_settings
 
@@ -178,6 +179,12 @@ def materialize_recurring(
     if rule is None:
         raise HTTPException(status_code=404, detail="Recurring rule not found")
     created = materialize_rule(db, rule_id=rule_id, as_of_date=as_of, current_user=current_user)
+
+    # R1: auto-post GL entries for every materialized recurring transaction.
+    bridge = GLBridge(db, tenant_id=tenant_id, user_id=current_user.id)
+    txn_models = [db.query(models.Transaction).filter(models.Transaction.id == t["id"]).first() for t in created]
+    bridge.post_batch([t for t in txn_models if t is not None])
+
     record(
         db,
         current_user,
