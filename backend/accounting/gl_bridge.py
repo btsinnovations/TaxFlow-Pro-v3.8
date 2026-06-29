@@ -54,9 +54,9 @@ class GLBridge:
     def _get_cash_coa(self, txn: models.Transaction) -> Optional[models.CoaAccount]:
         """Map a transaction's bank account to a COA asset account.
 
-        The COA account on the transaction is the OFFSET account (income/expense),
-        not the cash account. Cash is determined from the bank account or a
-        default asset account.
+        A transaction's `coa_account_id` is the *offset* category (income/expense),
+        never the cash account. Cash is resolved from the statement's bank account
+        or the first asset account in the 1000-1999 range.
         """
         # Try to find a cash/asset COA account for this tenant
         cash = self.db.query(models.CoaAccount).filter(
