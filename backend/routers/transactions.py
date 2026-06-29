@@ -144,6 +144,13 @@ def create_transaction(
     db.add(tx)
     db.commit()
     db.refresh(tx)
+
+    # R1: auto-post GL entries for every manually created transaction.
+    from backend.accounting.gl_bridge import GLBridge
+    bridge = GLBridge(db, tenant_id=effective_tenant_id, user_id=current_user.id)
+    bridge.post_for_transaction(tx)
+    db.commit()
+
     record(db, current_user, AuditAction.CREATE, AuditResource.TRANSACTION, tx.id,
            {"amount": str(tx.amount), "category": tx.category, "gl_account_id": tx.gl_account_id})
     return _transaction_response(tx, current_user)
