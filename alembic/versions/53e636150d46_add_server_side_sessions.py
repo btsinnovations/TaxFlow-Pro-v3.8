@@ -42,7 +42,11 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index(op.f('ix_sessions_user_id'), table_name='sessions')
-    op.drop_index(op.f('ix_sessions_token_jti'), table_name='sessions')
-    op.drop_index(op.f('ix_sessions_token_hash'), table_name='sessions')
-    op.drop_table('sessions')
+    conn = op.get_bind()
+    for idx_name in (
+        op.f('ix_sessions_user_id'),
+        op.f('ix_sessions_token_jti'),
+        op.f('ix_sessions_token_hash'),
+    ):
+        conn.execute(sa.text(f"DROP INDEX IF EXISTS {idx_name}"))
+    conn.execute(sa.text("DROP TABLE IF EXISTS sessions"))

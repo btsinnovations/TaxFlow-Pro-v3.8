@@ -92,27 +92,41 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    with op.batch_alter_table('gl_accounts', schema=None) as batch_op:
-        batch_op.alter_column(
-            'account_type',
-            existing_type=sa.String(),
-            nullable=True,
-            server_default=None,
-        )
-    op.drop_column('transactions', 'owner_uncertain')
+    conn = op.get_bind()
+    try:
+        tables = {row[0] for row in conn.execute(sa.text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()}
+    except Exception:
+        tables = set()
+    if 'gl_accounts' in tables:
+        with op.batch_alter_table('gl_accounts', schema=None) as batch_op:
+            batch_op.alter_column(
+                'account_type',
+                existing_type=sa.String(),
+                nullable=True,
+                server_default=None,
+            )
+    if 'transactions' in tables:
+        try:
+            op.drop_column('transactions', 'owner_uncertain')
+        except Exception:
+            pass
     for table, cols in [
         ('statements', ['period_start', 'period_end']),
         ('transactions', ['date']),
         ('general_ledger_entries', ['date']),
     ]:
-        for col in cols:
-            with op.batch_alter_table(table, schema=None) as batch_op:
-                batch_op.alter_column(
-                    col,
-                    existing_type=sa.Date(),
-                    type_=sa.String(),
-                    existing_nullable=True,
-                )
+        if table in tables:
+            for col in cols:
+                try:
+                    with op.batch_alter_table(table, schema=None) as batch_op:
+                        batch_op.alter_column(
+                            col,
+                            existing_type=sa.Date(),
+                            type_=sa.String(),
+                            existing_nullable=True,
+                        )
+                except Exception:
+                    pass
 
 
 def _cascade_fk(table: str, ref: str, columns: list, name: str) -> None:

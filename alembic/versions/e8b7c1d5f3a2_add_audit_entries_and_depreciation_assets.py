@@ -94,18 +94,13 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index('ix_periods_user_id', table_name='periods')
-    op.drop_index('ix_periods_tenant_id', table_name='periods')
-    op.drop_table('periods')
-
-    op.drop_index('ix_journals_user_id', table_name='journals')
-    op.drop_index('ix_journals_tenant_id', table_name='journals')
-    op.drop_table('journals')
-    op.drop_index('ix_depreciation_assets_user_id', table_name='depreciation_assets')
-    op.drop_index('ix_depreciation_assets_tenant_id', table_name='depreciation_assets')
-    op.drop_index('ix_depreciation_assets_id', table_name='depreciation_assets')
-    op.drop_table('depreciation_assets')
-
-    op.drop_index('ix_audit_entries_resource', table_name='audit_entries')
-    op.drop_index('ix_audit_entries_actor_id', table_name='audit_entries')
-    op.drop_table('audit_entries')
+    conn = op.get_bind()
+    for tbl in ['periods', 'journals', 'depreciation_assets', 'audit_entries']:
+        conn.execute(sa.text(f"DROP TABLE IF EXISTS {tbl}"))
+    for idx in [
+        'ix_periods_user_id', 'ix_periods_tenant_id',
+        'ix_journals_user_id', 'ix_journals_tenant_id',
+        'ix_depreciation_assets_user_id', 'ix_depreciation_assets_tenant_id', 'ix_depreciation_assets_id',
+        'ix_audit_entries_resource', 'ix_audit_entries_actor_id',
+    ]:
+        conn.execute(sa.text(f"DROP INDEX IF EXISTS {idx}"))

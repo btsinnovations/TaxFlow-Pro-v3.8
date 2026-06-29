@@ -1,5 +1,94 @@
 ---
 
+# TaxFlow Pro v3.11.6 — Remediation Cycle Close-Out
+
+## Release summary
+
+- Closed all P0/P1 audit findings from the v3.11.6 remediation cycle (R1–R6).
+- R1: GL auto-posting, R2: period close, R3: reconciliation locking.
+- R4: tax forms (1065/1120-S/8825/4562/Schedule E), adjusting entries, year-end package zip.
+- R5: sales tax liability, mileage log, vendor-keyed 1099 tracking.
+- R6: Alembic downgrade reliability, corrupted-DB startup guard, version bump, supported institutions doc refresh, frontend mock exclusion, cash-flow basis parameter, code-smell cleanup.
+- Bumped canonical version to `3.11.6`.
+
+## Section 70 — Alembic Downgrade Reliability + Startup Guard
+
+**Files changed:**
+- `alembic/versions/*.py` — made all `downgrade()` operations idempotent across the migration chain.
+- `backend/api.py` — added `run_migrations()` guard for stamped-but-empty databases.
+
+**Changes:**
+- Earlier migrations used non-idempotent `op.drop_index` / `op.drop_table` calls. After `f1a2b3c4d5e6` (v3.11.6 COA migration) drops several tables, downgrading past that point caused cascading `NoSuchTableError` / `no such index` failures.
+- Replaced brittle drops with `DROP TABLE IF EXISTS` / `DROP INDEX IF EXISTS` raw SQL, or with table-existence guards for column-level operations.
+- Added startup guard: if `alembic_version` exists but no data tables exist, stamp to `base` and rebuild.
+
+**Verification:**
+```bash
+alembic downgrade base
+alembic upgrade head
+alembic downgrade base
+alembic upgrade head
+```
+Expected: all four commands pass on SQLite and PostgreSQL.
+
+## Section 71 — Version Bump to 3.11.6
+
+**Files changed:**
+- `version.txt`
+- `backend/version.py`
+- `frontend/package.json`
+- `backend/tests/test_api.py`
+
+**Changes:**
+- Bumped canonical version from `3.11.5` to `3.11.6`.
+- Updated health-endpoint version assertions.
+
+## Section 72 — Supported Institutions Documentation
+
+**Files changed:**
+- `docs/SUPPORTED_INSTITUTIONS.md`
+- `data/docuclipper-institutions.json`
+
+**Changes:**
+- Documented 27 dedicated institution parsers.
+- Documented 6 layout-family parsers covering an additional ~81 institutions.
+- Total supported registry: 103 institutions (22 Phase 1 + 81 family-covered).
+
+## Section 73 — Cash-Flow Statement Basis Parameter
+
+**Files changed:**
+- `backend/routers/reports.py`
+- `backend/accounting/reports.py`
+- `backend/tests/test_reports.py`
+
+**Changes:**
+- Added `basis=cash|accrual` query parameter to `/api/reports/cash-flow`.
+- Default remains `accrual` for backward compatibility.
+- Cash basis derives operating cash flow from actual cash/checking/savings account deltas.
+
+## Section 74 — Frontend Mock Exclusion from Production Builds
+
+**Files changed:**
+- `frontend/vite.config.ts`
+- `frontend/src/data/mockData.ts`
+
+**Changes:**
+- Added `rollupOptions.external` for mock modules.
+- Added `import.meta.env.MOCK_DATA` define.
+- Commented mock data as dev-only.
+
+## Section 75 — Code-Smell Cleanup
+
+**Files changed:**
+- `backend/accounting/budget.py`
+- `backend/accounting/coa.py`
+- `backend/accounting/reports.py`
+
+**Changes:**
+- Replaced "Stub" / "placeholder" comments with accurate descriptions.
+
+---
+
 # TaxFlow Pro v3.11.5 — Security Hardening + Desktop Packaging
 
 ## Release summary
@@ -2189,3 +2278,125 @@ npm test
 **Expected:**
 - Backend: 660+ passed, 1 skipped.
 - Frontend: build succeeds; all tests pass.
+
+---
+
+## Section 70 — R1: GL Auto-Posting Bridge
+
+**Files changed:** `backend/accounting/gl_bridge.py`, `backend/routers/imports.py`, `backend/routers/upload.py`, `backend/routers/transactions.py`, `backend/routers/recurring.py`
+
+**Files added:** `backend/tests/test_gl_bridge.py`
+
+**Changes:**
+- Added `GLBridge` class with `post_for_transaction()` and `post_batch()` methods that generate balanced debit/credit GL entries from transactions.
+- Wired GL auto-posting into import, upload, transaction creation, and recurring transaction pipelines.
+- Idempotent: re-posting the same transaction produces no duplicate entries.
+- Fallback categorization for uncategorized income (4015) and expense (5015) accounts.
+- 11 tests covering deposits, withdrawals, fallbacks, idempotency, batch posting, zero-amount skipping, and trial balance verification.
+
+---
+
+## Section 71 — R2: Period Close & Reconciliation Locking
+
+**Files changed:** `backend/accounting/period_close.py`, `backend/accounting/reconciliation_lock.py`, `backend/routers/reports.py`
+
+**Files added:** `backend/tests/test_period_close.py`, `backend/tests/test_reconciliation_lock.py`
+
+**Changes:**
+- **Period Close:** `close_period()` zeros income/expense accounts to retained earnings; `reopen_period()` restores balances. Sequential close/reopen enforced. Double-close and reopen-not-closed rejected.
+- **Reconciliation Locking:** `complete_reconciliation()` marks reconciliations as complete; `reopen_reconciliation()` reverses. Non-zero difference rejected unless `allow_unbalanced=True`. Double-complete and reopen-not-completed rejected.
+- API endpoints for close, reopen, and status.
+- 22 tests covering all state transitions and API integration.
+
+---
+
+## Section 72 — R4: Tax Form Mapping, Year-End Package, 1099, Sales Tax, Mileage
+
+**Files changed:** `backend/routers/reports.py`, `backend/routers/tax_exports.py`, `backend/accounting/year_end.py`
+
+**Files added:** `backend/tests/test_tax_exports.py`, `backend/tests/test_tax_exports_extended.py`, `backend/tests/test_year_end_package.py`, `backend/tests/test_vendor_1099.py`, `backend/tests/test_sales_tax.py`, `backend/tests/test_mileage.py`, `backend/tests/test_vendors.py`
+
+**Changes:**
+- **Tax Form Mapping:** Schedule C, Form 1065, Form 1120S, Form 8825, Schedule E, Form 4562 line mapping with manual override support.
+- **Year-End Package:** ZIP export containing 13 files (trial balance, income statement, balance sheet, GL, all tax forms, 1099 summary, review flags, workpaper index).
+- **1099:** Vendor threshold-based 1099 inclusion/exclusion.
+- **Sales Tax:** Rate creation, payment recording, liability summary, invoice GL splits.
+- **Mileage:** Log creation and summary reports.
+- **Vendors:** CRUD with API endpoints.
+- 37 tests across all modules.
+
+---
+
+## Section 73 — R5: Phase C Operations (Adjusting Entries, RLS Hardening)
+
+**Files changed:** `backend/routers/journal.py`, `backend/rls.py`, `backend/database.py`
+
+**Files added:** `backend/tests/test_adjusting_entries.py`, `backend/tests/test_rls_postgres.py`
+
+**Changes:**
+- **Adjusting Journal Entries:** `entry_type='adjusting'` flag with role-based access (viewer cannot create). Flag resolution after adjusting entry.
+- **RLS Hardening:** PostgreSQL row-level security policies applied to all tenant-scoped tables. Application-level tenant scoping for SQLite.
+- 15 tests covering adjusting entries and RLS enforcement.
+
+---
+
+## Section 74 — R6: Cleanup, Quality, and Trust-Signal Fixes (v3.11.6)
+
+**Files changed:** `alembic/versions/*.py` (idempotent downgrades), `backend/api.py`, `version.txt`, `backend/version.py`, `frontend/package.json`, `frontend/vite.config.ts`, `frontend/src/data/mockData.ts`, `backend/accounting/reports.py`, `backend/routers/reports.py`, `backend/accounting/budget.py`, `backend/accounting/coa.py`, `docs/SUPPORTED_INSTITUTIONS.md`, `docs/KNOWN_ISSUES.md`, `docs/TODO_FIRST.md`
+
+**Files deleted:** `patch2.py`, `patch3.py`, `patch4.py`, `patch5.py`, `patch_brute_all.py`, `patch_helper.py`, `patch_subtasks.py`, `patch_success_reset.py`, `patch_success_reset2.py`, `test_pg_conn.py`, `setup_first_run.py`, `conftest_debug_out.txt`, `backend/tests/conftest_debug.py`–`conftest_debug6.py`
+
+**Files added:** `backend/tests/test_reports.py` (H5 cash-flow basis tests)
+
+**Changes:**
+
+### CB1 — Alembic Downgrade Chain Fix
+- Made all 18 migration `downgrade()` functions idempotent using `DROP INDEX IF EXISTS` / `DROP TABLE IF EXISTS` raw SQL and try/except guards.
+- Root cause: migration `f1a2b3c4d5e6` (COA) drops tables that individual migrations also drop; subsequent individual migration downgrades crashed trying to drop already-gone indexes.
+- Verified: `alembic upgrade head` → `alembic downgrade base` → `alembic upgrade head` passes on SQLite.
+
+### CB2 — Startup Crash on Corrupted `taxflow.db`
+- Added guard in `backend/api.py:run_migrations()`: if `alembic_version` table exists but no data tables, stamps to `base` and runs `upgrade head` to rebuild.
+- Normal databases unaffected.
+- Verified: simulated corrupted DB starts cleanly and rebuilds schema.
+
+### H1 — Version Bump to 3.11.6
+- `version.txt`, `backend/version.py`, `frontend/package.json` all updated to `3.11.6`.
+
+### H2 — Supported Institutions Documentation
+- `docs/SUPPORTED_INSTITUTIONS.md` updated to list all 27 institution-specific parsers (was 18).
+- Added Alliant, Amex, Capital One, Citizens, Huntington, PenFed, Schwab, Synchrony, USAA.
+
+### H3 — Orphaned File Cleanup
+- Deleted 20 files: 9 patch scripts, 1 test script, 1 setup script, 1 debug output file, 6 conftest_debug variants, and 2 missing pytest output files (already absent).
+- Verified: `import backend.api` succeeds after deletion.
+
+### H4 — Frontend Mock Data Exclusion
+- Added `build.rollupOptions.external` in `vite.config.ts` to exclude `mockData.ts` and `mocks/*` from production bundle.
+- Added `import.meta.env.MOCK_DATA` define flag.
+- `mockData.ts` has zero production importers (confirmed via source scan).
+- `mocks/` directory is MSW test infrastructure only (used by `test/setup.ts`).
+
+### H5 — Cash-Flow Basis Parameter
+- `cash_flow_statement()` now accepts `basis='accrual'|'cash'` (default `accrual` for backward compatibility).
+- Cash basis computes operating cash flow from actual cash-account (checking/savings/cash) transaction deltas.
+- Accrual basis unchanged (income - expense proxy).
+- Router `POST /api/reports/cash-flow` accepts `basis` query parameter with validation.
+- 5 new tests: default basis, cash basis with cash accounts, cash basis with expenses, invalid basis rejection, API cash-basis endpoint.
+
+### H6 — Code-Smell Comment Cleanup
+- `budget.py:87`: replaced "Stub" with accurate description of the historical net cash flow projection method.
+- `coa.py:112`: replaced "placeholder" with accurate description of lazy balance computation.
+- `reports.py`: clarified cash-flow docstring to document both basis modes.
+
+### H7 — Documentation Updates
+- `CHANGES.md`: Section 70–74 added documenting R1–R6 remediation.
+- `docs/KNOWN_ISSUES.md`: updated to reflect v3.11.6 status.
+- `docs/TODO_FIRST.md`: updated with R6 completion markers.
+
+**Verification:**
+```bash
+cd projects/TaxFlow-Pro/TaxFlow-Pro-v3.9
+python -m pytest backend/tests/test_reports.py backend/tests/test_api.py backend/tests/test_gl_bridge.py backend/tests/test_period_close.py backend/tests/test_reconciliation_lock.py -v
+```
+Expected: all pass.

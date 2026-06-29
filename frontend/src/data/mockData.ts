@@ -1,4 +1,5 @@
 // Dev-only fallback data. Production sections should fetch from useAPI hooks.
+// This module is excluded from production builds via vite.config.ts rollupOptions.external.
 // Client Management Data
 export interface Client {
   id: string;

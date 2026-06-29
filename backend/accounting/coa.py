@@ -109,7 +109,7 @@ def _coa_account_to_dict(account: "CoaAccount") -> dict:
         "type": account.type,
         "parent_id": account.parent_id,
         "is_active": account.is_active,
-        "balance": None,  # placeholder; populated by reporting/ledger later
+        "balance": None,  # computed lazily by reporting/ledger queries when needed
         "created_at": account.created_at,
         "updated_at": getattr(account, "updated_at", None),
     }

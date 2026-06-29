@@ -178,19 +178,20 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Drop baseline tables in reverse dependency order."""
-    op.drop_table('recurring_rules')
-    op.drop_table('categorization_rules')
-    op.drop_index('ix_transactions_txn_uid', table_name='transactions')
-    op.drop_index('ix_transactions_tenant_id', table_name='transactions')
-    op.drop_table('transactions')
-    op.drop_index('ix_statements_tenant_id', table_name='statements')
-    op.drop_table('statements')
-    op.drop_index('ix_gl_accounts_tenant_id', table_name='gl_accounts')
-    op.drop_table('gl_accounts')
-    op.drop_index('ix_accounts_tenant_id', table_name='accounts')
-    op.drop_table('accounts')
-    op.drop_table('clients')
-    op.drop_index('ix_audit_entries_resource', table_name='audit_entries')
-    op.drop_index('ix_audit_entries_actor_id', table_name='audit_entries')
-    op.drop_table('audit_entries')
-    op.drop_table('users')
+    conn = op.get_bind()
+    for tbl in [
+        'recurring_rules', 'categorization_rules', 'transactions',
+        'statements', 'gl_accounts', 'accounts', 'clients',
+        'audit_entries', 'users',
+    ]:
+        conn.execute(sa.text(f"DROP TABLE IF EXISTS {tbl}"))
+    for idx, _tbl in [
+        ('ix_transactions_txn_uid', 'transactions'),
+        ('ix_transactions_tenant_id', 'transactions'),
+        ('ix_statements_tenant_id', 'statements'),
+        ('ix_gl_accounts_tenant_id', 'gl_accounts'),
+        ('ix_accounts_tenant_id', 'accounts'),
+        ('ix_audit_entries_resource', 'audit_entries'),
+        ('ix_audit_entries_actor_id', 'audit_entries'),
+    ]:
+        conn.execute(sa.text(f"DROP INDEX IF EXISTS {idx}"))

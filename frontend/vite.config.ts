@@ -14,6 +14,12 @@ export default defineConfig({
   },
   build: {
     chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      external: ["./src/data/mockData", "./src/mocks/browser", "./src/mocks/handlers", "./src/mocks/server"],
+    },
+  },
+  define: {
+    "import.meta.env.MOCK_DATA": JSON.stringify(false),
   },
   resolve: {
     alias: {

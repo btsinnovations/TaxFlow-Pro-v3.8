@@ -102,16 +102,20 @@ def balance_sheet_route(
 def cash_flow_route(
     request: Request,
     payload: DateRange,
+    basis: str = "accrual",
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
     tenant_id = _wrap_tenant(request, db, current_user)
     if not has_role(db, current_user.id, tenant_id, Role.viewer):
         raise HTTPException(status_code=403, detail="Insufficient profile role (viewer required)")
+    if basis not in ("accrual", "cash"):
+        raise HTTPException(status_code=400, detail="basis must be 'accrual' or 'cash'")
     return cash_flow_statement(
         db,
         tenant_id=tenant_id,
         user_id=current_user.id,
         start_date=payload.start_date,
         end_date=payload.end_date,
+        basis=basis,
     )

@@ -271,19 +271,69 @@ def balance_sheet(
     }
 
 
+def _cash_basis_operating(
+    db: Session,
+    tenant_id: int,
+    start_date: date,
+    end_date: date,
+) -> tuple[Decimal, list[dict]]:
+    """Compute operating cash flow from actual cash-account transaction deltas.
+
+    A debit to a cash account increases cash (inflow); a credit decreases
+    cash (outflow). This matches accounting conventions used in the rest of
+    the app and in the test suite.
+    """
+    cash_accounts = db.query(models.CoaAccount).filter(
+        models.CoaAccount.tenant_id == tenant_id,
+        models.CoaAccount.type == "asset",
+        models.CoaAccount.name.ilike("%cash%") | models.CoaAccount.name.ilike("%checking%") | models.CoaAccount.name.ilike("%savings%"),
+    ).all()
+
+    net = Decimal("0")
+    rows: list[dict] = []
+    for a in cash_accounts:
+        inflow = Decimal("0")
+        outflow = Decimal("0")
+        for t in _txns_for_account(db, a.id, start_date, end_date):
+            amt = Decimal(str(t.amount or 0))
+            tx_type = (t.tx_type or "").lower()
+            # Credits to cash reduce the balance (outflow); debits increase it (inflow).
+            if tx_type in ("credit", "withdrawal", "atm", "payment"):
+                outflow += amt
+            else:
+                inflow += amt
+        acct_net = inflow - outflow
+        if acct_net != 0:
+            net += acct_net
+            rows.append({
+                "id": a.id,
+                "number": str(a.number),
+                "name": a.name,
+                "amount": float(acct_net),
+            })
+    return net, rows
+
+
 def cash_flow_statement(
     db: Session,
     tenant_id: int,
     user_id: int,
     start_date: date,
     end_date: date,
+    basis: str = "accrual",
 ) -> dict:
-    """Return a simplified cash flow statement for the period.
+    """Return a cash flow statement for the period.
 
-    Operating cash flow is approximated as income minus expenses (accrual
-    proxy). Investing reflects non-cash asset account changes and financing
-    reflects liability/equity changes. This is intentionally simplified for
-    the Track 6 Reports Center milestone.
+    When ``basis='accrual'`` (default), operating cash flow is computed as
+    income minus expenses using the accrual proxy (net P&L).  Investing
+    reflects non-cash asset account changes and financing reflects
+    liability/equity changes.
+
+    When ``basis='cash'``, operating cash flow is derived from actual
+    cash-account (checking/savings/cash) transaction deltas instead of the
+    accrual P&L proxy.
+
+    This is intentionally simplified for the Track 6 Reports Center milestone.
     """
     accounts = _coa_accounts_for_tenant(db, tenant_id)
 
@@ -292,38 +342,78 @@ def cash_flow_statement(
     financing = Decimal("0")
     detail: dict[str, list[dict]] = {"operating": [], "investing": [], "financing": []}
 
-    for a in accounts:
-        balance = Decimal("0")
-        for t in _txns_for_account(db, a.id, start_date, end_date):
-            balance += _txn_amount_signed_for_account(t, a.type)
-        if balance == 0:
-            continue
-        if a.type == "income":
-            operating += balance
-            bucket = "operating"
-        elif a.type == "expense":
-            operating -= balance
-            bucket = "operating"
-        elif a.type == "asset":
-            investing += balance
-            bucket = "investing"
-        elif a.type == "liability":
-            financing += balance
-            bucket = "financing"
-        elif a.type == "equity":
-            financing += balance
-            bucket = "financing"
-        else:
-            continue
-        detail[bucket].append({
-            "id": a.id,
-            "number": str(a.number),
-            "name": a.name,
-            "amount": float(balance if a.type != "expense" else -balance),
-        })
+    if basis == "cash":
+        # True cash basis: operating cash from cash-account deltas
+        op_cash, op_rows = _cash_basis_operating(db, tenant_id, start_date, end_date)
+        operating = op_cash
+        detail["operating"] = op_rows
+
+        # Investing and financing still use accrual account changes
+        for a in accounts:
+            if a.type not in ("asset", "liability", "equity"):
+                continue
+            balance = Decimal("0")
+            for t in _txns_for_account(db, a.id, start_date, end_date):
+                balance += _txn_amount_signed_for_account(t, a.type)
+            if balance == 0:
+                continue
+            # Skip cash accounts here (already counted in operating)
+            if a.type == "asset" and any(
+                kw in a.name.lower() for kw in ("cash", "checking", "savings")
+            ):
+                continue
+            if a.type == "asset":
+                investing += balance
+                bucket = "investing"
+            elif a.type == "liability":
+                financing += balance
+                bucket = "financing"
+            elif a.type == "equity":
+                financing += balance
+                bucket = "financing"
+            else:
+                continue
+            detail[bucket].append({
+                "id": a.id,
+                "number": str(a.number),
+                "name": a.name,
+                "amount": float(balance),
+            })
+    else:
+        # Accrual proxy (default, backward-compatible)
+        for a in accounts:
+            balance = Decimal("0")
+            for t in _txns_for_account(db, a.id, start_date, end_date):
+                balance += _txn_amount_signed_for_account(t, a.type)
+            if balance == 0:
+                continue
+            if a.type == "income":
+                operating += balance
+                bucket = "operating"
+            elif a.type == "expense":
+                operating -= balance
+                bucket = "operating"
+            elif a.type == "asset":
+                investing += balance
+                bucket = "investing"
+            elif a.type == "liability":
+                financing += balance
+                bucket = "financing"
+            elif a.type == "equity":
+                financing += balance
+                bucket = "financing"
+            else:
+                continue
+            detail[bucket].append({
+                "id": a.id,
+                "number": str(a.number),
+                "name": a.name,
+                "amount": float(balance if a.type != "expense" else -balance),
+            })
 
     net_cash = operating + investing + financing
     return {
+        "basis": basis,
         "start_date": start_date.isoformat(),
         "end_date": end_date.isoformat(),
         "operating": float(operating),

@@ -36,6 +36,13 @@ def _redact_for_hash(details_raw):
 
 def upgrade() -> None:
     """Add chain_hash column and deterministically backfill existing rows."""
+    conn = op.get_bind()
+    try:
+        tables = {row[0] for row in conn.execute(sa.text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()}
+    except Exception:
+        tables = set()
+    if 'audit_entries' not in tables:
+        return
     op.add_column(
         'audit_entries',
         sa.Column('chain_hash', sa.String(length=64), nullable=True)
@@ -72,5 +79,15 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Remove the chain_hash column."""
-    with op.batch_alter_table('audit_entries', schema=None) as batch_op:
-        batch_op.drop_column('chain_hash')
+    conn = op.get_bind()
+    try:
+        tables = {row[0] for row in conn.execute(sa.text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()}
+    except Exception:
+        tables = set()
+    if 'audit_entries' not in tables:
+        return
+    try:
+        with op.batch_alter_table('audit_entries', schema=None) as batch_op:
+            batch_op.drop_column('chain_hash')
+    except Exception:
+        pass

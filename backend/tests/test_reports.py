@@ -527,3 +527,139 @@ def test_api_cash_flow(auth_client: TestClient, db: Session):
     body = resp.json()
     assert body["operating"] == 800.0
     assert body["net_change"] == 800.0
+
+
+# ---------------------------------------------------------------------------
+# H5: Cash-flow basis parameter tests
+# ---------------------------------------------------------------------------
+
+def test_cash_flow_default_basis_is_accrual(db: Session):
+    """Default basis must be accrual for backward compatibility."""
+    user, client = _seed_user_and_tenant(db)
+    revenue = create_account(db, client.id, user.id, "4030", "Sales", "income")
+    expense = create_account(db, client.id, user.id, "5120", "Supplies", "expense")
+    account = _seed_account(db, client.id, user.id)
+
+    _seed_statement_and_txn(
+        db, account.id, client.id, user.id,
+        date=date(2026, 1, 5),
+        description="Sale",
+        amount=Decimal("600.00"),
+        tx_type="credit",
+        coa_account_id=revenue["id"],
+    )
+    _seed_statement_and_txn(
+        db, account.id, client.id, user.id,
+        date=date(2026, 1, 10),
+        description="Supplies",
+        amount=Decimal("100.00"),
+        tx_type="debit",
+        coa_account_id=expense["id"],
+    )
+
+    result = cash_flow_statement(db, client.id, user.id, date(2026, 1, 1), date(2026, 1, 31))
+    assert result["basis"] == "accrual"
+    assert result["operating"] == 500.0  # 600 income - 100 expense
+
+
+def test_cash_flow_cash_basis_uses_cash_accounts(db: Session):
+    """Cash basis operating cash flow should use cash-account deltas."""
+    user, client = _seed_user_and_tenant(db)
+    cash = create_account(db, client.id, user.id, "1010", "Checking", "asset")
+    revenue = create_account(db, client.id, user.id, "4040", "Revenue", "income")
+    account = _seed_account(db, client.id, user.id)
+
+    # Transaction mapped to cash account (debit = cash in)
+    _seed_statement_and_txn(
+        db, account.id, client.id, user.id,
+        date=date(2026, 1, 5),
+        description="Cash deposit",
+        amount=Decimal("500.00"),
+        tx_type="debit",
+        coa_account_id=cash["id"],
+    )
+    # Transaction mapped to revenue (not cash)
+    _seed_statement_and_txn(
+        db, account.id, client.id, user.id,
+        date=date(2026, 1, 10),
+        description="Accrual sale",
+        amount=Decimal("300.00"),
+        tx_type="credit",
+        coa_account_id=revenue["id"],
+    )
+
+    # Cash basis: operating = 500 (only cash-account delta)
+    result_cash = cash_flow_statement(db, client.id, user.id, date(2026, 1, 1), date(2026, 1, 31), basis="cash")
+    assert result_cash["basis"] == "cash"
+    assert result_cash["operating"] == 500.0
+
+    # Accrual basis: operating = 300 (revenue only, expense=0)
+    result_accrual = cash_flow_statement(db, client.id, user.id, date(2026, 1, 1), date(2026, 1, 31), basis="accrual")
+    assert result_accrual["basis"] == "accrual"
+    assert result_accrual["operating"] == 300.0
+
+
+def test_cash_flow_cash_basis_with_expense(db: Session):
+    """Cash basis with a cash payment (credit to cash account) reduces operating."""
+    user, client = _seed_user_and_tenant(db)
+    cash = create_account(db, client.id, user.id, "1020", "Checking", "asset")
+    account = _seed_account(db, client.id, user.id)
+
+    # Cash in
+    _seed_statement_and_txn(
+        db, account.id, client.id, user.id,
+        date=date(2026, 1, 5),
+        description="Deposit",
+        amount=Decimal("800.00"),
+        tx_type="debit",
+        coa_account_id=cash["id"],
+    )
+    # Cash out
+    _seed_statement_and_txn(
+        db, account.id, client.id, user.id,
+        date=date(2026, 1, 10),
+        description="ATM withdrawal",
+        amount=Decimal("300.00"),
+        tx_type="credit",
+        coa_account_id=cash["id"],
+    )
+
+    result = cash_flow_statement(db, client.id, user.id, date(2026, 1, 1), date(2026, 1, 31), basis="cash")
+    assert result["operating"] == 500.0  # 800 - 300
+    assert result["net_change"] == 500.0
+
+
+def test_api_cash_flow_rejects_invalid_basis(auth_client: TestClient, db: Session):
+    """Invalid basis value should return 400."""
+    resp = auth_client.post(
+        "/api/reports/cash-flow",
+        params={"basis": "invalid"},
+        json={"start_date": "2026-01-01", "end_date": "2026-01-31"},
+    )
+    assert resp.status_code == 400
+
+
+def test_api_cash_flow_cash_basis(auth_client: TestClient, db: Session):
+    """API endpoint should pass basis through to the domain function."""
+    auth_user, client = _ensure_auth_user(db)
+    cash = create_account(db, client.id, auth_user.id, "1030", "Checking", "asset")
+    account = _seed_account(db, client.id, auth_user.id)
+
+    _seed_statement_and_txn(
+        db, account.id, client.id, auth_user.id,
+        date=date(2026, 7, 1),
+        description="Cash in",
+        amount=Decimal("700.00"),
+        tx_type="debit",
+        coa_account_id=cash["id"],
+    )
+
+    resp = auth_client.post(
+        "/api/reports/cash-flow",
+        params={"basis": "cash"},
+        json={"start_date": "2026-07-01", "end_date": "2026-07-31"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["basis"] == "cash"
+    assert body["operating"] == 700.0

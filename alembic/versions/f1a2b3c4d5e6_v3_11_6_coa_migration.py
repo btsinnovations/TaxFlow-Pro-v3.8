@@ -657,6 +657,8 @@ def downgrade() -> None:
     Drops new columns added to existing tables, then drops all tables created
     by this migration.  Tables that existed before v3.11.6 are preserved.
     """
+    conn = op.get_bind()
+
     # Drop coa_account_id columns from existing tables
     if _table_exists('transactions'):
         tx_cols = _table_columns('transactions')
@@ -679,15 +681,8 @@ def downgrade() -> None:
             with op.batch_alter_table('categorization_rules') as batch_op:
                 batch_op.drop_column('coa_account_id')
 
-    # Drop tables created by this migration that are NOT created by the
-    # v3.11 baseline (e8f4a2c1d0b5).  Tables that the v3.11 baseline creates
-    # (users, clients, accounts, gl_accounts, statements, transactions,
-    # categorization_rules, recurring_rules, audit_entries) are left for
-    # the v3.11 baseline downgrade to handle.
-    #
-    # We use try/except because some tables may have dependent FKs or
-    # may not exist (created idempotently only if missing).
-    for tbl in [
+    # Drop tables created by this migration (idempotent)
+    for table_name in [
         'tax_line_mappings', 'budget_lines', 'reconciliation_matches',
         'reconciliation_imports', 'fx_rates', 'inventory_transactions',
         'inventory_items', 'investment_lots', 'loan_schedules',
@@ -697,27 +692,14 @@ def downgrade() -> None:
         'trained_models', 'sessions', 'refresh_tokens', 'revoked_tokens',
         'profile_memberships',
     ]:
-        if _table_exists(tbl):
-            try:
-                op.drop_table(tbl)
-            except Exception:
-                pass  # Table may have dependent FKs; ignore on downgrade
+        conn.execute(sa.text(f"DROP TABLE IF EXISTS {table_name}"))
 
-    # Drop coa_accounts table
-    if _table_exists('coa_accounts'):
-        try:
-            op.drop_index('ix_coa_accounts_parent_id', table_name='coa_accounts')
-        except Exception:
-            pass
-        try:
-            op.drop_index('ix_coa_accounts_tenant_number', table_name='coa_accounts')
-        except Exception:
-            pass
-        try:
-            op.drop_index('ix_coa_accounts_tenant_id', table_name='coa_accounts')
-        except Exception:
-            pass
-        try:
-            op.drop_table('coa_accounts')
-        except Exception:
-            pass
+    # Drop coa_accounts table and its indexes (idempotent)
+    for idx_name in [
+        'ix_coa_accounts_parent_id',
+        'ix_coa_accounts_tenant_number',
+        'ix_coa_accounts_tenant_id',
+    ]:
+        conn.execute(sa.text(f"DROP INDEX IF EXISTS {idx_name}"))
+    conn.execute(sa.text("DROP TABLE IF EXISTS coa_accounts"))
+
