@@ -1,0 +1,13 @@
+Charles Schwab Brokerage Statement
+Statement Period: 01/01/2026 - 01/31/2026
+Account Number: ****9012
+
+Cash Transactions
+
+01/02/2026 DIVIDEND RECEIVED 125.00
+01/04/2026 WITHDRAWAL TO BANK -1000.00
+01/10/2026 INTEREST EARNED 0.80
+
+Holdings
+SYMBOL QTY PRICE
+SPY 100 450.00
