@@ -84,7 +84,7 @@ def cash_flow_forecast(
     months: int = 6,
 ) -> list[dict]:
     """Project cash balance forward using recurring inflows/outflows."""
-    # Stub: use historical net from last 3 months as monthly delta.
+    # Project using historical net cash flow from the prior 3 months as the recurring monthly delta.
     end = start_date
     start = date(start_date.year - 1 if start_date.month <= 3 else start_date.year,
                  start_date.month - 3 if start_date.month > 3 else start_date.month + 9,
