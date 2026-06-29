@@ -5,6 +5,37 @@ root = Path(__file__).resolve().parents[3]
 routers_dir = root / 'backend' / 'routers'
 frontend_dir = root / 'frontend' / 'src'
 
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def _path_to_regex(path: str) -> re.Pattern:
+    """Convert a FastAPI-style path with {params} to a matching regex."""
+    # Escape everything, then replace \{param\} with [^/]+
+    escaped = re.escape(path)
+    escaped = re.sub(r'\\\{[^}]+\\\}', r'[^/]+', escaped)
+    return re.compile(f'^{escaped}$')
+
+
+def _path_matches(fp: str, fc: str) -> bool:
+    """Check if frontend route fc matches backend path fp (with {params})."""
+    # Direct match
+    if fc == fp:
+        return True
+    # Frontend route is prefix of backend path (collection covers detail)
+    if fp.startswith(fc + '/'):
+        return True
+    # Backend path has {params} — check if frontend route matches the pattern
+    if '{' in fp:
+        pat = _path_to_regex(fp)
+        if pat.match(fc):
+            return True
+        # Also check if the collection prefix (strip /{param}) matches
+        base = re.sub(r'/\{[^}]+\}.*$', '', fp)
+        if fc == base or fc.startswith(base + '/'):
+            return True
+    return False
+
+# ── Endpoint discovery ───────────────────────────────────────────────────────
+
 endpoints = []
 for f in sorted(routers_dir.glob('*.py')):
     if f.name in ('__init__.py',):
@@ -49,13 +80,13 @@ for f in frontend_dir.rglob('*'):
     if not f.is_file() or f.suffix not in ('.ts', '.tsx', '.js', '.jsx'):
         continue
     text = f.read_text(encoding='utf-8', errors='ignore')
-    for match in re.findall(r'["\'`](/api/[a-zA-Z0-9_/-]+)', text):
+    for match in re.findall(r'["\'`](/api/[a-zA-Z0-9_/{}.-]+)', text):
         frontend_calls.add(match.rstrip('/'))
 
 for ep in endpoints:
     fp = ep['full_path'].rstrip('/')
     for fc in frontend_calls:
-        if fc == fp or fc.startswith(fp + '/'):
+        if _path_matches(fp, fc):
             ep['has_frontend'] = True
             ep['matched_frontend_route'] = fc
             break
