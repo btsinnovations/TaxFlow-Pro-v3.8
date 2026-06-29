@@ -538,6 +538,9 @@ class ReconciliationImport(Base):
     statement_date = Column(Date, nullable=True)
     statement_balance = Column(Numeric(12, 2), nullable=False)
     filename = Column(String, nullable=True)
+    is_completed = Column(Boolean, default=False)
+    completed_at = Column(DateTime, nullable=True)
+    completed_by_profile_id = Column(Integer, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
 

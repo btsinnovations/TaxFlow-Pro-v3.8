@@ -24,6 +24,11 @@ from backend.rls import is_postgres, resolve_user_tenant_id, set_tenant_id
 from backend.local import settings as local_settings
 
 from backend.local.roles import Role, has_role
+from backend.accounting.reconciliation_lock import (
+    ReconciliationLockError,
+    complete_reconciliation,
+    reopen_reconciliation,
+)
 
 router = APIRouter(prefix="/reconciliation", tags=["reconciliation"])
 
@@ -224,3 +229,43 @@ def status_route(
         return reconciliation_status(db, import_id=import_id, user_id=current_user.id)
     except ReconciliationError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/{import_id}/complete")
+def complete_reconciliation_endpoint(
+    request: Request,
+    import_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Complete (lock) a reconciliation."""
+    tenant_id = _wrap_tenant(request, db, current_user)
+    _require_role(db, current_user, tenant_id, Role.bookkeeper)
+    try:
+        imp = complete_reconciliation(
+            db, import_id=import_id, user_id=current_user.id,
+            tenant_id=tenant_id, profile_id=tenant_id,
+        )
+    except ReconciliationLockError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"id": imp.id, "is_completed": imp.is_completed}
+
+
+@router.post("/{import_id}/reopen")
+def reopen_reconciliation_endpoint(
+    request: Request,
+    import_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Reopen a completed reconciliation."""
+    tenant_id = _wrap_tenant(request, db, current_user)
+    _require_role(db, current_user, tenant_id, Role.admin)
+    try:
+        imp = reopen_reconciliation(
+            db, import_id=import_id, user_id=current_user.id,
+            tenant_id=tenant_id,
+        )
+    except ReconciliationLockError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"id": imp.id, "is_completed": imp.is_completed}
