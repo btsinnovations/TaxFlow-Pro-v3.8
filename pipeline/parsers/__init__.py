@@ -17,10 +17,10 @@ def register_parser(cls):
 
 def _load_plugins():
     """Explicit plugin loader (safe, deterministic)."""
-    import phase3_pipeline.parsers as pkg
+    import pipeline.parsers as pkg
     for _, module_name, _ in pkgutil.iter_modules(pkg.__path__):
         if module_name != "base":
-            importlib.import_module(f".{module_name}", package="phase3_pipeline.parsers")
+            importlib.import_module(f".{module_name}", package="pipeline.parsers")
     PARSER_REGISTRY.sort(key=lambda p: getattr(p, "priority", 0), reverse=True)
 
 _load_plugins()

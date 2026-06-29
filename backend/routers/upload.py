@@ -65,7 +65,7 @@ def standardize_date(date_str: str) -> Optional[date]:
     return None
 
 
-from phase3_pipeline.identity import IdentityService
+from pipeline.identity import IdentityService
 
 
 def clean_header_bleed(desc: str) -> str:

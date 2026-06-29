@@ -169,15 +169,15 @@ def test_model_to_dict_roundtrip(tmp_path, monkeypatch):
 
 
 def test_phase3_wrapper_imports():
-    """The phase3_pipeline wrapper must import without error and expose expected names."""
-    from phase3_pipeline import pdf_parser
+    """The pipeline wrapper must import without error and expose expected names."""
+    from pipeline import pdf_parser
     assert callable(pdf_parser.pdf_to_transactions)
     assert hasattr(pdf_parser, "detect_institution")
 
 
 def test_phase3_wrapper_falls_back_to_backend_parser(tmp_path):
     """When plugin registry returns nothing, the wrapper falls back to backend.parsers."""
-    from phase3_pipeline.pdf_parser import pdf_to_transactions
+    from pipeline.pdf_parser import pdf_to_transactions
 
     pdf_path = tmp_path / "stmt.pdf"
     pdf = _SimpleStmtPDF()

@@ -54,11 +54,11 @@ def test_no_unsafe_yaml_load_in_project() -> None:
 
 
 def test_phase3_pipeline_uses_yaml_safe_loader() -> None:
-    """Ensure phase3 modules import safe_load_yaml_file instead of yaml.safe_load."""
+    """Ensure pipeline modules import safe_load_yaml_file instead of yaml.safe_load."""
     targets = [
-        PROJECT_ROOT / "phase3_pipeline" / "categorizer.py",
-        PROJECT_ROOT / "phase3_pipeline" / "category_loader.py",
-        PROJECT_ROOT / "phase3_pipeline" / "profile_manager.py",
+        PROJECT_ROOT / "pipeline" / "categorizer.py",
+        PROJECT_ROOT / "pipeline" / "category_loader.py",
+        PROJECT_ROOT / "pipeline" / "profile_manager.py",
     ]
     for path in targets:
         source = path.read_text(encoding="utf-8")

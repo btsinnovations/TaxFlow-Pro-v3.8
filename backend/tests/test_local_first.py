@@ -14,7 +14,7 @@ import pytest
 
 class TestLocalFirstProperties:
     def test_categorize_is_case_insensitive(self):
-        from phase3_pipeline.categorizer import PriorityCategorizer
+        from pipeline.categorizer import PriorityCategorizer
 
         categorizer = PriorityCategorizer()
         variants = ["STARBUCKS", "starbucks", "StarBucks", "StArBuCkS"]
@@ -31,7 +31,7 @@ class TestLocalFirstProperties:
         assert "1234567890" not in masked
 
     def test_generate_transaction_uid_is_deterministic(self):
-        from phase3_pipeline.identity import IdentityService
+        from pipeline.identity import IdentityService
 
         uid1 = IdentityService.generate_transaction_uid(
             "2025-01-15", "Walmart", "-42.50", institution="Chase", account="checking"
@@ -42,7 +42,7 @@ class TestLocalFirstProperties:
         assert uid1 == uid2
 
     def test_generate_transaction_uid_changes_when_amount_changes(self):
-        from phase3_pipeline.identity import IdentityService
+        from pipeline.identity import IdentityService
 
         base = dict(date="2025-01-15", description="Walmart", institution="Chase", account="checking")
         uid_a = IdentityService.generate_transaction_uid(**base, amount="-42.50")
@@ -116,7 +116,7 @@ class TestOfflineModeGuards:
 
 # ── Runtime dependency audit ────────────────────────────────────────────────
 
-RUNTIME_DIRS = [Path("backend"), Path("phase3_pipeline")]
+RUNTIME_DIRS = [Path("backend"), Path("pipeline")]
 FORBIDDEN_IMPORTS = {"requests", "urllib.request", "http.client", "httpx", "aiohttp"}
 
 

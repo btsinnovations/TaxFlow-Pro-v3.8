@@ -1,4 +1,4 @@
-"""Cash App statement parser (ported from phase3_pipeline).
+"""Cash App statement parser (ported from pipeline).
 
 Cash App uses a peer-to-peer format with To/From semantics and
 single-column amounts with +/- sign indicators.

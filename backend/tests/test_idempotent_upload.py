@@ -11,7 +11,7 @@ from backend.database import Base, DATABASE_URL
 from backend.models import Client, Account, Statement, Transaction, User
 from backend.routers.auth import get_password_hash
 from backend.routers.upload import _upsert_transactions
-from phase3_pipeline.identity import IdentityService
+from pipeline.identity import IdentityService
 
 
 def _make_test_db():
