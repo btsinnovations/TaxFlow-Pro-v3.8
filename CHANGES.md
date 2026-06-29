@@ -1,5 +1,94 @@
 ---
 
+# TaxFlow Pro v3.11.6 — Remediation Cycle Close-Out
+
+## Release summary
+
+- Closed all P0/P1 audit findings from the v3.11.6 remediation cycle (R1–R6).
+- R1: GL auto-posting, R2: period close, R3: reconciliation locking.
+- R4: tax forms (1065/1120-S/8825/4562/Schedule E), adjusting entries, year-end package zip.
+- R5: sales tax liability, mileage log, vendor-keyed 1099 tracking.
+- R6: Alembic downgrade reliability, corrupted-DB startup guard, version bump, supported institutions doc refresh, frontend mock exclusion, cash-flow basis parameter, code-smell cleanup.
+- Bumped canonical version to `3.11.6`.
+
+## Section 70 — Alembic Downgrade Reliability + Startup Guard
+
+**Files changed:**
+- `alembic/versions/*.py` — made all `downgrade()` operations idempotent across the migration chain.
+- `backend/api.py` — added `run_migrations()` guard for stamped-but-empty databases.
+
+**Changes:**
+- Earlier migrations used non-idempotent `op.drop_index` / `op.drop_table` calls. After `f1a2b3c4d5e6` (v3.11.6 COA migration) drops several tables, downgrading past that point caused cascading `NoSuchTableError` / `no such index` failures.
+- Replaced brittle drops with `DROP TABLE IF EXISTS` / `DROP INDEX IF EXISTS` raw SQL, or with table-existence guards for column-level operations.
+- Added startup guard: if `alembic_version` exists but no data tables exist, stamp to `base` and rebuild.
+
+**Verification:**
+```bash
+alembic downgrade base
+alembic upgrade head
+alembic downgrade base
+alembic upgrade head
+```
+Expected: all four commands pass on SQLite and PostgreSQL.
+
+## Section 71 — Version Bump to 3.11.6
+
+**Files changed:**
+- `version.txt`
+- `backend/version.py`
+- `frontend/package.json`
+- `backend/tests/test_api.py`
+
+**Changes:**
+- Bumped canonical version from `3.11.5` to `3.11.6`.
+- Updated health-endpoint version assertions.
+
+## Section 72 — Supported Institutions Documentation
+
+**Files changed:**
+- `docs/SUPPORTED_INSTITUTIONS.md`
+- `data/docuclipper-institutions.json`
+
+**Changes:**
+- Documented 27 dedicated institution parsers.
+- Documented 6 layout-family parsers covering an additional ~81 institutions.
+- Total supported registry: 103 institutions (22 Phase 1 + 81 family-covered).
+
+## Section 73 — Cash-Flow Statement Basis Parameter
+
+**Files changed:**
+- `backend/routers/reports.py`
+- `backend/accounting/reports.py`
+- `backend/tests/test_reports.py`
+
+**Changes:**
+- Added `basis=cash|accrual` query parameter to `/api/reports/cash-flow`.
+- Default remains `accrual` for backward compatibility.
+- Cash basis derives operating cash flow from actual cash/checking/savings account deltas.
+
+## Section 74 — Frontend Mock Exclusion from Production Builds
+
+**Files changed:**
+- `frontend/vite.config.ts`
+- `frontend/src/data/mockData.ts`
+
+**Changes:**
+- Added `rollupOptions.external` for mock modules.
+- Added `import.meta.env.MOCK_DATA` define.
+- Commented mock data as dev-only.
+
+## Section 75 — Code-Smell Cleanup
+
+**Files changed:**
+- `backend/accounting/budget.py`
+- `backend/accounting/coa.py`
+- `backend/accounting/reports.py`
+
+**Changes:**
+- Replaced "Stub" / "placeholder" comments with accurate descriptions.
+
+---
+
 # TaxFlow Pro v3.11.5 — Security Hardening + Desktop Packaging
 
 ## Release summary
