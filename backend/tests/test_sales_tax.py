@@ -73,3 +73,89 @@ def test_api_sales_tax_liability_summary(auth_client: TestClient, db: Session):
     body = resp.json()
     assert body["remitted"] == 100.0
     assert body["balance"] == -100.0
+
+
+def test_api_invoice_with_tax_rate_splits_gl(db: Session, auth_client: TestClient):
+    user, client = _ensure_auth_user(db)
+    rate_payload = {
+        "name": "Miami-Dade",
+        "jurisdiction": "FL-Miami-Dade",
+        "rate": 0.07,
+        "effective_date": "2026-01-01",
+    }
+    resp = auth_client.post("/api/sales-tax/rates", json=rate_payload)
+    assert resp.status_code == 201, resp.text
+    rate_id = resp.json()["id"]
+
+    invoice_payload = {
+        "contact_name": "Customer A",
+        "invoice_number": "INV-001",
+        "issue_date": "2026-03-01",
+        "due_date": "2026-04-01",
+        "line_items": [
+            {"description": "Widget", "qty": 1, "rate": 1000.00, "tax_rate_id": rate_id}
+        ],
+    }
+    resp = auth_client.post("/api/invoicing/invoices", json=invoice_payload)
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["total"] == 1070.0
+
+    # GL should have A/R debit, revenue credit, liability credit
+    entries = db.query(models.GeneralLedgerEntry).filter(
+        models.GeneralLedgerEntry.tenant_id == client.id,
+        models.GeneralLedgerEntry.memo.ilike("%sales tax%"),
+    ).all()
+    assert len(entries) >= 1
+    liability = next((e for e in entries if e.credit_coa_account_id is not None and "Sales Tax Payable" in (e.description or "")), None)
+    assert liability is not None, entries
+    assert float(liability.amount) == 70.0
+
+    resp = auth_client.get("/api/sales-tax/liability-summary?as_of=2026-12-31")
+    assert resp.status_code == 200, resp.text
+    summary = resp.json()
+    assert summary["collected"] == 70.0
+    assert summary["balance"] == 70.0
+
+
+def test_api_sales_tax_payment_reduces_liability(db: Session, auth_client: TestClient):
+    user, client = _ensure_auth_user(db)
+    create_account(db, client.id, user.id, "1020", "Operating Checking", "asset")
+    rate_payload = {
+        "name": "FL",
+        "jurisdiction": "FL",
+        "rate": 0.06,
+        "effective_date": "2026-01-01",
+    }
+    resp = auth_client.post("/api/sales-tax/rates", json=rate_payload)
+    assert resp.status_code == 201
+    rate_id = resp.json()["id"]
+
+    invoice_payload = {
+        "contact_name": "Customer B",
+        "invoice_number": "INV-002",
+        "issue_date": "2026-03-01",
+        "due_date": "2026-04-01",
+        "line_items": [
+            {"description": "Service", "qty": 1, "rate": 500.00, "tax_rate_id": rate_id}
+        ],
+    }
+    resp = auth_client.post("/api/invoicing/invoices", json=invoice_payload)
+    assert resp.status_code == 201
+
+    payment_payload = {
+        "period_start": "2026-03-01",
+        "period_end": "2026-03-31",
+        "payment_date": "2026-04-15",
+        "amount": 30.00,
+        "jurisdiction": "FL",
+    }
+    resp = auth_client.post("/api/sales-tax/payments", json=payment_payload)
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["amount"] == 30.0
+
+    resp = auth_client.get("/api/sales-tax/liability-summary?as_of=2026-12-31")
+    summary = resp.json()
+    assert summary["collected"] == 30.0
+    assert summary["remitted"] == 30.0
+    assert summary["balance"] == 0.0

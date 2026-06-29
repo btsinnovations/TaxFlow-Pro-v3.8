@@ -77,7 +77,11 @@ def create_invoice(
                 models.SalesTaxRate.tenant_id == tenant_id,
             ).first()
             if tax_rate:
-                line_tax = Decimal(str(line.get("tax_amount", 0))) or (net * Decimal(str(tax_rate.rate))).quantize(Decimal("0.01"))
+                provided_tax = line.get("tax_amount")
+                if provided_tax not in (None, ""):
+                    line_tax = Decimal(str(provided_tax)).quantize(Decimal("0.01"))
+                else:
+                    line_tax = (net * Decimal(str(tax_rate.rate))).quantize(Decimal("0.01"))
                 line["tax_rate_id"] = tax_rate.id
         line["amount"] = float(net)
         line["tax_amount"] = float(line_tax)

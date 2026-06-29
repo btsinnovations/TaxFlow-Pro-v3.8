@@ -175,7 +175,7 @@ def form_1099_nec_misc(
     ).all()
     vendor_map = {v.name.strip().lower(): v for v in vendors}
 
-    # Bills (is_bill=True) paid in the tax year
+    # Vendor-keyed payments via invoices/bills (paid bills in the tax year).
     bills = db.query(models.Invoice).filter(
         models.Invoice.tenant_id == tenant_id,
         models.Invoice.user_id == user_id,
@@ -186,6 +186,7 @@ def form_1099_nec_misc(
 
     vendor_totals: dict[int, Decimal] = {}
     fallback_totals: dict[str, Decimal] = {}
+
     for bill in bills:
         paid = Decimal(str(bill.amount_paid or 0))
         if paid == 0:
@@ -197,12 +198,21 @@ def form_1099_nec_misc(
             name = (bill.contact_name or "Unknown").strip()
             fallback_totals[name] = fallback_totals.get(name, Decimal("0")) + paid
 
+    # Fallback to debit transactions grouped by description when no matching
+    # vendor record exists. This preserves legacy 1099 detection from bank txns.
+    txns = _1099_candidates(db, tenant_id, user_id, year)
+    for t in txns:
+        amt = Decimal(str(t.amount or 0))
+        name = (t.description or "Unknown").strip()
+        # Skip if this transaction's description already matched a vendor via bills.
+        if name.lower() in vendor_map:
+            continue
+        fallback_totals[name] = fallback_totals.get(name, Decimal("0")) + amt
+
     results = []
     for vendor_id, total in vendor_totals.items():
         if total >= threshold:
-            vendor = vendor_map.get(vendor_id) if isinstance(vendor_id, int) else None
-            if vendor is None:
-                vendor = next((v for v in vendors if v.id == vendor_id), None)
+            vendor = next((v for v in vendors if v.id == vendor_id), None)
             if not vendor:
                 continue
             form = "1099-NEC" if vendor.is_1099_eligible else "1099-MISC"
