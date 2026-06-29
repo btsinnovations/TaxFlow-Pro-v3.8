@@ -6,7 +6,7 @@ from starlette.responses import JSONResponse
 from pathlib import Path
 from .database import engine, DATABASE_URL
 from . import models  # noqa: F401 - ensure models are registered
-from .routers import upload, clients, accounts, audit, tax, tax_exports, ml, export, dashboard, auth, depreciation, rules, flags, gl, transactions, health, coa, profiles, recurring, checks, inventory, fx, reconciliation, reports, budget, invoicing, liabilities, investments, imports, backup, periods
+from .routers import upload, clients, accounts, audit, tax, tax_exports, ml, export, dashboard, auth, depreciation, rules, flags, gl, transactions, health, coa, profiles, recurring, checks, inventory, fx, reconciliation, reports, budget, invoicing, liabilities, investments, imports, backup, periods, year_end, sales_tax, mileage, vendors
 from . import auth as auth_module
 from .rls import is_postgres
 from .local import settings as local_settings
@@ -329,11 +329,15 @@ app.include_router(investments.router, prefix="/api")
 app.include_router(upload.router, prefix="/api")
 app.include_router(imports.router, prefix="/api")
 app.include_router(backup.router, prefix="/api")
-app.include_router(periods.router, prefix="/api")
 app.include_router(export.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(tax.router, prefix="/api")
 app.include_router(tax_exports.router, prefix="/api")
+app.include_router(periods.router, prefix="/api")
+app.include_router(year_end.router, prefix="/api")
+app.include_router(sales_tax.router, prefix="/api")
+app.include_router(mileage.router, prefix="/api")
+app.include_router(vendors.router, prefix="/api")
 app.include_router(ml.router, prefix="/api")
 app.include_router(audit.router, prefix="/api")
 app.include_router(depreciation.router, prefix="/api")
