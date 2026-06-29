@@ -1,6 +1,10 @@
 """Year-end closing and tax-package generation for TaxFlow Pro v3.11.6."""
 from __future__ import annotations
 
+import csv
+import io
+import json
+import zipfile
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Optional
@@ -8,8 +12,20 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from backend import models
-from backend.accounting.reports import profit_and_loss
-from backend.accounting.tax_exports import schedule_c
+from backend.accounting.reports import balance_sheet, profit_and_loss, trial_balance
+from backend.accounting.tax_exports import (
+    csv_rows_to_csv,
+    form_1065,
+    form_1099_nec_misc,
+    form_1099_summary_csv,
+    form_1120s,
+    form_4562,
+    form_8825,
+    json_dumps_compact,
+    schedule_c,
+    schedule_c_csv,
+    schedule_e,
+)
 
 
 RETAINED_EARNINGS_NUMBER = 3100
@@ -89,7 +105,6 @@ def close_year(
     start = date(year, 1, 1)
     end = date(year, 12, 31)
 
-    # Ensure retained earnings and income summary accounts exist.
     retained_earnings = _get_or_create_coa(
         db, tenant_id, RETAINED_EARNINGS_NUMBER, "Retained Earnings", "equity"
     )
@@ -106,14 +121,12 @@ def close_year(
     net_income = Decimal("0")
     entries_created = 0
 
-    # Close income accounts to income summary.
     for a in accounts:
         if a.type != "income":
             continue
         balance = _coa_balance(db, a.id, start, end)
         if balance == 0:
             continue
-        # Income has credit balance. To zero it, debit income, credit summary.
         db.add(
             models.GeneralLedgerEntry(
                 tenant_id=tenant_id,
@@ -130,14 +143,12 @@ def close_year(
         entries_created += 1
         net_income += balance
 
-    # Close expense accounts to income summary.
     for a in accounts:
         if a.type != "expense":
             continue
         balance = _coa_balance(db, a.id, start, end)
         if balance == 0:
             continue
-        # Expense has debit balance. To zero it, credit expense, debit summary.
         db.add(
             models.GeneralLedgerEntry(
                 tenant_id=tenant_id,
@@ -154,16 +165,13 @@ def close_year(
         entries_created += 1
         net_income += balance
 
-    # Move net income/loss from income summary to retained earnings.
     summary_balance = net_income
 
     if summary_balance != 0:
         if summary_balance > 0:
-            # Net profit: debit summary, credit retained earnings.
             debit_acct = income_summary
             credit_acct = retained_earnings
         else:
-            # Net loss: debit retained earnings, credit summary.
             debit_acct = retained_earnings
             credit_acct = income_summary
         db.add(
@@ -181,7 +189,6 @@ def close_year(
         )
         entries_created += 1
 
-    # Mark all periods in the year as closed.
     periods = (
         db.query(models.Period)
         .filter(
@@ -206,3 +213,135 @@ def close_year(
         "closed_periods": closed_periods,
         "net_income": float(summary_balance),
     }
+
+
+def _general_ledger_csv(
+    db: Session,
+    tenant_id: int,
+    start_date: date,
+    end_date: date,
+) -> str:
+    entries = (
+        db.query(models.GeneralLedgerEntry)
+        .filter(
+            models.GeneralLedgerEntry.tenant_id == tenant_id,
+            models.GeneralLedgerEntry.date >= start_date,
+            models.GeneralLedgerEntry.date <= end_date,
+        )
+        .order_by(models.GeneralLedgerEntry.date, models.GeneralLedgerEntry.id)
+        .all()
+    )
+    rows = [
+        {
+            "id": e.id,
+            "date": e.date.isoformat(),
+            "description": e.description,
+            "debit_account_id": e.debit_account_id,
+            "credit_account_id": e.credit_account_id,
+            "debit_coa_account_id": e.debit_coa_account_id,
+            "credit_coa_account_id": e.credit_coa_account_id,
+            "amount": float(e.amount),
+            "memo": e.memo,
+            "entry_type": e.entry_type,
+            "workpaper_ref": e.workpaper_ref,
+        }
+        for e in entries
+    ]
+    return csv_rows_to_csv(rows)
+
+
+def _review_flags_json(
+    db: Session,
+    tenant_id: int,
+    start_date: date,
+    end_date: date,
+) -> str:
+    flags = (
+        db.query(models.Flag)
+        .filter(
+            models.Flag.tenant_id == tenant_id,
+        )
+        .all()
+    )
+    data = {
+        "period_start": start_date.isoformat(),
+        "period_end": end_date.isoformat(),
+        "total": len(flags),
+        "unresolved": sum(1 for f in flags if not f.resolved),
+        "flags": [
+            {
+                "id": f.id,
+                "note": f.note,
+                "resolved": f.resolved,
+                "created_by": f.created_by,
+                "created_at": f.created_at.isoformat() if f.created_at else None,
+                "resolved_at": f.resolved_at.isoformat() if f.resolved_at else None,
+            }
+            for f in flags
+        ],
+    }
+    return json_dumps_compact(data)
+
+
+def generate_year_end_package(
+    db: Session,
+    tenant_id: int,
+    user_id: int,
+    year: int,
+) -> bytes:
+    """Generate a zip archive containing the year-end package files."""
+    start = date(year, 1, 1)
+    end = date(year, 12, 31)
+
+    pnl = profit_and_loss(db, tenant_id, user_id, start, end)
+    tb = trial_balance(db, tenant_id, user_id, end)
+    bs = balance_sheet(db, tenant_id, user_id, end)
+    schedule_c_result = schedule_c(db, tenant_id, user_id, start, end)
+    f1065 = form_1065(db, tenant_id, user_id, start, end)
+    f1120s = form_1120s(db, tenant_id, user_id, start, end)
+    f8825 = form_8825(db, tenant_id, user_id, start, end)
+    f4562 = form_4562(db, tenant_id, user_id, year)
+    schedule_e_result = schedule_e(db, tenant_id, user_id, start, end)
+    form_1099s = form_1099_nec_misc(db, tenant_id, user_id, year)
+
+    gl_csv = _general_ledger_csv(db, tenant_id, start, end)
+    review_flags = _review_flags_json(db, tenant_id, start, end)
+
+    index = {
+        "year": year,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "files": [
+            {"name": "trial_balance.csv", "type": "csv"},
+            {"name": "income_statement.csv", "type": "csv"},
+            {"name": "balance_sheet.json", "type": "json"},
+            {"name": "general_ledger.csv", "type": "csv"},
+            {"name": "schedule_c.json", "type": "json"},
+            {"name": "form_1065.json", "type": "json"},
+            {"name": "form_1120s.json", "type": "json"},
+            {"name": "form_8825.json", "type": "json"},
+            {"name": "form_4562.json", "type": "json"},
+            {"name": "schedule_e.json", "type": "json"},
+            {"name": "form_1099_summary.csv", "type": "csv"},
+            {"name": "review_flags.json", "type": "json"},
+        ],
+    }
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("trial_balance.csv", csv_rows_to_csv(tb))
+        zf.writestr("income_statement.csv", csv_rows_to_csv(pnl["by_account"]))
+        zf.writestr("balance_sheet.json", json_dumps_compact(bs))
+        zf.writestr("general_ledger.csv", gl_csv)
+        zf.writestr("schedule_c.json", json_dumps_compact(schedule_c_result))
+        zf.writestr("schedule_c.csv", schedule_c_csv(schedule_c_result))
+        zf.writestr("form_1065.json", json_dumps_compact(f1065))
+        zf.writestr("form_1120s.json", json_dumps_compact(f1120s))
+        zf.writestr("form_8825.json", json_dumps_compact(f8825))
+        zf.writestr("form_4562.json", json_dumps_compact(f4562))
+        zf.writestr("schedule_e.json", json_dumps_compact(schedule_e_result))
+        zf.writestr("form_1099_summary.csv", form_1099_summary_csv(form_1099s))
+        zf.writestr("review_flags.json", review_flags)
+        zf.writestr("workpaper_index.json", json_dumps_compact(index))
+
+    buf.seek(0)
+    return buf.read()

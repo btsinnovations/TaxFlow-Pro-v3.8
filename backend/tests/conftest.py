@@ -302,6 +302,27 @@ import base64 as _b64
 import secrets as _secrets
 
 
+def _seed_default_coa_accounts(db, tenant_id: int, user_id: int) -> None:
+    """Create minimal default COA accounts used by R4/R5 tests."""
+    from backend.accounting.coa import create_account
+    defaults = [
+        ("1010", "Cash", "asset"),
+        ("1200", "Accounts Receivable", "asset"),
+        ("1500", "Equipment", "asset"),
+        ("2000", "Accounts Payable", "liability"),
+        ("2100", "Sales Tax Payable", "liability"),
+        ("3000", "Owner Equity", "equity"),
+        ("4000", "Revenue", "income"),
+        ("5000", "Cost of Goods Sold", "expense"),
+        ("6000", "Operating Expenses", "expense"),
+    ]
+    for code, name, account_type in defaults:
+        try:
+            create_account(db, tenant_id, user_id, code, name, account_type)
+        except Exception:
+            db.rollback()
+
+
 def _create_test_tenant(db, name: str = "Bundle Tenant"):
     """Create a User + Client pair and return the Client (tenant)."""
     user = models.User(
@@ -318,6 +339,7 @@ def _create_test_tenant(db, name: str = "Bundle Tenant"):
     db.add(client)
     db.commit()
     db.refresh(client)
+    _seed_default_coa_accounts(db, client.id, user.id)
     return client
 
 

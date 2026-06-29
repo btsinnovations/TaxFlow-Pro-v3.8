@@ -3,7 +3,9 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
+import io
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -18,9 +20,15 @@ from backend.accounting.tax_exports import (
     delete_mapping,
     list_mappings,
     SCHEDULE_C_LINES,
+    form_1065,
+    form_1120s,
+    form_8825,
+    form_4562,
+    schedule_e,
     form_1099_nec_misc,
     year_end_summary,
 )
+from backend.accounting.year_end import generate_year_end_package
 from backend.rls import is_postgres, resolve_user_tenant_id, set_tenant_id
 from backend.local import settings as local_settings
 
@@ -118,6 +126,89 @@ def export_year_end_summary(
     tenant_id = _wrap_tenant(request, db, current_user)
     _require_role(db, current_user, tenant_id, Role.bookkeeper)
     return year_end_summary(db, tenant_id=tenant_id, user_id=current_user.id, year=year)
+
+
+@router.get("/year-end-package")
+def export_year_end_package(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+    year: int = date.today().year - 1,
+):
+    tenant_id = _wrap_tenant(request, db, current_user)
+    _require_role(db, current_user, tenant_id, Role.bookkeeper)
+    zip_bytes = generate_year_end_package(
+        db, tenant_id=tenant_id, user_id=current_user.id, year=year
+    )
+    return StreamingResponse(
+        io.BytesIO(zip_bytes),
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename=year_end_package_{year}.zip"},
+    )
+
+
+@router.post("/form-1065")
+def export_1065(
+    request: Request,
+    payload: DateRange,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    tenant_id = _wrap_tenant(request, db, current_user)
+    _require_role(db, current_user, tenant_id, Role.bookkeeper)
+    return form_1065(db, tenant_id=tenant_id, user_id=current_user.id,
+                     start_date=payload.start_date, end_date=payload.end_date)
+
+
+@router.post("/form-1120s")
+def export_1120s(
+    request: Request,
+    payload: DateRange,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    tenant_id = _wrap_tenant(request, db, current_user)
+    _require_role(db, current_user, tenant_id, Role.bookkeeper)
+    return form_1120s(db, tenant_id=tenant_id, user_id=current_user.id,
+                      start_date=payload.start_date, end_date=payload.end_date)
+
+
+@router.post("/form-8825")
+def export_8825(
+    request: Request,
+    payload: DateRange,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    tenant_id = _wrap_tenant(request, db, current_user)
+    _require_role(db, current_user, tenant_id, Role.bookkeeper)
+    return form_8825(db, tenant_id=tenant_id, user_id=current_user.id,
+                     start_date=payload.start_date, end_date=payload.end_date)
+
+
+@router.post("/schedule-e")
+def export_schedule_e(
+    request: Request,
+    payload: DateRange,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    tenant_id = _wrap_tenant(request, db, current_user)
+    _require_role(db, current_user, tenant_id, Role.bookkeeper)
+    return schedule_e(db, tenant_id=tenant_id, user_id=current_user.id,
+                      start_date=payload.start_date, end_date=payload.end_date)
+
+
+@router.post("/form-4562")
+def export_4562(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+    year: int = date.today().year - 1,
+):
+    tenant_id = _wrap_tenant(request, db, current_user)
+    _require_role(db, current_user, tenant_id, Role.bookkeeper)
+    return form_4562(db, tenant_id=tenant_id, user_id=current_user.id, year=year)
 
 
 @router.post("/mappings", response_model=dict)

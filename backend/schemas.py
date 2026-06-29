@@ -170,9 +170,12 @@ class GeneralLedgerEntryOut(BaseModel):
     description: Optional[str] = None
     debit_account_id: Optional[int] = None
     credit_account_id: Optional[int] = None
+    debit_coa_account_id: Optional[int] = None
+    credit_coa_account_id: Optional[int] = None
     amount: float
     memo: Optional[str] = None
     workpaper_ref: Optional[str] = None
+    entry_type: Optional[str] = None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
@@ -181,8 +184,11 @@ class GeneralLedgerEntryCreate(BaseModel):
     description: Optional[str] = None
     debit_account_id: Optional[int] = None
     credit_account_id: Optional[int] = None
+    debit_coa_account_id: Optional[int] = None
+    credit_coa_account_id: Optional[int] = None
     amount: float
     memo: Optional[str] = None
+    entry_type: Optional[str] = "regular"
 
 class GeneralLedgerEntryUpdate(BaseModel):
     workpaper_ref: Optional[str] = None
