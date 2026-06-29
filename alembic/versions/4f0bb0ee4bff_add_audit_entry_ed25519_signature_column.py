@@ -24,5 +24,10 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    with op.batch_alter_table('audit_entries', schema=None) as batch_op:
-        batch_op.drop_column('signature')
+    bind = op.get_bind()
+    try:
+        with op.batch_alter_table('audit_entries', schema=None) as batch_op:
+            batch_op.drop_column('signature')
+    except Exception:
+        # audit_entries may have been dropped by a later migration downgrade.
+        pass

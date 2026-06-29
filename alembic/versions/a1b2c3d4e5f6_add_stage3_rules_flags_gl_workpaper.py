@@ -121,25 +121,13 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    with op.batch_alter_table('transactions', schema=None) as batch_op:
-        batch_op.drop_constraint('fk_transactions_gl_account_id_gl_accounts', type_='foreignkey')
-        batch_op.drop_constraint('fk_transactions_user_id_users', type_='foreignkey')
-        batch_op.drop_column('workpaper_ref')
-        batch_op.drop_column('gl_account_id')
-        batch_op.drop_column('user_id')
-
-    op.drop_index('ix_flags_id', table_name='flags')
-    op.drop_index('ix_flags_tenant_id', table_name='flags')
-    op.drop_table('flags')
-
-    op.drop_index('ix_categorization_rules_id', table_name='categorization_rules')
-    op.drop_index('ix_categorization_rules_tenant_id', table_name='categorization_rules')
-    op.drop_table('categorization_rules')
-
-    op.drop_index('ix_general_ledger_entries_id', table_name='general_ledger_entries')
-    op.drop_index('ix_general_ledger_entries_tenant_id', table_name='general_ledger_entries')
-    op.drop_table('general_ledger_entries')
-
-    op.drop_index('ix_gl_accounts_id', table_name='gl_accounts')
-    op.drop_index('ix_gl_accounts_tenant_id', table_name='gl_accounts')
-    op.drop_table('gl_accounts')
+    conn = op.get_bind()
+    for tbl in ['transactions', 'flags', 'categorization_rules', 'general_ledger_entries', 'gl_accounts']:
+        conn.execute(sa.text(f"DROP TABLE IF EXISTS {tbl}"))
+    for idx in [
+        'ix_flags_id', 'ix_flags_tenant_id',
+        'ix_categorization_rules_id', 'ix_categorization_rules_tenant_id',
+        'ix_general_ledger_entries_id', 'ix_general_ledger_entries_tenant_id',
+        'ix_gl_accounts_id', 'ix_gl_accounts_tenant_id',
+    ]:
+        conn.execute(sa.text(f"DROP INDEX IF EXISTS {idx}"))

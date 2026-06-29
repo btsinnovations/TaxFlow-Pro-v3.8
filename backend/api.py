@@ -26,24 +26,42 @@ ENVIRONMENT = local_settings.ENVIRONMENT
 
 
 def run_migrations():
-    """Run Alembic migrations against the configured database engine."""
+    """Run Alembic migrations against the configured database engine.
+
+    If the database contains an alembic_version stamp but no actual data
+    tables (common for an older file that was initialized but never
+    populated), stamp it to base so the full migration chain can recreate
+    the schema from scratch.
+    """
     import sys
+    from sqlalchemy import inspect as sa_inspect, text
+
     alembic_cfg_path = os.environ.get("ALEMBIC_CONFIG", "alembic.ini")
     alembic_cfg = Config(alembic_cfg_path)
-    # Ensure migrations target the same database URL the app uses
     db_url = str(engine.url)
     alembic_cfg.set_main_option("sqlalchemy.url", db_url)
 
-    # In a PyInstaller frozen bundle, CWD may not be the project root.
-    # Alembic resolves script_location relative to the config file's directory,
-    # so we set CWD to the project root (where alembic/ lives) when frozen.
     original_cwd = os.getcwd()
     restore_cwd = False
     if getattr(sys, "frozen", False):
         project_root = str(Path(sys._MEIPASS))
         os.chdir(project_root)
         restore_cwd = True
+
     try:
+        # Detect corrupted/stamped-but-empty DB before Alembic tries to apply
+        # partial migrations.
+        try:
+            inspector = sa_inspect(engine)
+            table_names = set(inspector.get_table_names())
+            has_alembic_version = "alembic_version" in table_names
+            has_data_tables = bool(table_names - {"alembic_version"})
+            if has_alembic_version and not has_data_tables:
+                print("WARNING: database has alembic_version but no data tables; stamping to base and rebuilding.")
+                command.stamp(alembic_cfg, "base")
+        except Exception as exc:
+            print(f"WARNING: could not inspect database before migration: {exc}")
+
         command.upgrade(alembic_cfg, "head")
     finally:
         if restore_cwd:

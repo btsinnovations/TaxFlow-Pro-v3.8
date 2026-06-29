@@ -1,0 +1,105 @@
+{
+  "branch": "v3.11.6-dev-REMEDIATE-R6-cleanup",
+  "base_branch": "v3.11.6-dev",
+  "overall_status": "not_started",
+  "tasks": [
+    {
+      "id": "CB1",
+      "priority": "critical",
+      "title": "Fix Alembic downgrade base bug",
+      "files": ["alembic/versions/d9cf7c4a8fdf_add_trained_models_table.py"],
+      "acceptance": ["alembic downgrade base passes on SQLite", "alembic downgrade base passes on PostgreSQL"],
+      "status": "not_started"
+    },
+    {
+      "id": "CB2",
+      "priority": "critical",
+      "title": "Fix startup crash on corrupted taxflow.db",
+      "files": ["backend/api.py"],
+      "acceptance": ["Simulated stamped-empty DB starts cleanly", "Normal DB startup unchanged"],
+      "status": "not_started"
+    },
+    {
+      "id": "H1",
+      "priority": "high",
+      "title": "Bump version to 3.11.6",
+      "files": ["version.txt", "backend/version.py", "frontend/package.json", "CHANGES.md"],
+      "acceptance": ["version.txt reads 3.11.6", "CHANGES.md Section 70+ added"],
+      "status": "not_started"
+    },
+    {
+      "id": "H2",
+      "priority": "high",
+      "title": "Update SUPPORTED_INSTITUTIONS.md",
+      "files": ["docs/SUPPORTED_INSTITUTIONS.md"],
+      "acceptance": ["Lists all 27 specific parsers", "Clean formatting, no garbled chars"],
+      "status": "not_started"
+    },
+    {
+      "id": "H3",
+      "priority": "high",
+      "title": "Delete orphaned patch/debug files",
+      "files": [
+        "patch2.py", "patch3.py", "patch4.py", "patch5.py",
+        "patch_brute_all.py", "patch_helper.py", "patch_subtasks.py",
+        "patch_success_reset.py", "patch_success_reset2.py",
+        "test_pg_conn.py", "conftest_debug_out.txt",
+        "pytest_out.txt", "pytest_pipeline_results.txt", "pytest_sqlite_results.txt",
+        "setup_first_run.py",
+        "backend/tests/conftest_debug.py", "backend/tests/conftest_debug2.py",
+        "backend/tests/conftest_debug3.py", "backend/tests/conftest_debug4.py",
+        "backend/tests/conftest_debug5.py", "backend/tests/conftest_debug6.py"
+      ],
+      "acceptance": ["All listed files removed", "No imports broken"],
+      "status": "not_started"
+    },
+    {
+      "id": "H4",
+      "priority": "high",
+      "title": "Exclude frontend mock data from production builds",
+      "files": ["frontend/vite.config.ts", "frontend/src/data/mockData.ts", "frontend/src/mocks/*"],
+      "acceptance": ["Mock modules excluded from production build", "DEV build still works"],
+      "status": "not_started"
+    },
+    {
+      "id": "H5",
+      "priority": "high",
+      "title": "Add basis parameter to cash-flow statement",
+      "files": ["backend/routers/reports.py", "backend/accounting/reports.py", "backend/tests/test_reports.py"],
+      "acceptance": ["GET /api/reports/cash-flow?basis=cash returns true cash basis", "Default basis=accrual unchanged", "Tests added and passing"],
+      "status": "not_started"
+    },
+    {
+      "id": "H6",
+      "priority": "medium",
+      "title": "Clean code-smell comments",
+      "files": ["backend/accounting/budget.py", "backend/accounting/coa.py", "backend/accounting/reports.py"],
+      "acceptance": ["No 'Stub'/'placeholder' comments in critical paths", "Comments accurately describe current behavior"],
+      "status": "not_started"
+    },
+    {
+      "id": "H7",
+      "priority": "medium",
+      "title": "Update docs",
+      "files": ["CHANGES.md", "docs/KNOWN_ISSUES.md", "docs/TODO_FIRST.md"],
+      "acceptance": ["CHANGES.md Section 70+ documents R1-R6", "KNOWN_ISSUES.md removes fixed items", "TODO_FIRST.md updated or removed"],
+      "status": "not_started"
+    },
+    {
+      "id": "VAL",
+      "priority": "critical",
+      "title": "Final validation",
+      "files": [],
+      "acceptance": [
+        "Alembic upgrade/downgrade/up on SQLite",
+        "Alembic upgrade/downgrade/up on PostgreSQL",
+        "Corrupted DB startup simulation passes",
+        "R1-R5 focused regression 110+ tests pass",
+        "Orphaned file search clean",
+        "version.txt = 3.11.6",
+        "SUPPORTED_INSTITUTIONS.md lists 27 parsers"
+      ],
+      "status": "not_started"
+    }
+  ]
+}

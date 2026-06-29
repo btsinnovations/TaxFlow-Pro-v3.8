@@ -24,5 +24,15 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_column('users', 'keyfile_path')
-    op.drop_column('users', 'encryption_salt')
+    conn = op.get_bind()
+    try:
+        tables = {row[0] for row in conn.execute(sa.text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()}
+    except Exception:
+        tables = set()
+    if 'users' not in tables:
+        return
+    for col in ['keyfile_path', 'encryption_salt']:
+        try:
+            op.drop_column('users', col)
+        except Exception:
+            pass

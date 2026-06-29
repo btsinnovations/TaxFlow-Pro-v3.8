@@ -41,8 +41,12 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index(op.f('ix_refresh_tokens_family_id'), table_name='refresh_tokens')
-    op.drop_index(op.f('ix_refresh_tokens_user_id'), table_name='refresh_tokens')
-    op.drop_index(op.f('ix_refresh_tokens_token_hash'), table_name='refresh_tokens')
-    op.drop_index(op.f('ix_refresh_tokens_id'), table_name='refresh_tokens')
-    op.drop_table('refresh_tokens')
+    conn = op.get_bind()
+    for idx_name in (
+        op.f('ix_refresh_tokens_family_id'),
+        op.f('ix_refresh_tokens_user_id'),
+        op.f('ix_refresh_tokens_token_hash'),
+        op.f('ix_refresh_tokens_id'),
+    ):
+        conn.execute(sa.text(f"DROP INDEX IF EXISTS {idx_name}"))
+    conn.execute(sa.text("DROP TABLE IF EXISTS refresh_tokens"))

@@ -42,25 +42,33 @@ def _table_columns(table_name: str) -> set[str]:
 
 def upgrade() -> None:
     """Add columns that exist in the models but were not created by earlier migrations."""
-    tx_cols = _table_columns('transactions')
-    if 'import_source' not in tx_cols:
-        op.add_column('transactions', sa.Column('import_source', sa.String(), nullable=True))
+    conn = op.get_bind()
+    tables = {row[0] for row in conn.execute(sa.text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()}
+    if 'transactions' in tables:
+        tx_cols = _table_columns('transactions')
+        if 'import_source' not in tx_cols:
+            op.add_column('transactions', sa.Column('import_source', sa.String(), nullable=True))
 
-    flag_cols = _table_columns('flags')
-    if 'created_by' not in flag_cols:
-        op.add_column('flags', sa.Column('created_by', sa.String(), nullable=False, server_default='system'))
-    if 'resolved_at' not in flag_cols:
-        op.add_column('flags', sa.Column('resolved_at', sa.DateTime(), nullable=True))
+    if 'flags' in tables:
+        flag_cols = _table_columns('flags')
+        if 'created_by' not in flag_cols:
+            op.add_column('flags', sa.Column('created_by', sa.String(), nullable=False, server_default='system'))
+        if 'resolved_at' not in flag_cols:
+            op.add_column('flags', sa.Column('resolved_at', sa.DateTime(), nullable=True))
 
 
 def downgrade() -> None:
     """Remove columns added above."""
-    flag_cols = _table_columns('flags')
-    if 'resolved_at' in flag_cols:
-        op.drop_column('flags', 'resolved_at')
-    if 'created_by' in flag_cols:
-        op.drop_column('flags', 'created_by')
+    conn = op.get_bind()
+    tables = {row[0] for row in conn.execute(sa.text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()}
+    if 'flags' in tables:
+        flag_cols = _table_columns('flags')
+        if 'resolved_at' in flag_cols:
+            op.drop_column('flags', 'resolved_at')
+        if 'created_by' in flag_cols:
+            op.drop_column('flags', 'created_by')
 
-    tx_cols = _table_columns('transactions')
-    if 'import_source' in tx_cols:
-        op.drop_column('transactions', 'import_source')
+    if 'transactions' in tables:
+        tx_cols = _table_columns('transactions')
+        if 'import_source' in tx_cols:
+            op.drop_column('transactions', 'import_source')

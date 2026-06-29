@@ -22,8 +22,13 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Add txn_uid column and unique index for idempotent imports."""
-    # Idempotency UID for transactions. NULL allowed for legacy rows; new imports
-    # always populate it. Unique together with tenant_id and user_id.
+    bind = op.get_bind()
+    try:
+        tables = inspect(bind).get_table_names()
+    except Exception:
+        tables = []
+    if 'transactions' not in tables:
+        return  # table may have been dropped by a later migration downgrade
     op.add_column('transactions', sa.Column('txn_uid', sa.String(), nullable=True))
     op.create_index(
         op.f('ix_transactions_txn_uid'),

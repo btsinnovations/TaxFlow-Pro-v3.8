@@ -37,7 +37,11 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index(op.f('ix_revoked_tokens_user_id'), table_name='revoked_tokens')
-    op.drop_index(op.f('ix_revoked_tokens_jti'), table_name='revoked_tokens')
-    op.drop_index(op.f('ix_revoked_tokens_id'), table_name='revoked_tokens')
-    op.drop_table('revoked_tokens')
+    conn = op.get_bind()
+    for idx_name in (
+        op.f('ix_revoked_tokens_user_id'),
+        op.f('ix_revoked_tokens_jti'),
+        op.f('ix_revoked_tokens_id'),
+    ):
+        conn.execute(sa.text(f"DROP INDEX IF EXISTS {idx_name}"))
+    conn.execute(sa.text("DROP TABLE IF EXISTS revoked_tokens"))

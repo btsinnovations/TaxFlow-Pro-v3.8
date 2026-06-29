@@ -657,67 +657,16 @@ def downgrade() -> None:
     Drops new columns added to existing tables, then drops all tables created
     by this migration.  Tables that existed before v3.11.6 are preserved.
     """
-    # Drop coa_account_id columns from existing tables
-    if _table_exists('transactions'):
-        tx_cols = _table_columns('transactions')
-        if 'coa_account_id' in tx_cols:
-            with op.batch_alter_table('transactions') as batch_op:
-                batch_op.drop_column('coa_account_id')
-
-    if _table_exists('general_ledger_entries'):
-        gl_cols = _table_columns('general_ledger_entries')
-        if 'credit_coa_account_id' in gl_cols:
-            with op.batch_alter_table('general_ledger_entries') as batch_op:
-                batch_op.drop_column('credit_coa_account_id')
-        if 'debit_coa_account_id' in gl_cols:
-            with op.batch_alter_table('general_ledger_entries') as batch_op:
-                batch_op.drop_column('debit_coa_account_id')
-
-    if _table_exists('categorization_rules'):
-        cr_cols = _table_columns('categorization_rules')
-        if 'coa_account_id' in cr_cols:
-            with op.batch_alter_table('categorization_rules') as batch_op:
-                batch_op.drop_column('coa_account_id')
-
-    # Drop tables created by this migration that are NOT created by the
-    # v3.11 baseline (e8f4a2c1d0b5).  Tables that the v3.11 baseline creates
-    # (users, clients, accounts, gl_accounts, statements, transactions,
-    # categorization_rules, recurring_rules, audit_entries) are left for
-    # the v3.11 baseline downgrade to handle.
-    #
-    # We use try/except because some tables may have dependent FKs or
-    # may not exist (created idempotently only if missing).
-    for tbl in [
-        'tax_line_mappings', 'budget_lines', 'reconciliation_matches',
-        'reconciliation_imports', 'fx_rates', 'inventory_transactions',
-        'inventory_items', 'investment_lots', 'loan_schedules',
-        'payments', 'invoice_line_items', 'invoices',
-        'flags', 'general_ledger_entries',
-        'periods', 'journals', 'depreciation_assets',
-        'trained_models', 'sessions', 'refresh_tokens', 'revoked_tokens',
-        'profile_memberships',
+    
+    conn = op.get_bind()
+    for idx_name, table_name in [
+        ('ix_coa_accounts_parent_id', 'coa_accounts'),
+        ('ix_coa_accounts_tenant_number', 'coa_accounts'),
+        ('ix_coa_accounts_tenant_id', 'coa_accounts'),
     ]:
-        if _table_exists(tbl):
-            try:
-                op.drop_table(tbl)
-            except Exception:
-                pass  # Table may have dependent FKs; ignore on downgrade
+        conn.execute(sa.text(f"DROP INDEX IF EXISTS {idx_name}"))
+    for table_name in [
+        'coa_accounts',
+    ]:
+        conn.execute(sa.text(f"DROP TABLE IF EXISTS {table_name}"))
 
-    # Drop coa_accounts table
-    if _table_exists('coa_accounts'):
-        try:
-            op.drop_index('ix_coa_accounts_parent_id', table_name='coa_accounts')
-        except Exception:
-            pass
-        try:
-            op.drop_index('ix_coa_accounts_tenant_number', table_name='coa_accounts')
-        except Exception:
-            pass
-        try:
-            op.drop_index('ix_coa_accounts_tenant_id', table_name='coa_accounts')
-        except Exception:
-            pass
-        try:
-            op.drop_table('coa_accounts')
-        except Exception:
-            pass
