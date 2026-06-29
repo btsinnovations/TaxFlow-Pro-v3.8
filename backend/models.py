@@ -228,6 +228,9 @@ class Period(Base):
     name = Column(String, nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
+    is_closed = Column(Boolean, default=False)
+    closed_at = Column(DateTime, nullable=True)
+    closed_by_profile_id = Column(Integer, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     owner = relationship("User", back_populates="periods")
 
