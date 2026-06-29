@@ -12,6 +12,7 @@ from ..local import settings as local_settings
 from ..audit import record, AuditAction, AuditResource
 from ..local.column_encryption import decrypt_for_user, encrypt_for_user
 from ..accounting import register as register_logic
+from ..accounting.gl_bridge import GLBridge
 from .auth import get_current_user
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])

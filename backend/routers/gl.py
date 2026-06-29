@@ -122,3 +122,46 @@ def update_gl_workpaper_ref(
     record(db, current_user, AuditAction.UPDATE, AuditResource.GENERAL_LEDGER_ENTRY, entry.id,
            {"workpaper_ref": entry.workpaper_ref})
     return entry
+
+
+# R1: Auto-post batch endpoint
+@router.post("/auto-post-batch")
+def auto_post_batch(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Post GL entries for all transactions that don't have them yet."""
+    from backend.accounting.gl_bridge import GLBridge
+    from backend.rls import is_postgres, resolve_user_tenant_id, set_tenant_id
+    from backend.local import settings as local_settings
+    from backend.local.roles import Role, has_role
+
+    if not is_postgres():
+        tenant_id = resolve_user_tenant_id(current_user)
+    else:
+        if local_settings.is_single_user():
+            tenant_id = resolve_user_tenant_id(current_user)
+            set_tenant_id(db, tenant_id)
+        else:
+            tid = request.headers.get("x-tenant-id")
+            if tid is None:
+                raise HTTPException(status_code=400, detail="X-Tenant-ID header required")
+            tenant_id = int(tid)
+
+    if not has_role(db, current_user.id, tenant_id, Role.admin):
+        raise HTTPException(status_code=403, detail="Admin role required")
+
+    txns = db.query(models.Transaction).filter(
+        models.Transaction.tenant_id == tenant_id,
+        models.Transaction.user_id == current_user.id,
+    ).all()
+
+    bridge = GLBridge(db, tenant_id=tenant_id, user_id=current_user.id)
+    posted = 0
+    for txn in txns:
+        if not bridge.is_already_posted(txn):
+            entries = bridge.post_for_transaction(txn)
+            posted += len(entries)
+    db.commit()
+    return {"posted_entries": posted, "total_txns": len(txns)}

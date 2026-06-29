@@ -19,6 +19,7 @@ from backend.audit import record, AuditAction, AuditResource
 from backend.database import get_db
 from backend.routers.auth import get_current_user
 from backend import models, schemas
+from backend.accounting.gl_bridge import GLBridge
 from backend.rls import is_postgres, resolve_user_tenant_id, set_tenant_id
 from backend.local import settings as local_settings
 
