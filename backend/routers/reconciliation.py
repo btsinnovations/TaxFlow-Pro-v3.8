@@ -27,6 +27,7 @@ from backend.local.roles import Role, has_role
 from backend.accounting.reconciliation_lock import (
     ReconciliationLockError,
     complete_reconciliation,
+    is_reconciliation_completed,
     reopen_reconciliation,
 )
 
@@ -97,6 +98,15 @@ class AutoMatchRequest(BaseModel):
     statement_rows: list[dict] | None = None
 
 
+def _guard_completed(db: Session, import_id: int):
+    """Raise 409 if the reconciliation import is completed."""
+    if is_reconciliation_completed(db, import_id):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Reconciliation {import_id} is completed and locked",
+        )
+
+
 @router.post("/{import_id}/auto-match", response_model=list[dict])
 def auto_match_route(
     request: Request,
@@ -108,6 +118,7 @@ def auto_match_route(
 ):
     tenant_id = _wrap_tenant(request, db, current_user)
     _require_role(db, current_user, tenant_id, Role.bookkeeper)
+    _guard_completed(db, import_id)
     try:
         return auto_match(
             db,
@@ -135,6 +146,7 @@ def manual_match_route(
 ):
     tenant_id = _wrap_tenant(request, db, current_user)
     _require_role(db, current_user, tenant_id, Role.bookkeeper)
+    _guard_completed(db, import_id)
     try:
         m = manual_match(
             db,
@@ -164,6 +176,7 @@ def unmatch_route(
 ):
     tenant_id = _wrap_tenant(request, db, current_user)
     _require_role(db, current_user, tenant_id, Role.bookkeeper)
+    _guard_completed(db, import_id)
     try:
         ok = unmatch(
             db,

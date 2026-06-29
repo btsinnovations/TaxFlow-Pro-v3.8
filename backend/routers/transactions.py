@@ -13,9 +13,25 @@ from ..audit import record, AuditAction, AuditResource
 from ..local.column_encryption import decrypt_for_user, encrypt_for_user
 from ..accounting import register as register_logic
 from ..accounting.gl_bridge import GLBridge
+from ..accounting.period_close import is_period_closed
+from ..accounting.reconciliation_lock import is_transaction_cleared
 from .auth import get_current_user
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
+
+
+def _guard_period_closed(db: Session, tenant_id: int, txn_date):
+    if is_period_closed(db, tenant_id, txn_date):
+        raise HTTPException(status_code=422, detail="Transaction date falls in a closed period")
+
+
+def _guard_cleared(db: Session, transaction_id: int):
+    rec_id = is_transaction_cleared(db, transaction_id)
+    if rec_id is not None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Transaction is cleared by completed reconciliation {rec_id}",
+        )
 
 
 def _wrap_tenant(request: Request, db: Session, current_user: models.User):
@@ -141,12 +157,12 @@ def create_transaction(
         category=data.category,
         gl_account_id=data.gl_account_id,
     )
+    _guard_period_closed(db, effective_tenant_id, data.date)
     db.add(tx)
     db.commit()
     db.refresh(tx)
 
     # R1: auto-post GL entries for every manually created transaction.
-    from backend.accounting.gl_bridge import GLBridge
     bridge = GLBridge(db, tenant_id=effective_tenant_id, user_id=current_user.id)
     bridge.post_for_transaction(tx)
     db.commit()
@@ -167,6 +183,7 @@ def update_transaction(
 ):
     effective_tenant_id = _resolve_tenant_id(request, current_user) if tenant_id is None else tenant_id
     _wrap_tenant(request, db, current_user)
+    _guard_cleared(db, transaction_id)
     data = update.model_dump(exclude_unset=True)
     if "description" in data and data["description"]:
         data["description"] = encrypt_for_user(data["description"], current_user)
@@ -184,6 +201,8 @@ def update_transaction(
         )
     except register_logic.RegisterError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if tx:
+        _guard_period_closed(db, effective_tenant_id, tx.date)
     record(db, current_user, AuditAction.UPDATE, AuditResource.TRANSACTION, tx.id,
            {"updated_fields": list(data.keys())})
     return _transaction_response(tx, current_user)
@@ -199,6 +218,14 @@ def delete_transaction(
 ):
     effective_tenant_id = _resolve_tenant_id(request, current_user) if tenant_id is None else tenant_id
     _wrap_tenant(request, db, current_user)
+    _guard_cleared(db, transaction_id)
+    tx = db.query(models.Transaction).filter(
+        models.Transaction.id == transaction_id,
+        models.Transaction.tenant_id == effective_tenant_id,
+        models.Transaction.user_id == current_user.id,
+    ).first()
+    if tx:
+        _guard_period_closed(db, effective_tenant_id, tx.date)
     try:
         register_logic.delete_transaction(
             db,
