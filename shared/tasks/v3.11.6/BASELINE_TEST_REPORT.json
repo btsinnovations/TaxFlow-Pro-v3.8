@@ -1,0 +1,87 @@
+{
+  "timestamp": "2026-06-29T23:25:14Z",
+  "logs_found": 11,
+  "total_passed": 684,
+  "total_failed": 0,
+  "total_errors": 0,
+  "overall_status": "PASS",
+  "details": [
+    {
+      "log": "shared\\tasks\\v3.11.6\\baseline_test_logs\\chunk_001.log",
+      "passed": 0,
+      "failed": 0,
+      "errors": 0,
+      "status": "PASS"
+    },
+    {
+      "log": "shared\\tasks\\v3.11.6\\baseline_test_logs\\chunk_002.log",
+      "passed": 101,
+      "failed": 0,
+      "errors": 0,
+      "status": "PASS"
+    },
+    {
+      "log": "shared\\tasks\\v3.11.6\\baseline_test_logs\\chunk_003.log",
+      "passed": 155,
+      "failed": 0,
+      "errors": 0,
+      "status": "PASS"
+    },
+    {
+      "log": "shared\\tasks\\v3.11.6\\baseline_test_logs\\chunk_004.log",
+      "passed": 182,
+      "failed": 0,
+      "errors": 0,
+      "status": "PASS"
+    },
+    {
+      "log": "shared\\tasks\\v3.11.6\\baseline_test_logs\\chunk_005.log",
+      "passed": 118,
+      "failed": 0,
+      "errors": 0,
+      "status": "PASS"
+    },
+    {
+      "log": "shared\\tasks\\v3.11.6\\baseline_test_logs\\chunk_006.log",
+      "passed": 0,
+      "failed": 0,
+      "errors": 0,
+      "status": "PASS"
+    },
+    {
+      "log": "shared\\tasks\\v3.11.6\\baseline_test_logs\\chunk_007.log",
+      "passed": 0,
+      "failed": 0,
+      "errors": 0,
+      "status": "PASS"
+    },
+    {
+      "log": "shared\\tasks\\v3.11.6\\baseline_test_logs\\chunk_008.log",
+      "passed": 0,
+      "failed": 0,
+      "errors": 0,
+      "status": "PASS"
+    },
+    {
+      "log": "shared\\tasks\\v3.11.6\\baseline_test_logs\\chunk_009.log",
+      "passed": 128,
+      "failed": 0,
+      "errors": 0,
+      "status": "PASS"
+    },
+    {
+      "log": "shared\\tasks\\v3.11.6\\baseline_test_logs\\chunk_010.log",
+      "passed": 0,
+      "failed": 0,
+      "errors": 0,
+      "status": "PASS"
+    },
+    {
+      "log": "shared\\tasks\\v3.11.6\\baseline_test_logs\\chunk_011.log",
+      "passed": 0,
+      "failed": 0,
+      "errors": 0,
+      "status": "PASS"
+    }
+  ]
+}

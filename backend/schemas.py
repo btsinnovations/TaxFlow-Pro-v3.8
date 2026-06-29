@@ -1,7 +1,8 @@
 from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from typing import Optional, List
+from typing import Optional, List, Union
 from datetime import datetime, date
+import json
 
 class UserBase(BaseModel):
     username: str
@@ -48,11 +49,23 @@ class AuditEntryOut(BaseModel):
     action: str
     resource_type: str
     resource_id: Optional[int] = None
-    details: dict = {}
+    details: Union[dict, str] = {}
     entry_hash: str
     chain_hash: Optional[str] = None
     signature: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("details", mode="before")
+    @classmethod
+    def _parse_details(cls, value):
+        if isinstance(value, str):
+            try:
+                return json.loads(value or "{}")
+            except json.JSONDecodeError:
+                return {}
+        if value is None:
+            return {}
+        return value
 
 
 class DepreciationAssetBase(BaseModel):
