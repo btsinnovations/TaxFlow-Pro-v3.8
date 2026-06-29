@@ -723,11 +723,3 @@ class TransactionTag(Base):
     created_at = Column(DateTime, server_default=func.now())
     transaction = relationship("Transaction", back_populates="project_tags")
 
-
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    name = Column(String, nullable=False)
-    tax_id = Column(String, nullable=True)
-    address = Column(String, nullable=True)
-
