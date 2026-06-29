@@ -52,11 +52,12 @@ class GLBridge:
         self._get_or_create_coa(OPERATING_CHECKING_NUMBER, "Operating Checking", "asset")
 
     def _get_cash_coa(self, txn: models.Transaction) -> Optional[models.CoaAccount]:
-        """Map a transaction's bank account to a COA asset account."""
-        if txn.coa_account_id:
-            return self.db.query(models.CoaAccount).filter(
-                models.CoaAccount.id == txn.coa_account_id,
-            ).first()
+        """Map a transaction's bank account to a COA asset account.
+
+        The COA account on the transaction is the OFFSET account (income/expense),
+        not the cash account. Cash is determined from the bank account or a
+        default asset account.
+        """
         # Try to find a cash/asset COA account for this tenant
         cash = self.db.query(models.CoaAccount).filter(
             models.CoaAccount.tenant_id == self.tenant_id,
