@@ -3,6 +3,7 @@ import { ToastProvider } from "@/context/ToastContext";
 import { Routes, Route } from "react-router";
 import ToastContainer from "@/components/ToastContainer";
 import { BootGate } from "@/components/BootGate";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import Navigation from './sections/Navigation';
 import Hero from './sections/Hero';
 import UploadSection from './sections/UploadSection';
@@ -79,11 +80,12 @@ function AuthenticatedRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <div className="min-h-screen bg-canvas text-text-primary">
-          <Routes>
-            <Route path="/" element={<AuthenticatedRoutes />} />
+    <ErrorBoundary>
+      <AuthProvider>
+        <ToastProvider>
+          <div className="min-h-screen bg-canvas text-text-primary">
+            <Routes>
+              <Route path="/" element={<AuthenticatedRoutes />} />
             <Route path="/accounts" element={<COAManager />} />
             <Route path="/audit" element={<AuditManager />} />
             <Route path="/backup" element={<BackupManager />} />
@@ -114,9 +116,10 @@ export default function App() {
             <Route path="/vendors" element={<VendorManager />} />
             <Route path="/year-end" element={<YearEndManager />} />
           </Routes>
-        </div>
-        <ToastContainer />
-      </ToastProvider>
-    </AuthProvider>
+          </div>
+          <ToastContainer />
+        </ToastProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
