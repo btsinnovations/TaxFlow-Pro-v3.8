@@ -1,40 +1,121 @@
 {
   "generated_at": "2026-06-29",
   "total_endpoints": 197,
-  "frontend_covered": 14,
-  "uncovered": 142,
+  "frontend_covered": 90,
+  "uncovered": 66,
   "frontend_routes_found": [
     "/api/accounts",
+    "/api/audit",
+    "/api/audit/logs",
+    "/api/audit/verify",
+    "/api/auth/boot",
+    "/api/auth/change-password",
     "/api/auth/login",
+    "/api/auth/login-json",
+    "/api/auth/logout",
+    "/api/auth/me",
+    "/api/auth/refresh",
+    "/api/auth/register",
+    "/api/auth/status",
+    "/api/backup/export",
+    "/api/backup/import",
     "/api/bills",
     "/api/budget",
     "/api/budget/cash-flow",
+    "/api/budget/cash-flow-13-week",
+    "/api/budget/lines",
     "/api/checks",
+    "/api/clients",
     "/api/coa",
+    "/api/coa/coa",
+    "/api/coa/coa/seed",
     "/api/coa/seed",
+    "/api/dashboard",
+    "/api/dashboard/stats",
+    "/api/depreciation",
+    "/api/export/balance-sheet",
+    "/api/export/formats",
+    "/api/export/general-ledger",
+    "/api/export/profit-loss",
+    "/api/export/statement",
+    "/api/export/transactions",
+    "/api/export/trial-balance",
+    "/api/flags",
     "/api/fx",
     "/api/fx/convert",
+    "/api/fx/rates",
+    "/api/fx/report",
+    "/api/fx/transactions",
     "/api/health",
+    "/api/health/bootstrap",
+    "/api/health/config",
+    "/api/health/echo-auth",
+    "/api/health/migrations",
+    "/api/health/public",
+    "/api/imports/detect",
+    "/api/imports/ofx",
     "/api/inventory",
+    "/api/inventory/tags",
+    "/api/inventory/tags/search",
     "/api/investments",
+    "/api/investments/lots",
+    "/api/investments/prices",
     "/api/invoices",
     "/api/invoicing",
+    "/api/invoicing/aging",
+    "/api/invoicing/bills",
+    "/api/invoicing/invoices",
+    "/api/ledger/accounts",
+    "/api/ledger/adjusting-entry",
+    "/api/ledger/auto-post-batch",
+    "/api/ledger/entries",
     "/api/liabilities",
+    "/api/liabilities/amortization",
+    "/api/liabilities/credit-lines",
+    "/api/liabilities/loan-schedule",
+    "/api/mileage/logs",
+    "/api/mileage/summary",
+    "/api/ml/categorize",
+    "/api/ml/model-info",
+    "/api/ml/status",
+    "/api/ml/toggle",
+    "/api/ml/train",
     "/api/payments",
+    "/api/periods",
     "/api/profiles",
     "/api/reconciliation",
     "/api/reconciliation/import",
     "/api/recurring",
     "/api/reports",
+    "/api/reports/balance-sheet",
     "/api/reports/balance_sheet",
+    "/api/reports/cash-flow",
     "/api/reports/cash_flow",
     "/api/reports/pnl",
     "/api/reports/profit-and-loss",
     "/api/reports/trial-balance",
     "/api/reports/trial_balance",
+    "/api/rules",
+    "/api/sales-tax/liability-summary",
+    "/api/sales-tax/payments",
+    "/api/sales-tax/rates",
+    "/api/tax",
+    "/api/tax-exports/1099",
+    "/api/tax-exports/form-1065",
+    "/api/tax-exports/form-1120s",
+    "/api/tax-exports/form-4562",
+    "/api/tax-exports/form-8825",
+    "/api/tax-exports/lines",
     "/api/tax-exports/mappings",
     "/api/tax-exports/schedule-c",
-    "/api/transactions"
+    "/api/tax-exports/schedule-e",
+    "/api/tax-exports/year-end-package",
+    "/api/tax-exports/year-end-summary",
+    "/api/tax/summary",
+    "/api/transactions",
+    "/api/upload",
+    "/api/vendors",
+    "/api/year-end/close"
   ],
   "endpoints": [
     {
@@ -79,42 +160,48 @@
       "method": "GET",
       "path": "/",
       "full_path": "/api/audit/",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/audit/logs"
     },
     {
       "module": "audit",
       "method": "GET",
       "path": "/logs",
       "full_path": "/api/audit/logs",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/audit/logs"
     },
     {
       "module": "audit",
       "method": "GET",
       "path": "/verify",
       "full_path": "/api/audit/verify",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/audit/verify"
     },
     {
       "module": "auth",
       "method": "GET",
       "path": "/status",
       "full_path": "/api/auth/status",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/auth/status"
     },
     {
       "module": "auth",
       "method": "POST",
       "path": "/boot",
       "full_path": "/api/auth/boot",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/auth/boot"
     },
     {
       "module": "auth",
       "method": "POST",
       "path": "/register",
       "full_path": "/api/auth/register",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/auth/register"
     },
     {
       "module": "auth",
@@ -129,56 +216,64 @@
       "method": "POST",
       "path": "/login-json",
       "full_path": "/api/auth/login-json",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/auth/login-json"
     },
     {
       "module": "auth",
       "method": "POST",
       "path": "/refresh",
       "full_path": "/api/auth/refresh",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/auth/refresh"
     },
     {
       "module": "auth",
       "method": "POST",
       "path": "/change-password",
       "full_path": "/api/auth/change-password",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/auth/change-password"
     },
     {
       "module": "auth",
       "method": "GET",
       "path": "/me",
       "full_path": "/api/auth/me",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/auth/me"
     },
     {
       "module": "auth",
       "method": "POST",
       "path": "/logout",
       "full_path": "/api/auth/logout",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/auth/logout"
     },
     {
       "module": "backup",
       "method": "POST",
       "path": "/import",
       "full_path": "/api/backup/import",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/backup/import"
     },
     {
       "module": "backup",
       "method": "GET",
       "path": "/export",
       "full_path": "/api/backup/export",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/backup/export"
     },
     {
       "module": "budget",
       "method": "POST",
       "path": "/lines",
       "full_path": "/api/budget/lines",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/budget/lines"
     },
     {
       "module": "budget",
@@ -200,7 +295,8 @@
       "method": "GET",
       "path": "/cash-flow-13-week",
       "full_path": "/api/budget/cash-flow-13-week",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/budget/cash-flow-13-week"
     },
     {
       "module": "budget",
@@ -236,14 +332,16 @@
       "method": "GET",
       "path": "/",
       "full_path": "/api/clients/",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/clients"
     },
     {
       "module": "clients",
       "method": "POST",
       "path": "/",
       "full_path": "/api/clients/",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/clients"
     },
     {
       "module": "clients",
@@ -271,14 +369,16 @@
       "method": "GET",
       "path": "/coa",
       "full_path": "/api/coa/coa",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/coa/coa"
     },
     {
       "module": "coa",
       "method": "POST",
       "path": "/coa",
       "full_path": "/api/coa/coa",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/coa/coa"
     },
     {
       "module": "coa",
@@ -299,7 +399,8 @@
       "method": "POST",
       "path": "/coa/seed",
       "full_path": "/api/coa/coa/seed",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/coa/coa/seed"
     },
     {
       "module": "coa",
@@ -320,28 +421,32 @@
       "method": "GET",
       "path": "/stats",
       "full_path": "/api/dashboard/stats",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/dashboard/stats"
     },
     {
       "module": "dashboard",
       "method": "GET",
       "path": "/",
       "full_path": "/api/dashboard/",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/dashboard"
     },
     {
       "module": "depreciation",
       "method": "GET",
       "path": "/",
       "full_path": "/api/depreciation/",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/depreciation"
     },
     {
       "module": "depreciation",
       "method": "POST",
       "path": "/",
       "full_path": "/api/depreciation/",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/depreciation"
     },
     {
       "module": "depreciation",
@@ -369,42 +474,48 @@
       "method": "GET",
       "path": "/transactions",
       "full_path": "/api/export/transactions",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/export/transactions"
     },
     {
       "module": "export",
       "method": "GET",
       "path": "/general-ledger",
       "full_path": "/api/export/general-ledger",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/export/general-ledger"
     },
     {
       "module": "export",
       "method": "GET",
       "path": "/trial-balance",
       "full_path": "/api/export/trial-balance",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/export/trial-balance"
     },
     {
       "module": "export",
       "method": "GET",
       "path": "/profit-loss",
       "full_path": "/api/export/profit-loss",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/export/profit-loss"
     },
     {
       "module": "export",
       "method": "GET",
       "path": "/balance-sheet",
       "full_path": "/api/export/balance-sheet",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/export/balance-sheet"
     },
     {
       "module": "export",
       "method": "GET",
       "path": "/formats",
       "full_path": "/api/export/formats",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/export/formats"
     },
     {
       "module": "export",
@@ -418,14 +529,16 @@
       "method": "GET",
       "path": "/",
       "full_path": "/api/flags/",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/flags"
     },
     {
       "module": "flags",
       "method": "POST",
       "path": "/",
       "full_path": "/api/flags/",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/flags"
     },
     {
       "module": "flags",
@@ -453,14 +566,16 @@
       "method": "POST",
       "path": "/rates",
       "full_path": "/api/fx/rates",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/fx/rates"
     },
     {
       "module": "fx",
       "method": "GET",
       "path": "/rates",
       "full_path": "/api/fx/rates",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/fx/rates"
     },
     {
       "module": "fx",
@@ -497,35 +612,40 @@
       "method": "GET",
       "path": "/report",
       "full_path": "/api/fx/report",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/fx/report"
     },
     {
       "module": "gl",
       "method": "POST",
       "path": "/accounts",
       "full_path": "/api/ledger/accounts",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/ledger/accounts"
     },
     {
       "module": "gl",
       "method": "GET",
       "path": "/accounts",
       "full_path": "/api/ledger/accounts",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/ledger/accounts"
     },
     {
       "module": "gl",
       "method": "POST",
       "path": "/entries",
       "full_path": "/api/ledger/entries",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/ledger/entries"
     },
     {
       "module": "gl",
       "method": "POST",
       "path": "/adjusting-entry",
       "full_path": "/api/ledger/adjusting-entry",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/ledger/adjusting-entry"
     },
     {
       "module": "gl",
@@ -539,56 +659,64 @@
       "method": "POST",
       "path": "/auto-post-batch",
       "full_path": "/api/ledger/auto-post-batch",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/ledger/auto-post-batch"
     },
     {
       "module": "health",
       "method": "GET",
       "path": "/migrations",
       "full_path": "/api/health/migrations",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/health/migrations"
     },
     {
       "module": "health",
       "method": "GET",
       "path": "/public",
       "full_path": "/api/health/public",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/health/public"
     },
     {
       "module": "health",
       "method": "GET",
       "path": "/config",
       "full_path": "/api/health/config",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/health/config"
     },
     {
       "module": "health",
       "method": "GET",
       "path": "/bootstrap",
       "full_path": "/api/health/bootstrap",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/health/bootstrap"
     },
     {
       "module": "health",
       "method": "GET",
       "path": "/echo-auth",
       "full_path": "/api/health/echo-auth",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/health/echo-auth"
     },
     {
       "module": "imports",
       "method": "POST",
       "path": "/detect",
       "full_path": "/api/imports/detect",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/imports/detect"
     },
     {
       "module": "imports",
       "method": "POST",
       "path": "/ofx",
       "full_path": "/api/imports/ofx",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/imports/ofx"
     },
     {
       "module": "inventory",
@@ -609,14 +737,16 @@
       "method": "GET",
       "path": "/tags",
       "full_path": "/api/inventory/tags",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/inventory/tags/search"
     },
     {
       "module": "inventory",
       "method": "GET",
       "path": "/tags/search",
       "full_path": "/api/inventory/tags/search",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/inventory/tags/search"
     },
     {
       "module": "inventory",
@@ -624,7 +754,7 @@
       "path": "/",
       "full_path": "/api/inventory/",
       "has_frontend": true,
-      "matched_frontend_route": "/api/inventory"
+      "matched_frontend_route": "/api/inventory/tags/search"
     },
     {
       "module": "inventory",
@@ -632,7 +762,7 @@
       "path": "/",
       "full_path": "/api/inventory/",
       "has_frontend": true,
-      "matched_frontend_route": "/api/inventory"
+      "matched_frontend_route": "/api/inventory/tags/search"
     },
     {
       "module": "inventory",
@@ -674,7 +804,8 @@
       "method": "POST",
       "path": "/lots",
       "full_path": "/api/investments/lots",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/investments/lots"
     },
     {
       "module": "investments",
@@ -709,7 +840,8 @@
       "method": "POST",
       "path": "/prices",
       "full_path": "/api/investments/prices",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/investments/prices"
     },
     {
       "module": "investments",
@@ -737,35 +869,40 @@
       "method": "GET",
       "path": "/invoices",
       "full_path": "/api/invoicing/invoices",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/invoicing/invoices"
     },
     {
       "module": "invoicing",
       "method": "GET",
       "path": "/bills",
       "full_path": "/api/invoicing/bills",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/invoicing/bills"
     },
     {
       "module": "invoicing",
       "method": "POST",
       "path": "/invoices",
       "full_path": "/api/invoicing/invoices",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/invoicing/invoices"
     },
     {
       "module": "invoicing",
       "method": "POST",
       "path": "/bills",
       "full_path": "/api/invoicing/bills",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/invoicing/bills"
     },
     {
       "module": "invoicing",
       "method": "GET",
       "path": "/aging",
       "full_path": "/api/invoicing/aging",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/invoicing/aging"
     },
     {
       "module": "invoicing",
@@ -814,14 +951,16 @@
       "method": "POST",
       "path": "/loan-schedule",
       "full_path": "/api/liabilities/loan-schedule",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/liabilities/loan-schedule"
     },
     {
       "module": "liabilities",
       "method": "GET",
       "path": "/loan-schedule",
       "full_path": "/api/liabilities/loan-schedule",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/liabilities/loan-schedule"
     },
     {
       "module": "liabilities",
@@ -856,14 +995,16 @@
       "method": "POST",
       "path": "/credit-lines",
       "full_path": "/api/liabilities/credit-lines",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/liabilities/credit-lines"
     },
     {
       "module": "liabilities",
       "method": "GET",
       "path": "/credit-lines",
       "full_path": "/api/liabilities/credit-lines",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/liabilities/credit-lines"
     },
     {
       "module": "liabilities",
@@ -898,56 +1039,64 @@
       "method": "POST",
       "path": "/amortization",
       "full_path": "/api/liabilities/amortization",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/liabilities/amortization"
     },
     {
       "module": "mileage",
       "method": "POST",
       "path": "/logs",
       "full_path": "/api/mileage/logs",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/mileage/logs"
     },
     {
       "module": "mileage",
       "method": "GET",
       "path": "/logs",
       "full_path": "/api/mileage/logs",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/mileage/logs"
     },
     {
       "module": "mileage",
       "method": "GET",
       "path": "/summary",
       "full_path": "/api/mileage/summary",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/mileage/summary"
     },
     {
       "module": "ml",
       "method": "GET",
       "path": "/status",
       "full_path": "/api/ml/status",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/ml/status"
     },
     {
       "module": "ml",
       "method": "POST",
       "path": "/toggle",
       "full_path": "/api/ml/toggle",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/ml/toggle"
     },
     {
       "module": "ml",
       "method": "POST",
       "path": "/train",
       "full_path": "/api/ml/train",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/ml/train"
     },
     {
       "module": "ml",
       "method": "GET",
       "path": "/model-info",
       "full_path": "/api/ml/model-info",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/ml/model-info"
     },
     {
       "module": "ml",
@@ -1142,28 +1291,32 @@
       "method": "POST",
       "path": "/balance-sheet",
       "full_path": "/api/reports/balance-sheet",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/reports/balance-sheet"
     },
     {
       "module": "reports",
       "method": "POST",
       "path": "/cash-flow",
       "full_path": "/api/reports/cash-flow",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/reports/cash-flow"
     },
     {
       "module": "rules",
       "method": "GET",
       "path": "/",
       "full_path": "/api/rules/",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/rules"
     },
     {
       "module": "rules",
       "method": "POST",
       "path": "/",
       "full_path": "/api/rules/",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/rules"
     },
     {
       "module": "rules",
@@ -1191,42 +1344,48 @@
       "method": "POST",
       "path": "/rates",
       "full_path": "/api/sales-tax/rates",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/sales-tax/rates"
     },
     {
       "module": "sales_tax",
       "method": "GET",
       "path": "/rates",
       "full_path": "/api/sales-tax/rates",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/sales-tax/rates"
     },
     {
       "module": "sales_tax",
       "method": "POST",
       "path": "/payments",
       "full_path": "/api/sales-tax/payments",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/sales-tax/payments"
     },
     {
       "module": "sales_tax",
       "method": "GET",
       "path": "/payments",
       "full_path": "/api/sales-tax/payments",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/sales-tax/payments"
     },
     {
       "module": "sales_tax",
       "method": "GET",
       "path": "/liability-summary",
       "full_path": "/api/sales-tax/liability-summary",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/sales-tax/liability-summary"
     },
     {
       "module": "tax",
       "method": "GET",
       "path": "/",
       "full_path": "/api/tax/",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/tax/summary"
     },
     {
       "module": "tax",
@@ -1255,63 +1414,72 @@
       "method": "GET",
       "path": "/lines",
       "full_path": "/api/tax-exports/lines",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/tax-exports/lines"
     },
     {
       "module": "tax_exports",
       "method": "POST",
       "path": "/1099",
       "full_path": "/api/tax-exports/1099",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/tax-exports/1099"
     },
     {
       "module": "tax_exports",
       "method": "POST",
       "path": "/year-end-summary",
       "full_path": "/api/tax-exports/year-end-summary",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/tax-exports/year-end-summary"
     },
     {
       "module": "tax_exports",
       "method": "GET",
       "path": "/year-end-package",
       "full_path": "/api/tax-exports/year-end-package",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/tax-exports/year-end-package"
     },
     {
       "module": "tax_exports",
       "method": "POST",
       "path": "/form-1065",
       "full_path": "/api/tax-exports/form-1065",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/tax-exports/form-1065"
     },
     {
       "module": "tax_exports",
       "method": "POST",
       "path": "/form-1120s",
       "full_path": "/api/tax-exports/form-1120s",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/tax-exports/form-1120s"
     },
     {
       "module": "tax_exports",
       "method": "POST",
       "path": "/form-8825",
       "full_path": "/api/tax-exports/form-8825",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/tax-exports/form-8825"
     },
     {
       "module": "tax_exports",
       "method": "POST",
       "path": "/schedule-e",
       "full_path": "/api/tax-exports/schedule-e",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/tax-exports/schedule-e"
     },
     {
       "module": "tax_exports",
       "method": "POST",
       "path": "/form-4562",
       "full_path": "/api/tax-exports/form-4562",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/tax-exports/form-4562"
     },
     {
       "module": "tax_exports",
@@ -1399,21 +1567,24 @@
       "method": "POST",
       "path": "/",
       "full_path": "/api/upload/",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/upload"
     },
     {
       "module": "vendors",
       "method": "POST",
       "path": "/",
       "full_path": "/api/vendors",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/vendors"
     },
     {
       "module": "vendors",
       "method": "GET",
       "path": "/",
       "full_path": "/api/vendors",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/vendors"
     },
     {
       "module": "vendors",
@@ -1434,7 +1605,8 @@
       "method": "POST",
       "path": "/close",
       "full_path": "/api/year-end/close",
-      "has_frontend": false
+      "has_frontend": true,
+      "matched_frontend_route": "/api/year-end/close"
     }
   ]
 }
