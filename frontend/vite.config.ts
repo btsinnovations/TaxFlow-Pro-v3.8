@@ -36,5 +36,5 @@ export default defineConfig({
         maxForks: 1,
       },
     },
-  },
+  } as any,
 });
