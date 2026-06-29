@@ -13,7 +13,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("reconciliation_imports", sa.Column("is_completed", sa.Boolean(), nullable=True, server_default=sa.text("0")))
+    op.add_column("reconciliation_imports", sa.Column("is_completed", sa.Boolean(), nullable=True, server_default=sa.text("false")))
     op.add_column("reconciliation_imports", sa.Column("completed_at", sa.DateTime(), nullable=True))
     op.add_column("reconciliation_imports", sa.Column("completed_by_profile_id", sa.Integer(), nullable=True))
 

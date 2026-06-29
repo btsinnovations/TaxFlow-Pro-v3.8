@@ -13,7 +13,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("periods", sa.Column("is_closed", sa.Boolean(), nullable=True, server_default=sa.text("0")))
+    op.add_column("periods", sa.Column("is_closed", sa.Boolean(), nullable=True, server_default=sa.text("false")))
     op.add_column("periods", sa.Column("closed_at", sa.DateTime(), nullable=True))
     op.add_column("periods", sa.Column("closed_by_profile_id", sa.Integer(), nullable=True))
 
