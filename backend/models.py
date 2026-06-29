@@ -724,80 +724,10 @@ class TransactionTag(Base):
     transaction = relationship("Transaction", back_populates="project_tags")
 
 
-class Vendor(Base):
-    """B3.04 — Vendor record for bills, payments, and 1099 tracking."""
-    __tablename__ = "vendors"
-    __table_args__ = (
-        Index("ix_vendors_tenant_id", "tenant_id"),
-        Index("ix_vendors_name", "tenant_id", "name"),
-    )
     id = Column(Integer, primary_key=True, index=True)
     tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name = Column(String, nullable=False)
     tax_id = Column(String, nullable=True)
     address = Column(String, nullable=True)
-    is_1099_eligible = Column(Boolean, default=False, nullable=False)
-    default_expense_coa_account_id = Column(Integer, ForeignKey("coa_accounts.id", ondelete="SET NULL"), nullable=True)
-    notes = Column(String, nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, server_default=func.now())
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=lambda: datetime.now(timezone.utc))
 
-
-class SalesTaxRate(Base):
-    """B3.04 — Sales tax rate by jurisdiction and effective date."""
-    __tablename__ = "sales_tax_rates"
-    __table_args__ = (
-        Index("ix_sales_tax_rates_tenant_id", "tenant_id"),
-        Index("ix_sales_tax_rates_jurisdiction_effective", "tenant_id", "jurisdiction", "effective_date"),
-    )
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    name = Column(String, nullable=False)
-    jurisdiction = Column(String, nullable=False)
-    rate = Column(Numeric(8, 6), nullable=False)
-    effective_date = Column(Date, nullable=False)
-    is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, server_default=func.now())
-
-
-class SalesTaxPayment(Base):
-    """B3.04 — Remitted sales tax payment."""
-    __tablename__ = "sales_tax_payments"
-    __table_args__ = (
-        Index("ix_sales_tax_payments_tenant_id", "tenant_id"),
-        Index("ix_sales_tax_payments_period", "tenant_id", "period_start", "period_end"),
-    )
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    period_start = Column(Date, nullable=False)
-    period_end = Column(Date, nullable=False)
-    payment_date = Column(Date, nullable=False)
-    amount = Column(Numeric(14, 2), nullable=False)
-    jurisdiction = Column(String, nullable=True)
-    created_at = Column(DateTime, server_default=func.now())
-
-
-class MileageLog(Base):
-    """B3.04 — Vehicle mileage log for tax deduction."""
-    __tablename__ = "mileage_logs"
-    __table_args__ = (
-        Index("ix_mileage_logs_tenant_id", "tenant_id"),
-        Index("ix_mileage_logs_trip_date", "tenant_id", "trip_date"),
-    )
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    trip_date = Column(Date, nullable=False)
-    description = Column(String, nullable=False)
-    starting_odometer = Column(Numeric(12, 2), nullable=False)
-    ending_odometer = Column(Numeric(12, 2), nullable=False)
-    miles = Column(Numeric(12, 2), nullable=False)
-    purpose = Column(String, nullable=False, default="business")
-    vehicle = Column(String, nullable=True)
-    reimbursement_rate = Column(Numeric(8, 4), nullable=True)
-    reimbursement_amount = Column(Numeric(14, 2), nullable=True)
-    created_at = Column(DateTime, server_default=func.now())
