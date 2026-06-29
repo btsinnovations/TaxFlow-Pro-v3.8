@@ -7,8 +7,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 
 def parse_date_us(date_str: str, default_year: Optional[int] = None) -> Optional[str]:
-    """Convert MM/DD/YYYY, MM/DD/YY, or YYYY-MM-DD to ISO date string."""
+    """Convert MM/DD/YYYY, MM/DD/YY, MM/DD, or YYYY-MM-DD to ISO date string."""
     date_str = date_str.strip()
+    # Handle MM/DD without year by appending default year
+    if re.match(r"^\d{1,2}/\d{1,2}$", date_str) and default_year:
+        date_str = f"{date_str}/{default_year}"
     for fmt in ("%m/%d/%Y", "%m/%d/%y", "%Y-%m-%d"):
         try:
             from datetime import datetime
@@ -48,13 +51,38 @@ def normalize_signed_amount(raw: float, is_debit: bool = False) -> float:
     return abs(raw)
 
 
-def make_tx(date: str, desc: str, amount: float, balance: Optional[float] = None) -> Dict[str, Any]:
+DEBIT_KEYWORDS: set[str] = {
+    "withdrawal", "withdraw", "atm", "debit", "purchase", "fee", "charge",
+    "bill", "payment to", "transfer to", "grocery", "supermarket",
+    "annual fee", "late fee", "interest charge",
+}
+CREDIT_KEYWORDS: set[str] = {
+    "deposit", "direct deposit", "paycheck", "credit", "refund",
+    "return", "dividend", "interest", "reward", "cashback", "transfer in",
+    "wire in", "ach in", "contribution", "payment received", "dividend received",
+    "interest earned", "interest paid", "sale of",
+}
+
+
+def infer_transaction_sign(description: str, default_positive: bool = True) -> int:
+    """Return +1 for credit/deposit and -1 for debit/withdrawal based on description."""
+    lowered = description.lower()
+    if any(kw in lowered for kw in DEBIT_KEYWORDS):
+        return -1
+    if any(kw in lowered for kw in CREDIT_KEYWORDS):
+        return 1
+    return 1 if default_positive else -1
+
+
+def make_tx(date: str, desc: str, amount: float, balance: Optional[float] = None, force_sign: Optional[int] = None) -> Dict[str, Any]:
     """Build a GenericPDFParser-compatible transaction dict."""
+    sign = force_sign if force_sign in (1, -1) else infer_transaction_sign(desc)
+    signed = abs(amount) * sign
     return {
         "date": date,
         "description": desc.strip(),
-        "amount": float(amount),
-        "type": "debit" if amount < 0 else "credit",
+        "amount": float(signed),
+        "type": "debit" if signed < 0 else "credit",
         "balance": float(balance) if balance is not None else None,
         "tax_flag": None,
     }
