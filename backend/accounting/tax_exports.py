@@ -413,32 +413,84 @@ def form_1099_nec_misc(
     year: int,
     threshold: Decimal = Decimal("600"),
 ) -> list[dict]:
-    """Return annual 1099-NEC/MISC candidates grouped by payee description.
+    """Return annual 1099-NEC/MISC candidates grouped by vendor record.
 
-    This is a pragmatic approximation: transactions whose description is
-    treated as the payee name and whose debit amount exceeds the threshold are
-    surfaced as 1099 candidates. In production this should be keyed off vendor
-    records.
+    Falls back to transaction description grouping only when no vendor records
+    are present. Vendors marked is_1099_eligible are prioritised; all vendors
+    paid >= threshold are still returned.
     """
+    start = date(year, 1, 1)
+    end = date(year, 12, 31)
+    # Vendor-keyed payments via invoices/bills (vendor_id on Payment is not
+    # yet present, so derive from bill contact_name -> vendor name).
+    vendors = db.query(models.Vendor).filter(
+        models.Vendor.tenant_id == tenant_id,
+    ).all()
+    vendor_map = {v.name.strip().lower(): v for v in vendors}
+
+    # Vendor-keyed payments via invoices/bills (paid bills in the tax year).
+    bills = db.query(models.Invoice).filter(
+        models.Invoice.tenant_id == tenant_id,
+        models.Invoice.user_id == user_id,
+        models.Invoice.is_bill == True,
+        models.Invoice.issue_date >= start,
+        models.Invoice.issue_date <= end,
+    ).all()
+
+    vendor_totals: dict[int, Decimal] = {}
+    fallback_totals: dict[str, Decimal] = {}
+
+    for bill in bills:
+        paid = Decimal(str(bill.amount_paid or 0))
+        if paid == 0:
+            continue
+        vendor = vendor_map.get((bill.contact_name or "").strip().lower())
+        if vendor:
+            vendor_totals[vendor.id] = vendor_totals.get(vendor.id, Decimal("0")) + paid
+        else:
+            name = (bill.contact_name or "Unknown").strip()
+            fallback_totals[name] = fallback_totals.get(name, Decimal("0")) + paid
+
+    # Fallback to debit transactions grouped by description when no matching
+    # vendor record exists. This preserves legacy 1099 detection from bank txns.
     txns = _1099_candidates(db, tenant_id, user_id, year)
-    payee_totals: dict[str, Decimal] = {}
     for t in txns:
-        payee = (t.description or "Unknown").strip()
-        payee_totals[payee] = payee_totals.get(payee, Decimal("0")) + Decimal(str(t.amount or 0))
+        amt = Decimal(str(t.amount or 0))
+        name = (t.description or "Unknown").strip()
+        # Skip if this transaction's description already matched a vendor via bills.
+        if name.lower() in vendor_map:
+            continue
+        fallback_totals[name] = fallback_totals.get(name, Decimal("0")) + amt
 
     results = []
-    for payee, total in payee_totals.items():
+    for vendor_id, total in vendor_totals.items():
         if total >= threshold:
-            form = "1099-NEC" if any(
-                kw in payee.lower() for kw in ("contractor", "freelance", "consultant", "contract labor")
-            ) else "1099-MISC"
+            vendor = next((v for v in vendors if v.id == vendor_id), None)
+            if not vendor:
+                continue
+            form = "1099-NEC" if vendor.is_1099_eligible else "1099-MISC"
             results.append({
-                "payee": payee,
+                "vendor_id": vendor.id,
+                "payee": vendor.name,
+                "tin": vendor.tax_id,
                 "form": form,
                 "year": year,
                 "amount": float(total),
+                "is_vendor": True,
             })
-    results.sort(key=lambda r: (-r["amount"], r["payee"]))
+    for name, total in fallback_totals.items():
+        if total >= threshold:
+            form = "1099-NEC" if any(
+                kw in name.lower() for kw in ("contractor", "freelance", "consultant", "contract labor")
+            ) else "1099-MISC"
+            results.append({
+                "payee": name,
+                "form": form,
+                "year": year,
+                "amount": float(total),
+                "is_vendor": False,
+            })
+    results.sort(key=lambda r: (-r["amount"], r.get("payee", "")))
     return results
 
 

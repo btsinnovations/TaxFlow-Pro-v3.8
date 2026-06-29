@@ -58,13 +58,35 @@ def create_invoice(
     is_bill: bool = False,
     notes: str | None = None,
 ) -> models.Invoice:
-    """Create a customer invoice (A/R) or vendor bill (A/P)."""
+    """Create a customer invoice (A/R) or vendor bill (A/P).
+
+    Optional line-item fields:
+      - tax_rate_id: SalesTaxRate id; triggers sales-tax GL posting for invoices.
+      - tax_amount: pre-computed tax (computed from rate if omitted).
+    """
     total = Decimal("0.00")
+    tax_total = Decimal("0.00")
     for line in line_items:
         qty = Decimal(str(line.get("qty", 1)))
         rate = Decimal(str(line.get("rate", 0)))
-        line["amount"] = float(qty * rate)
-        total += qty * rate
+        net = qty * rate
+        line_tax = Decimal("0.00")
+        if not is_bill and line.get("tax_rate_id"):
+            tax_rate = db.query(models.SalesTaxRate).filter(
+                models.SalesTaxRate.id == line["tax_rate_id"],
+                models.SalesTaxRate.tenant_id == tenant_id,
+            ).first()
+            if tax_rate:
+                provided_tax = line.get("tax_amount")
+                if provided_tax not in (None, ""):
+                    line_tax = Decimal(str(provided_tax)).quantize(Decimal("0.01"))
+                else:
+                    line_tax = (net * Decimal(str(tax_rate.rate))).quantize(Decimal("0.01"))
+                line["tax_rate_id"] = tax_rate.id
+        line["amount"] = float(net)
+        line["tax_amount"] = float(line_tax)
+        total += net + line_tax
+        tax_total += line_tax
 
     invoice = models.Invoice(
         tenant_id=tenant_id,
@@ -92,7 +114,63 @@ def create_invoice(
         db.add(db_line)
     db.commit()
     db.refresh(invoice)
+
+    # Sales-tax GL posting for customer invoices with tax.
+    if not is_bill and tax_total > 0:
+        _post_sales_tax_invoice_gl(db, tenant_id, user_id, invoice, Decimal(str(invoice.total)) - tax_total, tax_total)
+
     return invoice
+
+
+def _post_sales_tax_invoice_gl(
+    db: Session,
+    tenant_id: int,
+    user_id: int,
+    invoice: models.Invoice,
+    net_total: Decimal,
+    tax_total: Decimal,
+) -> None:
+    """Post A/R, Revenue, and Sales Tax Payable GL entries for a taxable invoice."""
+    from backend.accounting.coa import create_account
+    ar = create_account(db, tenant_id, user_id, 1100, "Accounts Receivable", "asset")
+    revenue = create_account(db, tenant_id, user_id, 4000, "Sales Revenue", "income")
+    liability = create_account(db, tenant_id, user_id, 2110, "Sales Tax Payable", "liability")
+    entries = []
+    entries.append(models.GeneralLedgerEntry(
+        tenant_id=tenant_id,
+        user_id=user_id,
+        date=invoice.issue_date or date.today(),
+        description=f"Invoice {invoice.invoice_number} - A/R",
+        debit_coa_account_id=ar["id"],
+        credit_coa_account_id=None,
+        amount=invoice.total,
+        memo="Sales tax invoice A/R",
+        entry_type="regular",
+    ))
+    entries.append(models.GeneralLedgerEntry(
+        tenant_id=tenant_id,
+        user_id=user_id,
+        date=invoice.issue_date or date.today(),
+        description=f"Invoice {invoice.invoice_number} - Revenue",
+        debit_coa_account_id=None,
+        credit_coa_account_id=revenue["id"],
+        amount=net_total,
+        memo="Sales tax invoice revenue",
+        entry_type="regular",
+    ))
+    entries.append(models.GeneralLedgerEntry(
+        tenant_id=tenant_id,
+        user_id=user_id,
+        date=invoice.issue_date or date.today(),
+        description=f"Invoice {invoice.invoice_number} - Sales Tax Payable",
+        debit_coa_account_id=None,
+        credit_coa_account_id=liability["id"],
+        amount=tax_total,
+        memo="Sales tax liability",
+        entry_type="regular",
+    ))
+    db.add_all(entries)
+    db.commit()
 
 
 def create_bill(

@@ -481,3 +481,68 @@ class RecurringRule(RecurringRuleBase):
     last_generated_at: Optional[datetime] = None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+
+# v3.11.6 R5 — business operations schemas
+class VendorBase(BaseModel):
+    name: str
+    tax_id: Optional[str] = None
+    address: Optional[str] = None
+    is_1099_eligible: bool = False
+    default_expense_coa_account_id: Optional[int] = None
+    notes: Optional[str] = None
+
+class VendorCreate(VendorBase):
+    pass
+
+class VendorOut(VendorBase):
+    id: int
+    is_active: bool
+    model_config = ConfigDict(from_attributes=True)
+
+class SalesTaxRateBase(BaseModel):
+    name: str
+    jurisdiction: str
+    rate: float
+    effective_date: date
+    is_active: bool = True
+
+class SalesTaxRateCreate(SalesTaxRateBase):
+    pass
+
+class SalesTaxRateOut(SalesTaxRateBase):
+    id: int
+    model_config = ConfigDict(from_attributes=True)
+
+class SalesTaxPaymentBase(BaseModel):
+    period_start: date
+    period_end: date
+    payment_date: date
+    amount: float
+    jurisdiction: Optional[str] = None
+
+class SalesTaxPaymentCreate(SalesTaxPaymentBase):
+    pass
+
+class SalesTaxPaymentOut(SalesTaxPaymentBase):
+    id: int
+    model_config = ConfigDict(from_attributes=True)
+
+class MileageLogBase(BaseModel):
+    trip_date: date
+    description: str
+    starting_odometer: float
+    ending_odometer: float
+    purpose: Optional[str] = "business"
+    vehicle: Optional[str] = None
+    reimbursement_rate: Optional[float] = None
+
+class MileageLogCreate(MileageLogBase):
+    pass
+
+class MileageLogOut(MileageLogBase):
+    id: int
+    miles: float
+    reimbursement_amount: float
+    model_config = ConfigDict(from_attributes=True)
+
