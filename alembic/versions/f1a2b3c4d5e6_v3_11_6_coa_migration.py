@@ -657,16 +657,49 @@ def downgrade() -> None:
     Drops new columns added to existing tables, then drops all tables created
     by this migration.  Tables that existed before v3.11.6 are preserved.
     """
-    
     conn = op.get_bind()
-    for idx_name, table_name in [
-        ('ix_coa_accounts_parent_id', 'coa_accounts'),
-        ('ix_coa_accounts_tenant_number', 'coa_accounts'),
-        ('ix_coa_accounts_tenant_id', 'coa_accounts'),
-    ]:
-        conn.execute(sa.text(f"DROP INDEX IF EXISTS {idx_name}"))
+
+    # Drop coa_account_id columns from existing tables
+    if _table_exists('transactions'):
+        tx_cols = _table_columns('transactions')
+        if 'coa_account_id' in tx_cols:
+            with op.batch_alter_table('transactions') as batch_op:
+                batch_op.drop_column('coa_account_id')
+
+    if _table_exists('general_ledger_entries'):
+        gl_cols = _table_columns('general_ledger_entries')
+        if 'credit_coa_account_id' in gl_cols:
+            with op.batch_alter_table('general_ledger_entries') as batch_op:
+                batch_op.drop_column('credit_coa_account_id')
+        if 'debit_coa_account_id' in gl_cols:
+            with op.batch_alter_table('general_ledger_entries') as batch_op:
+                batch_op.drop_column('debit_coa_account_id')
+
+    if _table_exists('categorization_rules'):
+        cr_cols = _table_columns('categorization_rules')
+        if 'coa_account_id' in cr_cols:
+            with op.batch_alter_table('categorization_rules') as batch_op:
+                batch_op.drop_column('coa_account_id')
+
+    # Drop tables created by this migration (idempotent)
     for table_name in [
-        'coa_accounts',
+        'tax_line_mappings', 'budget_lines', 'reconciliation_matches',
+        'reconciliation_imports', 'fx_rates', 'inventory_transactions',
+        'inventory_items', 'investment_lots', 'loan_schedules',
+        'payments', 'invoice_line_items', 'invoices',
+        'flags', 'general_ledger_entries',
+        'periods', 'journals', 'depreciation_assets',
+        'trained_models', 'sessions', 'refresh_tokens', 'revoked_tokens',
+        'profile_memberships',
     ]:
         conn.execute(sa.text(f"DROP TABLE IF EXISTS {table_name}"))
+
+    # Drop coa_accounts table and its indexes (idempotent)
+    for idx_name in [
+        'ix_coa_accounts_parent_id',
+        'ix_coa_accounts_tenant_number',
+        'ix_coa_accounts_tenant_id',
+    ]:
+        conn.execute(sa.text(f"DROP INDEX IF EXISTS {idx_name}"))
+    conn.execute(sa.text("DROP TABLE IF EXISTS coa_accounts"))
 
