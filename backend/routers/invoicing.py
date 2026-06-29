@@ -58,6 +58,8 @@ class LineItem(BaseModel):
     description: str
     qty: float = 1
     rate: float
+    tax_rate_id: int | None = None
+    tax_amount: float | None = None
 
 
 class InvoiceCreate(BaseModel):
