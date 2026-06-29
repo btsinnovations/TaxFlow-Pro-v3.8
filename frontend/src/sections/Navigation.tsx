@@ -5,9 +5,16 @@ import { useToast } from "@/hooks/useToast";
 import LoginModal from "@/components/LoginModal";
 
 const navLinks = [
-  { label: "Upload", href: "#upload" },
-  { label: "Processed Files", href: "#processed-files" },
-  { label: "Dashboard", href: "#dashboard" },
+  { label: "Upload", href: "/upload" },
+  { label: "Dashboard", href: "/" },
+  { label: "Reports", href: "/reports" },
+  { label: "GL", href: "/gl" },
+  { label: "COA", href: "/accounts" },
+  { label: "Clients", href: "/clients" },
+  { label: "Vendors", href: "/vendors" },
+  { label: "Tax", href: "/tax" },
+  { label: "Year-End", href: "/year-end" },
+  { label: "Health", href: "/health" },
 ];
 
 export default function Navigation() {
@@ -36,7 +43,7 @@ export default function Navigation() {
         }`}
       >
         <div className="max-w-[1440px] mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
-          <a href="#" className="font-serif text-xl text-gold tracking-tight">
+          <a href="/" className="font-serif text-xl text-gold tracking-tight">
             TaxFlow Pro
           </a>
 

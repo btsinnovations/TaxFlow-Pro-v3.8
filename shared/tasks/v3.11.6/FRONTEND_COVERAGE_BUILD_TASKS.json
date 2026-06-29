@@ -1,0 +1,26 @@
+{
+  "task_id": "TF-COVERAGE-v3.11.6",
+  "title": "Frontend → Backend Coverage Build",
+  "status": "in_progress",
+  "assignee": "jane",
+  "orchestrator": "james",
+  "branch": "v3.11.6-dev",
+  "masterplan": "shared/tasks/v3.11.6/FRONTEND_COVERAGE_BUILD_MASTERPLAN.md",
+  "coverage_map": "shared/tasks/v3.11.6/BACKEND_FRONTEND_COVERAGE_MAP.json",
+  "coverage_script": "shared/tasks/v3.11.6/_build_coverage.py",
+  "scaffold_commit": null,
+  "tasks": [
+    { "id": "T1", "title": "Implement useAPIExtensions hooks", "status": "todo", "files": ["frontend/src/hooks/useAPIExtensions.ts"] },
+    { "id": "T2", "title": "Audit / Backup / Dashboard Health pages", "status": "todo", "files": ["frontend/src/components/v3.11/AuditManager.tsx", "frontend/src/components/v3.11/BackupManager.tsx", "frontend/src/components/v3.11/DashboardHealth.tsx"] },
+    { "id": "T3", "title": "COA / GL / Period / Rule managers", "status": "todo", "files": ["frontend/src/components/v3.11/COAManager.tsx", "frontend/src/components/v3.11/GLManager.tsx", "frontend/src/components/v3.11/PeriodManager.tsx", "frontend/src/components/v3.11/RuleManager.tsx"] },
+    { "id": "T4", "title": "Depreciation / Flags / Imports managers", "status": "todo", "files": ["frontend/src/components/v3.11/DepreciationManager.tsx", "frontend/src/components/v3.11/FlagManager.tsx", "frontend/src/components/v3.11/ImportsManager.tsx"] },
+    { "id": "T5", "title": "Tax / Sales Tax / Year End managers", "status": "todo", "files": ["frontend/src/components/v3.11/TaxManager.tsx", "frontend/src/components/v3.11/SalesTaxManager.tsx", "frontend/src/components/v3.11/YearEndManager.tsx"] },
+    { "id": "T6", "title": "Vendors / Mileage / Export managers", "status": "todo", "files": ["frontend/src/components/v3.11/VendorManager.tsx", "frontend/src/components/v3.11/MileageLog.tsx", "frontend/src/components/v3.11/ExportManager.tsx"] },
+    { "id": "T7", "title": "Investments / Invoicing / Liabilities managers", "status": "todo", "files": ["frontend/src/components/v3.11/InvestmentsManager.tsx", "frontend/src/components/v3.11/InvoicingManager.tsx", "frontend/src/components/v3.11/LiabilitiesManager.tsx"] },
+    { "id": "T8", "title": "Client Manager page", "status": "todo", "files": ["frontend/src/components/v3.11/ClientManager.tsx"] },
+    { "id": "T9", "title": "Update App.tsx routes", "status": "todo", "files": ["frontend/src/App.tsx"] },
+    { "id": "T10", "title": "Update Navigation links", "status": "todo", "files": ["frontend/src/sections/Navigation.tsx"] },
+    { "id": "T11", "title": "Update v3.11 index exports", "status": "todo", "files": ["frontend/src/components/v3.11/index.ts"] },
+    { "id": "T12", "title": "Build + test + coverage verification", "status": "todo", "files": ["shared/tasks/v3.11.6/BACKEND_FRONTEND_COVERAGE_MAP.json"] }
+  ]
+}
