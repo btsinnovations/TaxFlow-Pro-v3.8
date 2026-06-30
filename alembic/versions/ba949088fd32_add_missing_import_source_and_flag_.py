@@ -18,6 +18,21 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _table_exists(conn, table_name: str) -> bool:
+    dialect = conn.dialect.name
+    if dialect == "postgresql":
+        result = conn.execute(
+            sa.text("SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename=:t"),
+            {"t": table_name},
+        ).fetchone()
+        return result is not None
+    try:
+        tables = {row[0] for row in conn.execute(sa.text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()}
+        return table_name in tables
+    except Exception:
+        return False
+
+
 def _table_columns(table_name: str) -> set[str]:
     """Return the set of column names for the given table.
 
@@ -43,13 +58,12 @@ def _table_columns(table_name: str) -> set[str]:
 def upgrade() -> None:
     """Add columns that exist in the models but were not created by earlier migrations."""
     conn = op.get_bind()
-    tables = {row[0] for row in conn.execute(sa.text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()}
-    if 'transactions' in tables:
+    if _table_exists(conn, 'transactions'):
         tx_cols = _table_columns('transactions')
         if 'import_source' not in tx_cols:
             op.add_column('transactions', sa.Column('import_source', sa.String(), nullable=True))
 
-    if 'flags' in tables:
+    if _table_exists(conn, 'flags'):
         flag_cols = _table_columns('flags')
         if 'created_by' not in flag_cols:
             op.add_column('flags', sa.Column('created_by', sa.String(), nullable=False, server_default='system'))
@@ -60,15 +74,14 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Remove columns added above."""
     conn = op.get_bind()
-    tables = {row[0] for row in conn.execute(sa.text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()}
-    if 'flags' in tables:
+    if _table_exists(conn, 'flags'):
         flag_cols = _table_columns('flags')
         if 'resolved_at' in flag_cols:
             op.drop_column('flags', 'resolved_at')
         if 'created_by' in flag_cols:
             op.drop_column('flags', 'created_by')
 
-    if 'transactions' in tables:
+    if _table_exists(conn, 'transactions'):
         tx_cols = _table_columns('transactions')
         if 'import_source' in tx_cols:
             op.drop_column('transactions', 'import_source')

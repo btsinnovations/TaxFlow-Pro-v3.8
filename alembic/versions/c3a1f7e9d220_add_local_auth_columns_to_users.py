@@ -23,13 +23,25 @@ def upgrade() -> None:
     op.add_column('users', sa.Column('keyfile_path', sa.String(), nullable=True))
 
 
-def downgrade() -> None:
-    conn = op.get_bind()
+
+
+def _table_exists(conn, table_name: str) -> bool:
+    dialect = conn.dialect.name
+    if dialect == "postgresql":
+        result = conn.execute(
+            sa.text("SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename=:t"),
+            {"t": table_name},
+        ).fetchone()
+        return result is not None
     try:
         tables = {row[0] for row in conn.execute(sa.text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()}
+        return table_name in tables
     except Exception:
-        tables = set()
-    if 'users' not in tables:
+        return False
+
+def downgrade() -> None:
+    conn = op.get_bind()
+    if not _table_exists(conn, 'users'):
         return
     for col in ['keyfile_path', 'encryption_salt']:
         try:

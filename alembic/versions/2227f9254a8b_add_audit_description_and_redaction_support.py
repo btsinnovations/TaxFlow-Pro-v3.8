@@ -18,13 +18,25 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-def upgrade() -> None:
-    conn = op.get_bind()
+def _table_exists(conn, table_name: str) -> bool:
+    dialect = conn.dialect.name
+    if dialect == "postgresql":
+        result = conn.execute(
+            sa.text("SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename=:t"),
+            {"t": table_name},
+        ).fetchone()
+        return result is not None
+    # SQLite fallback
     try:
         tables = {row[0] for row in conn.execute(sa.text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()}
+        return table_name in tables
     except Exception:
-        tables = set()
-    if 'audit_entries' not in tables:
+        return False
+
+
+def upgrade() -> None:
+    conn = op.get_bind()
+    if not _table_exists(conn, 'audit_entries'):
         return
     with op.batch_alter_table('audit_entries', schema=None) as batch_op:
         batch_op.add_column(sa.Column('description', sa.String(), nullable=True))
@@ -32,11 +44,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     conn = op.get_bind()
-    try:
-        tables = {row[0] for row in conn.execute(sa.text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()}
-    except Exception:
-        tables = set()
-    if 'audit_entries' not in tables:
+    if not _table_exists(conn, 'audit_entries'):
         return
     with op.batch_alter_table('audit_entries', schema=None) as batch_op:
         batch_op.drop_column('description')

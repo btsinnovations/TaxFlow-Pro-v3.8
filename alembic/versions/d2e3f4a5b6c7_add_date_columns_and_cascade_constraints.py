@@ -91,13 +91,25 @@ def upgrade() -> None:
         )
 
 
-def downgrade() -> None:
-    conn = op.get_bind()
+
+
+def _table_exists(conn, table_name: str) -> bool:
+    dialect = conn.dialect.name
+    if dialect == "postgresql":
+        result = conn.execute(
+            sa.text("SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename=:t"),
+            {"t": table_name},
+        ).fetchone()
+        return result is not None
     try:
         tables = {row[0] for row in conn.execute(sa.text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()}
+        return table_name in tables
     except Exception:
-        tables = set()
-    if 'gl_accounts' in tables:
+        return False
+
+def downgrade() -> None:
+    conn = op.get_bind()
+    if _table_exists(conn, 'gl_accounts'):
         with op.batch_alter_table('gl_accounts', schema=None) as batch_op:
             batch_op.alter_column(
                 'account_type',
@@ -105,7 +117,7 @@ def downgrade() -> None:
                 nullable=True,
                 server_default=None,
             )
-    if 'transactions' in tables:
+    if _table_exists(conn, 'transactions'):
         try:
             op.drop_column('transactions', 'owner_uncertain')
         except Exception:

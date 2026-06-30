@@ -34,14 +34,25 @@ def _redact_for_hash(details_raw):
     return redact_pii_in_json(parsed)
 
 
+def _table_exists(conn, table_name: str) -> bool:
+    dialect = conn.dialect.name
+    if dialect == "postgresql":
+        result = conn.execute(
+            sa.text("SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename=:t"),
+            {"t": table_name},
+        ).fetchone()
+        return result is not None
+    try:
+        tables = {row[0] for row in conn.execute(sa.text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()}
+        return table_name in tables
+    except Exception:
+        return False
+
+
 def upgrade() -> None:
     """Add chain_hash column and deterministically backfill existing rows."""
     conn = op.get_bind()
-    try:
-        tables = {row[0] for row in conn.execute(sa.text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()}
-    except Exception:
-        tables = set()
-    if 'audit_entries' not in tables:
+    if not _table_exists(conn, 'audit_entries'):
         return
     op.add_column(
         'audit_entries',
@@ -80,11 +91,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Remove the chain_hash column."""
     conn = op.get_bind()
-    try:
-        tables = {row[0] for row in conn.execute(sa.text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()}
-    except Exception:
-        tables = set()
-    if 'audit_entries' not in tables:
+    if not _table_exists(conn, 'audit_entries'):
         return
     try:
         with op.batch_alter_table('audit_entries', schema=None) as batch_op:
