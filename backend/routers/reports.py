@@ -63,6 +63,7 @@ def pnl_route(
 
 
 @router.post("/trial-balance")
+@router.get("/trial-balance")
 def trial_balance_route(
     request: Request,
     as_of: date,

@@ -76,12 +76,15 @@ export default function ReportsCenter() {
   async function loadCashFlow() {
     setLoading(true);
     try {
-      const res = await fetchWithAuth(`/api/budget/cash-flow?start=${startDate}&months=6`);
+      const res = await fetchWithAuth("/api/reports/cash-flow", {
+        method: "POST",
+        body: JSON.stringify({ start_date: startDate, end_date: endDate }),
+      });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setCashFlow(data || []);
     } catch (e: any) {
-      setError(e?.message || "Failed to load cash flow forecast");
+      setError(e?.message || "Failed to load cash flow");
     } finally {
       setLoading(false);
     }

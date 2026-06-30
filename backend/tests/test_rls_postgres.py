@@ -10,6 +10,7 @@ TEST_DATABASE_URL is not set. They verify:
 from __future__ import annotations
 
 import os
+import time
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
@@ -38,17 +39,49 @@ def _run_migrations(url: str) -> None:
 
 @pytest.fixture(scope="module")
 def pg_engine():
-    """Create a fresh PostgreSQL schema via Alembic for the test module."""
+    """Create a fresh PostgreSQL database via Alembic for the test module.
+
+    The configured TEST_DATABASE_URL role has CREATEDB but does not own the
+    existing database, so we allocate a unique database per module run and
+    drop it afterwards.
+    """
+    from urllib.parse import urlparse, urlunparse
+
     url = os.environ["TEST_DATABASE_URL"]
-    engine = create_engine(url, pool_pre_ping=True)
-    # Drop all objects and re-run migrations to ensure RLS policies exist.
-    with engine.connect() as conn:
-        conn.execute(text("DROP SCHEMA public CASCADE"))
-        conn.execute(text("CREATE SCHEMA public"))
-        conn.commit()
-    _run_migrations(url)
+    parsed = urlparse(url)
+    db_name = f"taxflow_rls_{os.getpid()}_{int(time.time())}"
+    admin_url = urlunparse(
+        parsed._replace(path="/postgres")
+    )
+    test_url = urlunparse(
+        parsed._replace(path=f"/{db_name}")
+    )
+
+    admin_engine = create_engine(admin_url, pool_pre_ping=True, isolation_level="AUTOCOMMIT")
+    with admin_engine.connect() as conn:
+        # Terminate any lingering connections to avoid drop lock.
+        conn.execute(text(
+            f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+            f"WHERE datname = '{db_name}' AND pid <> pg_backend_pid()"
+        ))
+        conn.execute(text(f"DROP DATABASE IF EXISTS {db_name} WITH (FORCE)"))
+        conn.execute(text(f"CREATE DATABASE {db_name}"))
+    admin_engine.dispose()
+
+    engine = create_engine(test_url, pool_pre_ping=True)
+    _run_migrations(test_url)
     yield engine
     engine.dispose()
+
+    # Cleanup: drop isolated test database.
+    admin_engine = create_engine(admin_url, pool_pre_ping=True, isolation_level="AUTOCOMMIT")
+    with admin_engine.connect() as conn:
+        conn.execute(text(
+            f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+            f"WHERE datname = '{db_name}' AND pid <> pg_backend_pid()"
+        ))
+        conn.execute(text(f"DROP DATABASE IF EXISTS {db_name} WITH (FORCE)"))
+    admin_engine.dispose()
 
 
 @pytest.fixture(scope="module")
@@ -152,7 +185,7 @@ def test_postgres_tenant_a_cannot_read_tenant_b(pg_session, pg_tenant_data):
     # Set tenant context to A
     set_tenant_id(pg_session, tenant_a_id)
 
-    # Query coa_accounts — should only see tenant A's accounts
+    # Query coa_accounts - should only see tenant A's accounts
     accounts = pg_session.query(models.CoaAccount).all()
     for acct in accounts:
         assert acct.tenant_id == tenant_a_id, (
@@ -236,7 +269,7 @@ def test_postgres_tenant_insert_blocked_for_wrong_tenant(pg_session, pg_tenant_d
     # Set context to tenant A
     set_tenant_id(pg_session, tenant_a_id)
 
-    # Try to insert a row with tenant_b_id — should fail
+    # Try to insert a row with tenant_b_id - should fail
     bad_account = models.CoaAccount(
         tenant_id=tenant_b_id, number=9999, name="Stolen", type="asset"
     )
