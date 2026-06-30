@@ -91,7 +91,7 @@ class TrackAValidation:
             db.add(client)
             db.commit()
             db.refresh(client)
-            self.user = user
+            self.user_id = user.id
             self.tenant_id = client.id
             create_account(db, client.id, user.id, "1010", "Cash", "asset")
             create_account(db, client.id, user.id, "4000", "Revenue", "income")
@@ -212,59 +212,56 @@ class TrackAValidation:
                     violations.append(f"invariant check error: {exc}")
         return operations, violations
 
-    def run_tenant_isolation(self) -> Tuple[int, int]:
-        """A.5 — create second tenant and ensure no cross-tenant reads."""
+    def run_tenant_isolation(self) -> Tuple[int, int, Dict[str, Any]]:
+        """A.5 — create second tenant under same user and test isolation via x-tenant-id header."""
         db = self.SessionLocal()
         try:
-            user2 = models.User(
-                username="tracka_user2",
-                email="tracka2@example.com",
-                hashed_password=get_password_hash("tracka_pass2"),
-                is_active=True,
-                encryption_salt="dHJhY2thX3NhbHRfMTZieXRlczI=",
-            )
-            db.add(user2)
+            client2_row = models.Client(name="Track A Client 2", user_id=self.user_id)
+            db.add(client2_row)
             db.commit()
-            db.refresh(user2)
-            client2 = models.Client(name="Track A Client 2", user_id=user2.id)
-            db.add(client2)
-            db.commit()
-            db.refresh(client2)
-            tenant2_id = client2.id
-            create_account(db, tenant2_id, user2.id, "1010", "Cash", "asset")
+            db.refresh(client2_row)
+            tenant2_id = client2_row.id
+            create_account(db, tenant2_id, self.user_id, "1010", "Cash", "asset")
+            create_account(db, tenant2_id, self.user_id, "4000", "Revenue", "income")
         finally:
             db.close()
 
-        resp = self.client.post("/api/auth/login", data={"username": "tracka_user2", "password": "tracka_pass2"})
-        if resp.status_code != 200:
-            return 0, 1
-        token2 = resp.json()["access_token"]
         client2 = TestClient(app)
-        client2.headers.update({"Authorization": f"Bearer {token2}"})
+        client2.headers.update({
+            "Authorization": f"Bearer {self.token}",
+            "x-tenant-id": str(tenant2_id),
+        })
+        self.client.headers.update({"x-tenant-id": str(self.tenant_id)})
 
         leaks = 0
         checks = 0
-        # tenant 1 should not see tenant 2 data
         endpoints = ["/api/coa/", "/api/clients/", "/api/rules/", "/api/journal-entries/", "/api/invoices/", "/api/bills/", "/api/vendors/"]
+        endpoint_status = {}
         for endpoint in endpoints:
             try:
                 r1 = self.client.get(endpoint)
                 r2 = client2.get(endpoint)
                 checks += 1
-                if r1.status_code == 200 and r2.status_code == 200:
+                status1 = r1.status_code
+                status2 = r2.status_code
+                leak = False
+                if status1 == 200 and status2 == 200:
                     try:
                         d1 = r1.json()
                         d2 = r2.json()
                         if isinstance(d1, list) and isinstance(d2, list):
-                            ids1 = {x.get("id") for x in d1}
-                            ids2 = {x.get("id") for x in d2}
+                            ids1 = {x.get("id") for x in d1 if isinstance(x, dict)}
+                            ids2 = {x.get("id") for x in d2 if isinstance(x, dict)}
                             if ids1 & ids2:
                                 leaks += 1
+                                leak = True
                     except Exception:
                         pass
-            except Exception:
+                endpoint_status[endpoint] = {"tenant1_status": status1, "tenant2_status": status2, "leak": leak}
+            except Exception as exc:
                 checks += 1
-        return leaks, checks
+                endpoint_status[endpoint] = {"error": str(exc)}
+        return leaks, checks, endpoint_status
 
     def run_parser_fuzz(self) -> Tuple[int, int]:
         """A.7 — feed mutated synthetic OFX content to parser detection."""
@@ -320,9 +317,9 @@ class TrackAValidation:
 
         # A.5
         try:
-            leaks, checks = self.run_tenant_isolation()
+            leaks, checks, endpoint_status = self.run_tenant_isolation()
             verdict = "PASS" if leaks == 0 else "FAIL"
-            self.log("A.5 Multi-Tenant Isolation", verdict, f"{checks} checks; {leaks} leaks detected", {"checks": checks, "leaks": leaks})
+            self.log("A.5 Multi-Tenant Isolation", verdict, f"{checks} checks; {leaks} leaks detected", {"checks": checks, "leaks": leaks, "endpoint_status": endpoint_status})
         except Exception as exc:
             self.log("A.5 Multi-Tenant Isolation", "FAIL", f"Exception: {exc}")
 

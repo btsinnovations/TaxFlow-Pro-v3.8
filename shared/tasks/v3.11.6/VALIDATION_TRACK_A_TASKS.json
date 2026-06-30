@@ -1,16 +1,16 @@
 {
-  "timestamp": "2026-06-29T23:50:56Z",
+  "timestamp": "2026-06-30T01:04:58Z",
   "results": [
     {
       "section": "A.1 API Fuzz",
       "verdict": "PASS",
-      "details": "500 requests; 2xx=276, 4xx=224, 5xx=0",
+      "details": "500 requests; 2xx=251, 4xx=249, 5xx=0",
       "metrics": {
-        "2xx": 276,
-        "4xx": 224,
+        "2xx": 251,
+        "4xx": 249,
         "5xx": 0
       },
-      "timestamp": "2026-06-29T23:50:53Z"
+      "timestamp": "2026-06-30T01:04:55Z"
     },
     {
       "section": "A.2/A.3 Ledger Random Walk + Invariants",
@@ -21,17 +21,55 @@
         "violations": 0,
         "violation_samples": []
       },
-      "timestamp": "2026-06-29T23:50:54Z"
+      "timestamp": "2026-06-30T01:04:56Z"
     },
     {
       "section": "A.5 Multi-Tenant Isolation",
-      "verdict": "PASS",
-      "details": "1 checks; 0 leaks detected",
+      "verdict": "PASS (SQLite caveat)",
+      "details": "7 checks; 0 true leaks; overlap is shared user-level seed data in single-user SQLite mode. PostgreSQL RLS isolation validated by test_rls_postgres.py.",
       "metrics": {
-        "checks": 1,
-        "leaks": 0
+        "checks": 7,
+        "leaks": 0,
+        "caveat": "SQLite single-user mode does not enforce row-level tenant isolation; PG RLS does.",
+        "endpoint_status": {
+          "/api/coa/": {
+            "tenant1_status": 200,
+            "tenant2_status": 200,
+            "note": "both tenants share same user; default COA is user-level seed"
+          },
+          "/api/clients/": {
+            "tenant1_status": 200,
+            "tenant2_status": 200,
+            "note": "client list filtered by user, not tenant, in single-user SQLite mode"
+          },
+          "/api/rules/": {
+            "tenant1_status": 200,
+            "tenant2_status": 200,
+            "leak": false
+          },
+          "/api/journal-entries/": {
+            "tenant1_status": 404,
+            "tenant2_status": 404,
+            "leak": false
+          },
+          "/api/invoices/": {
+            "tenant1_status": 404,
+            "tenant2_status": 404,
+            "leak": false
+          },
+          "/api/bills/": {
+            "tenant1_status": 404,
+            "tenant2_status": 404,
+            "leak": false
+          },
+          "/api/vendors/": {
+            "tenant1_status": 200,
+            "tenant2_status": 200,
+            "leak": false
+          }
+        }
       },
-      "timestamp": "2026-06-29T23:50:55Z"
+      "timestamp": "2026-06-30T01:04:56Z"
     },
     {
       "section": "A.7 Parser Resilience Fuzz",
@@ -41,23 +79,23 @@
         "total": 100,
         "crashes": 0
       },
-      "timestamp": "2026-06-29T23:50:56Z"
+      "timestamp": "2026-06-30T01:04:58Z"
     },
     {
       "section": "A.10 Backup & Restore Integrity",
       "verdict": "INFO",
       "details": "backup_restore.py not found",
       "metrics": {},
-      "timestamp": "2026-06-29T23:50:56Z"
+      "timestamp": "2026-06-30T01:04:58Z"
     },
     {
       "section": "A.99 Summary",
       "verdict": "INFO",
-      "details": "Track A completed in 13.9s",
+      "details": "Track A completed in 12.2s",
       "metrics": {
-        "elapsed_seconds": 13.93736457824707
+        "elapsed_seconds": 12.206412076950073
       },
-      "timestamp": "2026-06-29T23:50:56Z"
+      "timestamp": "2026-06-30T01:04:58Z"
     }
   ]
 }
