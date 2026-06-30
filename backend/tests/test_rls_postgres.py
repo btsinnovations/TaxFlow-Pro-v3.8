@@ -53,11 +53,13 @@ def pg_engine():
 
 @pytest.fixture(scope="module")
 def pg_session(pg_engine):
-    """Session bound to the PostgreSQL test database."""
-    SessionLocal = sessionmaker(bind=pg_engine)
+    """Session bound to a single PostgreSQL connection for RLS GUC stability."""
+    connection = pg_engine.connect()
+    SessionLocal = sessionmaker(bind=connection)
     session = SessionLocal()
     yield session
     session.close()
+    connection.close()
 
 
 @pytest.fixture(scope="module")
