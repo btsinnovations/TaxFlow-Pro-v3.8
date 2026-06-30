@@ -1,0 +1,63 @@
+{
+  "timestamp": "2026-06-29T23:50:56Z",
+  "results": [
+    {
+      "section": "A.1 API Fuzz",
+      "verdict": "PASS",
+      "details": "500 requests; 2xx=276, 4xx=224, 5xx=0",
+      "metrics": {
+        "2xx": 276,
+        "4xx": 224,
+        "5xx": 0
+      },
+      "timestamp": "2026-06-29T23:50:53Z"
+    },
+    {
+      "section": "A.2/A.3 Ledger Random Walk + Invariants",
+      "verdict": "PASS",
+      "details": "250 operations; 0 invariant violations",
+      "metrics": {
+        "operations": 250,
+        "violations": 0,
+        "violation_samples": []
+      },
+      "timestamp": "2026-06-29T23:50:54Z"
+    },
+    {
+      "section": "A.5 Multi-Tenant Isolation",
+      "verdict": "PASS",
+      "details": "1 checks; 0 leaks detected",
+      "metrics": {
+        "checks": 1,
+        "leaks": 0
+      },
+      "timestamp": "2026-06-29T23:50:55Z"
+    },
+    {
+      "section": "A.7 Parser Resilience Fuzz",
+      "verdict": "PASS",
+      "details": "100 mutated files; 0 crashes",
+      "metrics": {
+        "total": 100,
+        "crashes": 0
+      },
+      "timestamp": "2026-06-29T23:50:56Z"
+    },
+    {
+      "section": "A.10 Backup & Restore Integrity",
+      "verdict": "INFO",
+      "details": "backup_restore.py not found",
+      "metrics": {},
+      "timestamp": "2026-06-29T23:50:56Z"
+    },
+    {
+      "section": "A.99 Summary",
+      "verdict": "INFO",
+      "details": "Track A completed in 13.9s",
+      "metrics": {
+        "elapsed_seconds": 13.93736457824707
+      },
+      "timestamp": "2026-06-29T23:50:56Z"
+    }
+  ]
+}
