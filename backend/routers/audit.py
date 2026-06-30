@@ -8,7 +8,7 @@ from .. import models, schemas
 from ..rls import is_postgres, resolve_user_tenant_id, set_tenant_id
 from ..local import settings as local_settings
 from ..audit import verify_chain, AuditAction, AuditResource
-from ..utils.redaction import mask_account_number, redact_description
+from ..utils.redaction import mask_account_number, redact_description, redact_pii_in_json
 from .auth import get_current_user
 
 router = APIRouter(prefix="/audit", tags=["audit"])
@@ -50,6 +50,20 @@ def get_audit_root(
         }
         for e in entries
     ]
+
+
+def _redact_audit_entries(
+    entries: list[schemas.AuditEntryOut],
+) -> list[schemas.AuditEntryOut]:
+    """Apply PII redaction to audit entries before returning to the client.
+
+    Masks account numbers in details and redacts free-text descriptions.
+    """
+    for entry in entries:
+        # Redact description if present
+        if entry.details:
+            entry.details = redact_pii_in_json(entry.details)
+    return entries
 
 
 @router.get("/logs", response_model=List[schemas.AuditEntryOut])
