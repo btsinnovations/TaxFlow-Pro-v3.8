@@ -117,6 +117,15 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return constant_time_verify_password(plain_password, hashed_password)
 
 
+def _naive_utc(dt: Optional[datetime]) -> Optional[datetime]:
+    """Return a naive UTC datetime for consistent SQLite/PostgreSQL storage."""
+    if dt is None:
+        return None
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
 def create_access_token(
     user_id: int,
     expires_delta: Optional[timedelta] = None,
@@ -156,8 +165,8 @@ def _create_session_record(
         token_hash=_hash_token(token),
         token_jti=jti,
         user_id=user_id,
-        expires_at=expires_at,
-        created_at=datetime.now(timezone.utc),
+        expires_at=_naive_utc(expires_at),
+        created_at=_naive_utc(datetime.now(timezone.utc)),
     )
     db.add(session)
     db.commit()
@@ -172,10 +181,8 @@ def _lookup_session_by_token(db: Session, token: str) -> Optional[models.Session
 def _session_is_valid(session: models.Session) -> bool:
     if session.revoked_at is not None:
         return False
-    expires_at = session.expires_at
-    if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
-    return expires_at > datetime.now(timezone.utc)
+    expires_at = _naive_utc(session.expires_at) or datetime.min
+    return expires_at > _naive_utc(datetime.now(timezone.utc))
 
 
 def decode_access_token(token: str, db: Optional[Session] = None) -> Optional[dict]:
@@ -205,7 +212,7 @@ def _hash_token(token: str) -> str:
 
 def _create_refresh_token_record(db: Session, user_id: int, family_id: Optional[str] = None) -> Tuple[str, models.RefreshToken]:
     """Generate an opaque refresh token and persist its hash in the database."""
-    now = datetime.now(timezone.utc)
+    now = _naive_utc(datetime.now(timezone.utc))
     expires = now + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     family_id = family_id or uuid.uuid4().hex
     token = secrets.token_urlsafe(REFRESH_TOKEN_BYTES)
@@ -237,11 +244,9 @@ def _lookup_refresh_token(db: Session, token: str) -> Optional[models.RefreshTok
 def _refresh_token_is_valid(record: models.RefreshToken) -> bool:
     if record.revoked_at is not None:
         return False
-    # SQLite returns naive datetimes; normalize to UTC for comparison.
-    expires_at = record.expires_at
-    if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
-    return expires_at > datetime.now(timezone.utc)
+    expires_at = _naive_utc(record.expires_at)
+    now = _naive_utc(datetime.now(timezone.utc))
+    return expires_at is not None and expires_at > now
 
 
 def rotate_refresh_token(db: Session, old_refresh_token: str) -> Tuple[Optional[str], Optional[dict]]:
@@ -265,7 +270,7 @@ def rotate_refresh_token(db: Session, old_refresh_token: str) -> Tuple[Optional[
     new_token, new_record = _create_refresh_token_record(db, record.user_id, family_id=record.family_id)
     new_hash = new_record.token_hash
 
-    now = datetime.now(timezone.utc)
+    now = _naive_utc(datetime.now(timezone.utc))
     record.replaced_by_token_hash = new_hash
     record.revoked_at = now
     db.add(record)
@@ -282,7 +287,7 @@ def revoke_refresh_token(db: Session, token: str) -> bool:
     if record is None:
         return False
     if record.revoked_at is None:
-        record.revoked_at = datetime.now(timezone.utc)
+        record.revoked_at = _naive_utc(datetime.now(timezone.utc))
         db.add(record)
         db.commit()
     return True
@@ -296,7 +301,7 @@ def revoke_refresh_family(db: Session, token: str) -> int:
     record = _lookup_refresh_token(db, token)
     if record is None:
         return 0
-    now = datetime.now(timezone.utc)
+    now = _naive_utc(datetime.now(timezone.utc))
     rows = (
         db.query(models.RefreshToken)
         .filter(
@@ -335,16 +340,12 @@ def _revoke_access_token_by_jti(
     if existing:
         return existing
 
-    # Normalize naive datetimes to UTC for consistent comparison/cleanup.
-    if expires_at is not None and expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
-
     revoked = models.RevokedToken(
         jti=jti,
         user_id=user_id,
         token_type="access",
-        expires_at=expires_at,
-        revoked_at=datetime.now(timezone.utc),
+        expires_at=_naive_utc(expires_at),
+        revoked_at=_naive_utc(datetime.now(timezone.utc)),
     )
     db.add(revoked)
     db.commit()
@@ -368,7 +369,7 @@ def revoke_access_token(db: Session, token: str) -> Optional[models.RevokedToken
     # Also mark the server-side session revoked, when present.
     session = _lookup_session_by_token(db, token)
     if session is not None and session.revoked_at is None:
-        session.revoked_at = datetime.now(timezone.utc)
+        session.revoked_at = _naive_utc(datetime.now(timezone.utc))
         db.add(session)
         db.commit()
     return _revoke_access_token_by_jti(db, jti, user_id=user_id, expires_at=expires_at)
@@ -376,8 +377,7 @@ def revoke_access_token(db: Session, token: str) -> Optional[models.RevokedToken
 
 def cleanup_expired_revoked_tokens(db: Session) -> int:
     """Delete revoked token records whose expiry has passed. Returns deleted count."""
-    now = datetime.now(timezone.utc)
-    # SQLite returns naive datetimes; normalize them before comparing.
+    now = _naive_utc(datetime.now(timezone.utc))
     rows = (
         db.query(models.RevokedToken)
         .filter(models.RevokedToken.expires_at != None)
@@ -385,10 +385,8 @@ def cleanup_expired_revoked_tokens(db: Session) -> int:
     )
     deleted = 0
     for row in rows:
-        expires = row.expires_at
-        if expires.tzinfo is None:
-            expires = expires.replace(tzinfo=timezone.utc)
-        if expires <= now:
+        expires = _naive_utc(row.expires_at)
+        if expires is not None and expires <= now:
             db.delete(row)
             deleted += 1
     if deleted:

@@ -95,7 +95,7 @@ class User(Base):
     encryption_salt = Column(String, nullable=True)
     keyfile_path = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     clients = relationship("Client", back_populates="owner")
     accounts = relationship("Account", back_populates="owner")
     assets = relationship("DepreciationAsset", back_populates="owner")

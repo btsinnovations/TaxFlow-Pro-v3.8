@@ -17,7 +17,9 @@ router = APIRouter(prefix="/audit", tags=["audit"])
 def _wrap_tenant(request: Request, db: Session, current_user: models.User):
     if not is_postgres():
         return
-    tenant_id = request.headers.get("x-tenant-id")
+    tenant_id = getattr(request.state, "tenant_id", None)
+    if tenant_id is None:
+        tenant_id = request.headers.get("x-tenant-id")
     if tenant_id:
         set_tenant_id(db, int(tenant_id))
         return

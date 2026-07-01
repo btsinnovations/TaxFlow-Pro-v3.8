@@ -1,10 +1,18 @@
 """Row-Level Security helpers for PostgreSQL tenant isolation."""
 import os
+from weakref import WeakKeyDictionary
+
 from sqlalchemy import event, text
 from sqlalchemy.orm import Session
 from sqlalchemy.engine import Engine
 
 from .database import DATABASE_URL, engine
+
+
+# Session-bound tenant cache. PostgreSQL GUCs live on DBAPI connections, which
+# are returned to the pool on commit; we remember the tenant per Session so it
+# can be restored on the next after_begin event.
+_session_tenant_map: WeakKeyDictionary = WeakKeyDictionary()
 
 
 def is_postgres() -> bool:
@@ -52,6 +60,8 @@ def install_rls_event_listeners() -> None:
     if not is_postgres():
         return
 
+    from sqlalchemy import event
+
     @event.listens_for(engine, "connect")
     def _on_connect(dbapi_conn, connection_record):
         # Default to empty tenant; middleware or explicit scope will override.
@@ -61,6 +71,18 @@ def install_rls_event_listeners() -> None:
     def _on_checkout(dbapi_conn, connection_record, connection_proxy):
         # Reset tenant each time a connection is checked out from the pool.
         reset_tenant_on_connection(dbapi_conn)
+
+    @event.listens_for(Session, "after_begin")
+    def _restore_tenant_on_begin(session, transaction, connection):
+        if not _is_postgres_session(session):
+            return
+        tenant_id = _session_tenant_map.get(session)
+        if tenant_id is not None:
+            set_tenant_on_connection(connection.connection, int(tenant_id))
+
+    @event.listens_for(Session, "after_close")
+    def _clear_tenant_on_close(session):
+        _session_tenant_map.pop(session, None)
 
 
 def _is_postgres_session(session: Session) -> bool:
@@ -77,10 +99,12 @@ def set_tenant_id(session: Session, tenant_id: int) -> None:
     Uses a direct SQL GUC command on the session's active connection so it
     works reliably across SQLAlchemy versions. The setting is session-level
     (is_local=false) so it survives transaction boundaries on the same
-    connection.
+    connection, and we record it in _session_tenant_map so it can be restored
+    after the connection is checked back out from the pool.
     """
     if not _is_postgres_session(session):
         return
+    _session_tenant_map[session] = tenant_id
     session.execute(
         text("SELECT set_config('taxflow.tenant_id', :tid, false)"),
         {"tid": str(tenant_id)},
@@ -91,6 +115,7 @@ def clear_tenant_id(session: Session) -> None:
     """Clear the RLS tenant context for a SQLAlchemy session."""
     if not _is_postgres_session(session):
         return
+    _session_tenant_map.pop(session, None)
     session.execute(
         text("SELECT set_config('taxflow.tenant_id', '', false)")
     )

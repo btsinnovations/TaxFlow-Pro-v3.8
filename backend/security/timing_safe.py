@@ -85,26 +85,31 @@ def _padded_username(username: str) -> str:
 def constant_time_user_lookup(
     db: Session, username: str
 ) -> Union[models.User, _SentinelUser]:
-    """Look up the single local user without leaking username timing.
+    """Look up a user without leaking authentication timing.
 
-    Instead of asking the database to filter by username (which can expose
-    existence through index-hit vs miss timing), this function fetches the
-    first user record and performs a constant-time username comparison in
-    Python. The comparison result is attached to the returned user object as
-    `_tf_username_match` so callers may use it without re-comparing.
+    Single-user mode: fetches the first (and only) user row and performs a
+    constant-time username comparison so that any supplied username can log in
+    as the master user without exposing existence through query timing.
 
-    If the database contains no users, a `_SentinelUser` is returned so that
-    callers always follow the same code path and do not branch on existence.
-
-    In the single-tenant local app there is exactly one user; tests that
-    create extra users are expected to reset the database per test.
+    Multi-entity mode: fetches by username directly and requires an exact
+    match. This prevents one tenant user from impersonating another while still
+    keeping the password-verification path timing-safe.
     """
-    user = db.query(models.User).first()
+    from backend.local import settings as local_settings
+
+    if local_settings.is_single_user():
+        user = db.query(models.User).first()
+        if user is None:
+            return _SentinelUser()
+        padded = _padded_username(username)
+        user._tf_username_match = constant_time_compare(
+            _padded_username(user.username), padded
+        )
+        return user
+
+    # Multi-entity mode: exact username match is required.
+    user = db.query(models.User).filter(models.User.username == username).first()
     if user is None:
         return _SentinelUser()
-    padded = _padded_username(username)
-    # Constant-time comparison prevents leaking whether the username matched.
-    user._tf_username_match = constant_time_compare(
-        _padded_username(user.username), padded
-    )
+    user._tf_username_match = True
     return user

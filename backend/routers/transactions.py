@@ -40,7 +40,9 @@ def _wrap_tenant(request: Request, db: Session, current_user: models.User):
     if local_settings.is_single_user():
         set_tenant_id(db, resolve_user_tenant_id(current_user))
         return
-    tenant_id = request.headers.get("x-tenant-id")
+    tenant_id = getattr(request.state, "tenant_id", None)
+    if tenant_id is None:
+        tenant_id = request.headers.get("x-tenant-id")
     if tenant_id is None:
         raise HTTPException(status_code=400, detail="X-Tenant-ID header required")
     set_tenant_id(db, int(tenant_id))
@@ -51,7 +53,9 @@ def _resolve_tenant_id(request: Request, current_user: models.User) -> int:
         return resolve_user_tenant_id(current_user)
     if local_settings.is_single_user():
         return resolve_user_tenant_id(current_user)
-    tenant_id = request.headers.get("x-tenant-id")
+    tenant_id = getattr(request.state, "tenant_id", None)
+    if tenant_id is None:
+        tenant_id = request.headers.get("x-tenant-id")
     if tenant_id is None:
         raise HTTPException(status_code=400, detail="X-Tenant-ID header required")
     return int(tenant_id)
@@ -140,7 +144,6 @@ def create_transaction(
         )
         db.add(synthetic_statement)
         db.commit()
-        db.refresh(synthetic_statement)
 
     description = data.description
     if data.payee:
@@ -160,7 +163,6 @@ def create_transaction(
     _guard_period_closed(db, effective_tenant_id, data.date)
     db.add(tx)
     db.commit()
-    db.refresh(tx)
 
     # R1: auto-post GL entries for every manually created transaction.
     bridge = GLBridge(db, tenant_id=effective_tenant_id, user_id=current_user.id)

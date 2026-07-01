@@ -8,6 +8,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Optional
 
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from .. import models
@@ -28,13 +29,36 @@ class GLBridge:
         self.user_id = user_id
 
     def _get_or_create_coa(self, number: int, name: str, acct_type: str) -> models.CoaAccount:
-        """Find or create a COA account by number."""
+        """Find or create a COA account by number (race-safe on PostgreSQL)."""
         existing = self.db.query(models.CoaAccount).filter(
             models.CoaAccount.tenant_id == self.tenant_id,
             models.CoaAccount.number == number,
         ).first()
         if existing:
             return existing
+
+        # Use upsert to avoid duplicate-key races during concurrent GL posting.
+        dialect = getattr(self.db.bind, "dialect", None)
+        if dialect is not None and dialect.name == "postgresql":
+            stmt = pg_insert(models.CoaAccount).values(
+                tenant_id=self.tenant_id,
+                number=number,
+                name=name,
+                type=acct_type,
+            ).on_conflict_do_nothing(
+                index_elements=["tenant_id", "number"]
+            )
+            self.db.execute(stmt)
+            self.db.commit()
+            # Re-query to obtain the row inserted by this or another session.
+            account = self.db.query(models.CoaAccount).filter(
+                models.CoaAccount.tenant_id == self.tenant_id,
+                models.CoaAccount.number == number,
+            ).first()
+            if account is not None:
+                return account
+
+        # Fallback for non-PostgreSQL engines.
         account = models.CoaAccount(
             tenant_id=self.tenant_id,
             number=number,

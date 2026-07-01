@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models, schemas
 from ..rls import is_postgres, set_tenant_id
+from ..local import settings as local_settings
 from ..security.timing_safe import (
     constant_time_compare,
     constant_time_user_lookup,
@@ -126,19 +127,28 @@ get_current_user = _get_current_user
 
 
 def _timing_safe_authenticate(db: Session, username: str, password: str) -> Optional[models.User]:
-    """Authenticate the single local user without leaking username timing.
+    """Authenticate the local user without leaking username timing.
 
-    This is a single-tenant local app: there is exactly one master user. The
-    supplied username is accepted for that user (original behavior), but the
-    lookup still performs a constant-time username comparison so that the
-    processing time does not depend on the supplied username value.
+    Single-user mode accepts any username because there is exactly one master
+    user (the original TaxFlow v3.x behavior). Multi-entity PostgreSQL mode
+    requires an exact username match to prevent cross-user impersonation when
+    more than one user row exists.
     """
     user = constant_time_user_lookup(db, username)
     # Always run password verification against a real hash. If the database is
     # empty, use a dummy hash so the failure path performs the same bcrypt work.
     target_hash = user.hashed_password if hasattr(user, "hashed_password") else None
     password_ok = constant_time_verify_password(password, target_hash)
-    return user if (password_ok and isinstance(user, models.User)) else None
+    username_ok = getattr(user, "_tf_username_match", False)
+    if not password_ok or not isinstance(user, models.User):
+        return None
+
+    # Single-user mode: preserve legacy any-username-login behavior.
+    if local_settings.is_single_user():
+        return user
+
+    # Multi-entity mode: enforce exact username match.
+    return user if username_ok else None
 
 @router.get("/status")
 def auth_status(db: Session = Depends(get_db)):

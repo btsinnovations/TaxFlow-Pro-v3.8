@@ -17,7 +17,9 @@ def _wrap_tenant(request: Request, db: Session, current_user: models.User):
     if local_settings.is_single_user():
         set_tenant_id(db, resolve_user_tenant_id(current_user))
         return
-    tenant_id = request.headers.get("x-tenant-id")
+    tenant_id = getattr(request.state, "tenant_id", None)
+    if tenant_id is None:
+        tenant_id = request.headers.get("x-tenant-id")
     if tenant_id is None:
         raise HTTPException(status_code=400, detail="X-Tenant-ID header required")
     set_tenant_id(db, int(tenant_id))
