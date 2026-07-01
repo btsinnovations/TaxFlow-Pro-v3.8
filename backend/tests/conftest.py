@@ -40,6 +40,9 @@ os.environ.pop("TAXFLOW_SECRETS_FILE", None)
 os.environ["TAXFLOW_GLOBAL_RATE_LIMIT"] = "10000/second"
 os.environ["TAXFLOW_GLOBAL_BURST_LIMIT"] = "10000"
 os.environ["TAXFLOW_TESTING"] = "true"
+# Use a long JWT access-token lifetime in tests so a single minted token in the
+# auth_client fixture does not expire before tests that run late in a large suite.
+os.environ["TAXFLOW_TOKEN_EXPIRE_MINUTES"] = "240"
 
 
 import base64

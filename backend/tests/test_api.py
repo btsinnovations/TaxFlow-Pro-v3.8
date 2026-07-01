@@ -123,6 +123,30 @@ def test_client_crud(auth_client):
     assert resp.status_code == 200
 
 
+def test_client_name_max_length(auth_client):
+    c = auth_client
+    long_name = "x" * 256
+
+    # Create must reject names over 255 chars
+    resp = c.post("/api/clients/", json={"name": long_name})
+    assert resp.status_code == 422
+
+    # Valid 255-char name should succeed
+    valid_name = "x" * 255
+    resp = c.post("/api/clients/", json={"name": valid_name})
+    assert resp.status_code == 200
+    client_id = resp.json()["id"]
+    assert resp.json()["name"] == valid_name
+
+    # Update must also reject names over 255 chars
+    resp = c.patch(f"/api/clients/{client_id}", json={"name": long_name})
+    assert resp.status_code == 422
+
+    # Cleanup
+    resp = c.delete(f"/api/clients/{client_id}")
+    assert resp.status_code == 200
+
+
 def test_account_crud(auth_client):
     c = auth_client
     # Create client first

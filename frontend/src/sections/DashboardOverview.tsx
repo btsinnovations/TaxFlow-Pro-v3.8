@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { FileText, Users, Calculator, Brain } from 'lucide-react';
 import { getDashboardStats, getAuditLog } from '@/hooks/useAPI';
+import { log } from '@/lib/logger';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -39,7 +40,7 @@ export default function DashboardOverview() {
         setStats(statsData);
         setActivity(auditData);
       } catch (err) {
-        console.error('Dashboard load failed:', err);
+        log.error('Dashboard load failed:', err);
       } finally {
         setLoading(false);
       }

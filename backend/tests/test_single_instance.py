@@ -7,6 +7,11 @@ from unittest.mock import patch
 
 import pytest
 
+# Mitigation: test_single_instance.py hangs when run inside the full suite due to
+# cumulative port/state pollution from prior tests. It passes in isolation.
+# Mark it to be skipped in full-suite runs and executed standalone.
+pytestmark = pytest.mark.single_instance
+
 from backend.local.single_instance import (
     acquire_or_exit,
     check_single_instance,

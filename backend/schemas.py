@@ -114,14 +114,14 @@ class DepreciationAssetWithSchedule(DepreciationAsset):
 
 
 class ClientBase(BaseModel):
-    name: str
+    name: str = Field(..., max_length=255)
     email: Optional[str] = None
     tax_id: Optional[str] = None
 
 class ClientCreate(ClientBase): pass
 
 class ClientUpdate(BaseModel):
-    name: Optional[str] = None
+    name: Optional[str] = Field(None, max_length=255)
     email: Optional[str] = None
     tax_id: Optional[str] = None
 

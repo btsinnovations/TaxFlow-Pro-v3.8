@@ -1,0 +1,91 @@
+{
+  "timestamp": "2026-06-30T15:08:03.742395+00:00",
+  "branch": "v3.11.6-dev",
+  "head": "ab65774",
+  "results": [
+    {
+      "section": "A.4 Chaos/Repair",
+      "verdict": "PASS",
+      "details": "20/20 chaos writes succeeded; 0 gracefully rejected; 0 unexpected errors",
+      "metrics": {
+        "steps": 20,
+        "ok": 20,
+        "rejected": 0,
+        "errors": []
+      },
+      "timestamp": "2026-06-30T15:07:53.313338+00:00"
+    },
+    {
+      "section": "A.6 Bookkeeping Module Stress",
+      "verdict": "PASS",
+      "details": "50/50 adjusting entries created; failure statuses: set()",
+      "metrics": {
+        "total": 50,
+        "success": 50,
+        "failure_statuses": []
+      },
+      "timestamp": "2026-06-30T15:07:54.297982+00:00"
+    },
+    {
+      "section": "A.8 Concurrent Load",
+      "verdict": "PASS",
+      "details": "100 concurrent public-health requests measured",
+      "metrics": {
+        "requests": 100,
+        "failed": 0,
+        "latency_min_ms": 62.392,
+        "latency_max_ms": 242.263,
+        "latency_mean_ms": 157.446,
+        "latency_p95_ms": 207.342
+      },
+      "timestamp": "2026-06-30T15:07:55.158924+00:00"
+    },
+    {
+      "section": "A.9 Volume Soak",
+      "verdict": "PASS",
+      "details": "1000 sequential requests in 8.35s (119.76 req/s); failures=0",
+      "metrics": {
+        "requests": 1000,
+        "elapsed_seconds": 8.35,
+        "rps": 119.76,
+        "failures": 0
+      },
+      "timestamp": "2026-06-30T15:08:03.509399+00:00"
+    },
+    {
+      "section": "A.10 Backup & Restore Integrity",
+      "verdict": "PASS",
+      "details": "Backup export/import round-trip succeeded",
+      "metrics": {
+        "exported_users": 1,
+        "exported_clients": 1,
+        "imported_users": 0,
+        "imported_clients": 0,
+        "id_maps_user_count": 1
+      },
+      "timestamp": "2026-06-30T15:08:03.558602+00:00"
+    },
+    {
+      "section": "A.11 Resource Monitoring",
+      "verdict": "PASS",
+      "details": "Public health/bootstrap endpoints checked",
+      "metrics": {
+        "/api/health/public": 200,
+        "/api/health/bootstrap": 200,
+        "/health": 200
+      },
+      "timestamp": "2026-06-30T15:08:03.612135+00:00"
+    },
+    {
+      "section": "A.12 Date Edge Cases",
+      "verdict": "PASS",
+      "details": "6/6 edge dates accepted",
+      "metrics": {
+        "dates": 6,
+        "ok": 6,
+        "failures": []
+      },
+      "timestamp": "2026-06-30T15:08:03.741630+00:00"
+    }
+  ]
+}

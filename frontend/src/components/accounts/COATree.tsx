@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { fetchWithAuth } from "@/hooks/useAPI";
+import { log } from "@/lib/logger";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
 
@@ -40,7 +41,7 @@ export default function COATree() {
       const data = await res.json();
       setAccounts(Array.isArray(data) ? data : []);
     } catch (e) {
-      console.error("Failed to load COA", e);
+      log.error("Failed to load COA", e);
     } finally {
       setLoading(false);
     }

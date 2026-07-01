@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Shield, Eye, Pencil, Trash2, Plus } from 'lucide-react';
 import { getClients, deleteClient } from '@/hooks/useAPI';
+import { log } from '@/lib/logger';
 import ClientModal from '@/components/ClientModal';
 import ClientViewDrawer from '@/components/ClientViewDrawer';
 import gsap from 'gsap';
@@ -36,7 +37,7 @@ export default function ClientManagement() {
       const data = await getClients();
       setClients(data);
     } catch (err) {
-      console.error('Failed to load clients:', err);
+      log.error('Failed to load clients:', err);
     } finally {
       setLoading(false);
     }
@@ -85,7 +86,7 @@ export default function ClientManagement() {
       setDeleteConfirm(null);
       loadClients();
     } catch (err) {
-      console.error('Failed to delete client:', err);
+      log.error('Failed to delete client:', err);
     }
   };
 

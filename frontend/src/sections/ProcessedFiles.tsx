@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Download, FileCheck, Clock, AlertCircle } from 'lucide-react';
 import { getProcessedFiles, downloadResult } from '@/hooks/useAPI';
+import { log } from '@/lib/logger';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -54,7 +55,7 @@ export default function ProcessedFiles() {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      console.error('Download failed:', err);
+      log.error('Download failed:', err);
     } finally {
       setDownloading(null);
     }

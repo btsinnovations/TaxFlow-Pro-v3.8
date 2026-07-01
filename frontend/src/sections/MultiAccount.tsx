@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link2, RefreshCw, Trash2, Plus, AlertTriangle, Clock, Building2 } from 'lucide-react';
 import { getAccounts, deleteAccount, syncAccount, getClients } from '@/hooks/useAPI';
+import { log } from '@/lib/logger';
 import AccountModal from '@/components/AccountModal';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -44,7 +45,7 @@ export default function MultiAccount() {
       setAccounts(accData);
       setClients(cliData);
     } catch (err) {
-      console.error('Failed to load accounts:', err);
+      log.error('Failed to load accounts:', err);
     } finally {
       setLoading(false);
     }
@@ -75,7 +76,7 @@ export default function MultiAccount() {
       await syncAccount(accountId);
       loadData();
     } catch (err) {
-      console.error('Sync failed:', err);
+      log.error('Sync failed:', err);
     } finally {
       setSyncing(null);
     }
@@ -87,7 +88,7 @@ export default function MultiAccount() {
       setDeleteConfirm(null);
       loadData();
     } catch (err) {
-      console.error('Delete failed:', err);
+      log.error('Delete failed:', err);
     }
   };
 

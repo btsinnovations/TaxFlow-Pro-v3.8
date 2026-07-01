@@ -127,7 +127,7 @@ def downgrade() -> None:
         ('transactions', ['date']),
         ('general_ledger_entries', ['date']),
     ]:
-        if table in tables:
+        if _table_exists(conn, table):
             for col in cols:
                 try:
                     with op.batch_alter_table(table, schema=None) as batch_op:

@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { fetchWithAuth } from "@/hooks/useAPI";
+import { log } from "@/lib/logger";
 import { Edit3, Trash2, Split, Loader2 } from "lucide-react";
 
 export interface RegisterRow {
@@ -160,13 +161,11 @@ export default function Register({ accountId }: RegisterProps) {
   });
 
   const handleSplit = (id: number) => {
-    // eslint-disable-next-line no-console
-    console.log("split stub", id);
+    log.log("split stub", id);
   };
 
   const handleEdit = (id: number) => {
-    // eslint-disable-next-line no-console
-    console.log("edit stub", id);
+    log.log("edit stub", id);
   };
 
   const handleDelete = async (id: number) => {

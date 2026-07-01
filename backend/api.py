@@ -232,8 +232,8 @@ class _SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Content-Security-Policy"] = (
             "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
         )
-        # HSTS is only meaningful over HTTPS; enable it in production.
-        if local_settings.is_production():
+        # HSTS is only meaningful over HTTPS; enable it in production over HTTPS.
+        if local_settings.is_production() and request.url.scheme == "https":
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 

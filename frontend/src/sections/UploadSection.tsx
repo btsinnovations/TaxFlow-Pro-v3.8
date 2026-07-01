@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Download, FileText, AlertTriangle } from 'lucide-react';
 import FileDropzone from '../components/FileDropzone';
 import { uploadFile, processFile, downloadResult, getClients } from '../hooks/useAPI';
+import { log } from '../lib/logger';
 import { useToast } from "@/hooks/useToast";
 import OFXUpload from '../components/upload/OFXUpload';
 
@@ -70,7 +71,7 @@ const UploadSection = () => {
     try {
       const blob = await downloadResult(fileId, format);
       if (!blob || blob.size === 0) {
-        console.error('Download failed: empty blob');
+        log.error('Download failed: empty blob');
         alert('Download failed: file not found or empty');
         return;
       }
@@ -85,7 +86,7 @@ const UploadSection = () => {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      console.error('Download error:', err);
+      log.error('Download error:', err);
       alert('Download failed. Check console for details.');
     }
   };

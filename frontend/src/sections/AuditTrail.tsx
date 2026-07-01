@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getAuditLog } from '@/hooks/useAPI';
+import { log } from '@/lib/logger';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -42,7 +43,7 @@ export default function AuditTrail() {
         const data = await getAuditLog(100);
         setAuditEvents(data);
       } catch (err) {
-        console.error('Failed to load audit log:', err);
+        log.error('Failed to load audit log:', err);
       } finally {
         setLoading(false);
       }

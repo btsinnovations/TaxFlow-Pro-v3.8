@@ -77,14 +77,8 @@ def test_hsts_absent_in_development(client):
     assert "Strict-Transport-Security" not in resp.headers
 
 
-def test_hsts_present_in_production(monkeypatch):
-    """Verify HSTS header is added in production mode.
-
-    We monkeypatch the environment reader used by the settings module so
-    is_production() returns True, then create a fresh FastAPI instance to
-    pick up the new behaviour.  Importing api inside the test avoids stale
-    module state from earlier tests.
-    """
+def test_hsts_present_in_production_https(monkeypatch):
+    """Verify HSTS header is added in production mode over HTTPS only."""
     from fastapi.testclient import TestClient
 
     # Patch the dynamic env reader before importing/creating the app.
@@ -102,11 +96,34 @@ def test_hsts_present_in_production(monkeypatch):
 
     _reset_global_limiter(tight_limit=100, window=60, burst=10)
 
-    with TestClient(api.app) as c:
+    with TestClient(api.app, base_url="https://testserver") as c:
         resp = c.get("/health")
         assert resp.status_code == 200
         hsts = resp.headers.get("Strict-Transport-Security")
         assert hsts == "max-age=31536000; includeSubDomains"
+
+
+def test_hsts_absent_in_production_http(monkeypatch):
+    """Verify HSTS header is NOT emitted in production mode over plain HTTP."""
+    from fastapi.testclient import TestClient
+
+    from backend import local
+    import importlib
+
+    monkeypatch.setattr(local.settings, "_read_env", lambda: "production")
+    monkeypatch.setenv("TAXFLOW_ENVIRONMENT", "production")
+
+    from backend import api
+    importlib.reload(api)
+
+    from backend.tests.test_global_rate_limit import _reset_global_limiter
+
+    _reset_global_limiter(tight_limit=100, window=60, burst=10)
+
+    with TestClient(api.app, base_url="http://testserver") as c:
+        resp = c.get("/health")
+        assert resp.status_code == 200
+        assert "Strict-Transport-Security" not in resp.headers
 
 
 # TAXFLOW_CORS_ORIGINS env override is respected.
