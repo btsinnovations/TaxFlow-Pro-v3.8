@@ -88,7 +88,54 @@ def _make_engine():
     )
 
 
+def _check_postgres_role_security(engine):
+    """Refuse multi-tenant PostgreSQL if the DB role bypasses RLS.
+
+    PostgreSQL superusers and roles with BYPASSRLS ignore RLS even when
+    ALTER TABLE ... FORCE ROW LEVEL SECURITY is set. In multi-tenant mode
+    this silently voids tenant isolation, so we fail fast at startup.
+    """
+    # Single-user SQLite mode does not use PostgreSQL; skip.
+    if not DATABASE_URL.startswith("postgresql://"):
+        return
+
+    # Single-user PostgreSQL mode does not enforce tenant isolation; skip.
+    # Import here to avoid circular imports at module load time.
+    from backend.local import settings as local_settings
+    if local_settings.is_single_user():
+        return
+
+    with engine.connect() as conn:
+        from sqlalchemy import text
+        role = conn.execute(text("SELECT current_user")).scalar()
+        result = conn.execute(
+            text(
+                "SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = :role"
+            ),
+            {"role": role},
+        ).fetchone()
+
+    if result is None:
+        raise RuntimeError(
+            f"PostgreSQL role '{role}' not found in pg_roles; cannot verify RLS safety."
+        )
+
+    rolsuper, rolbypassrls = result
+    if rolsuper:
+        raise RuntimeError(
+            f"TaxFlow multi-tenant mode cannot run with PostgreSQL superuser role '{role}'. "
+            "RLS is bypassed for superusers, so tenant isolation would be void. "
+            "Use a non-superuser role with BYPASSRLS disabled."
+        )
+    if rolbypassrls:
+        raise RuntimeError(
+            f"TaxFlow multi-tenant mode cannot run with PostgreSQL role '{role}' "
+            "because it has BYPASSRLS. Tenant isolation would be void."
+        )
+
+
 engine = _make_engine()
+_check_postgres_role_security(engine)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 if SQLCIPHER_ENABLED:
