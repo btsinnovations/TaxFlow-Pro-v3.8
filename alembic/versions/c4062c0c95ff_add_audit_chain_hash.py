@@ -49,15 +49,39 @@ def _table_exists(conn, table_name: str) -> bool:
         return False
 
 
+def _table_columns(conn, table_name: str) -> set[str]:
+    """Return the set of column names for the given table."""
+    dialect = conn.dialect.name
+    if dialect == "sqlite":
+        try:
+            rows = conn.execute(sa.text(f"PRAGMA table_info({table_name})")).fetchall()
+            return {row[1] for row in rows}
+        except Exception:
+            return set()
+    try:
+        rows = conn.execute(
+            sa.text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = :table_name"
+            ),
+            {"table_name": table_name},
+        ).fetchall()
+        return {row[0] for row in rows}
+    except Exception:
+        return set()
+
+
 def upgrade() -> None:
     """Add chain_hash column and deterministically backfill existing rows."""
     conn = op.get_bind()
     if not _table_exists(conn, 'audit_entries'):
         return
-    op.add_column(
-        'audit_entries',
-        sa.Column('chain_hash', sa.String(length=64), nullable=True)
-    )
+    cols = _table_columns(conn, 'audit_entries')
+    if 'chain_hash' not in cols:
+        op.add_column(
+            'audit_entries',
+            sa.Column('chain_hash', sa.String(length=64), nullable=True)
+        )
 
     connection = op.get_bind()
     rows = connection.execute(

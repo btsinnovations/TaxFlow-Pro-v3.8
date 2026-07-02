@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect, text
 
 
 # revision identifiers, used by Alembic.
@@ -18,9 +19,34 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _table_columns(table_name: str) -> set:
+    """Return the set of column names for the given table."""
+    conn = op.get_bind()
+    dialect = conn.dialect.name
+    if dialect == "sqlite":
+        try:
+            rows = conn.execute(text(f"PRAGMA table_info({table_name})")).fetchall()
+            return {row[1] for row in rows}
+        except Exception:
+            return set()
+    try:
+        rows = conn.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = :table_name"
+            ),
+            {"table_name": table_name},
+        ).fetchall()
+        return {row[0] for row in rows}
+    except Exception:
+        return set()
+
+
 def upgrade() -> None:
-    with op.batch_alter_table('audit_entries', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('signature', sa.String(), nullable=True))
+    cols = _table_columns('audit_entries')
+    if 'signature' not in cols:
+        with op.batch_alter_table('audit_entries', schema=None) as batch_op:
+            batch_op.add_column(sa.Column('signature', sa.String(), nullable=True))
 
 
 def downgrade() -> None:

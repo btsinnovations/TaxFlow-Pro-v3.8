@@ -19,11 +19,36 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _table_columns(conn, table_name: str) -> set[str]:
+    """Return the set of column names for the given table."""
+    dialect = conn.dialect.name
+    if dialect == "sqlite":
+        try:
+            rows = conn.execute(sa.text(f"PRAGMA table_info({table_name})")).fetchall()
+            return {row[1] for row in rows}
+        except Exception:
+            return set()
+    try:
+        rows = conn.execute(
+            sa.text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = :table_name"
+            ),
+            {"table_name": table_name},
+        ).fetchall()
+        return {row[0] for row in rows}
+    except Exception:
+        return set()
+
+
 def upgrade() -> None:
     # 1. Remove server_default=1 from transactions.user_id and flag uncertain rows.
     with op.batch_alter_table('transactions', schema=None) as batch_op:
         batch_op.alter_column('user_id', server_default=None)
-    op.add_column('transactions', sa.Column('owner_uncertain', sa.Boolean(), nullable=True))
+    conn = op.get_bind()
+    tx_cols = _table_columns(conn, 'transactions')
+    if 'owner_uncertain' not in tx_cols:
+        op.add_column('transactions', sa.Column('owner_uncertain', sa.Boolean(), nullable=True))
 
     # 2. Convert date columns from String to Date where feasible.
     #    journals and periods already Date in their creation migration, but transactions

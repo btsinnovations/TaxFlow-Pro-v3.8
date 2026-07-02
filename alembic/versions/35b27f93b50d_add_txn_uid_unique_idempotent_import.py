@@ -8,7 +8,7 @@ Create Date: 2026-06-22 20:49:11.019663
 from typing import Sequence, Union
 
 from alembic import op
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 from sqlalchemy.exc import NoSuchTableError
 import sqlalchemy as sa
 
@@ -20,6 +20,52 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _table_columns(table_name: str) -> set:
+    """Return the set of column names for the given table."""
+    conn = op.get_bind()
+    dialect = conn.dialect.name
+    if dialect == "sqlite":
+        try:
+            rows = conn.execute(text(f"PRAGMA table_info({table_name})")).fetchall()
+            return {row[1] for row in rows}
+        except Exception:
+            return set()
+    try:
+        rows = conn.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = :table_name"
+            ),
+            {"table_name": table_name},
+        ).fetchall()
+        return {row[0] for row in rows}
+    except Exception:
+        return set()
+
+
+def _index_exists(table_name: str, index_name: str) -> bool:
+    """Check whether an index already exists on the given table."""
+    conn = op.get_bind()
+    dialect = conn.dialect.name
+    if dialect == "sqlite":
+        try:
+            rows = conn.execute(text(f"PRAGMA index_list({table_name})")).fetchall()
+            return any(row[1] == index_name for row in rows)
+        except Exception:
+            return False
+    try:
+        rows = conn.execute(
+            text(
+                "SELECT 1 FROM pg_indexes WHERE tablename = :table_name "
+                "AND indexname = :index_name"
+            ),
+            {"table_name": table_name, "index_name": index_name},
+        ).fetchall()
+        return bool(rows)
+    except Exception:
+        return False
+
+
 def upgrade() -> None:
     """Add txn_uid column and unique index for idempotent imports."""
     bind = op.get_bind()
@@ -29,13 +75,16 @@ def upgrade() -> None:
         tables = []
     if 'transactions' not in tables:
         return  # table may have been dropped by a later migration downgrade
-    op.add_column('transactions', sa.Column('txn_uid', sa.String(), nullable=True))
-    op.create_index(
-        op.f('ix_transactions_txn_uid'),
-        'transactions',
-        ['tenant_id', 'user_id', 'txn_uid'],
-        unique=True,
-    )
+    tx_cols = _table_columns('transactions')
+    if 'txn_uid' not in tx_cols:
+        op.add_column('transactions', sa.Column('txn_uid', sa.String(), nullable=True))
+    if not _index_exists('transactions', 'ix_transactions_txn_uid'):
+        op.create_index(
+            op.f('ix_transactions_txn_uid'),
+            'transactions',
+            ['tenant_id', 'user_id', 'txn_uid'],
+            unique=True,
+        )
 
 
 def downgrade() -> None:

@@ -18,13 +18,6 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-def upgrade() -> None:
-    op.add_column('users', sa.Column('encryption_salt', sa.String(), nullable=True))
-    op.add_column('users', sa.Column('keyfile_path', sa.String(), nullable=True))
-
-
-
-
 def _table_exists(conn, table_name: str) -> bool:
     dialect = conn.dialect.name
     if dialect == "postgresql":
@@ -38,6 +31,40 @@ def _table_exists(conn, table_name: str) -> bool:
         return table_name in tables
     except Exception:
         return False
+
+
+def _table_columns(conn, table_name: str) -> set[str]:
+    """Return the set of column names for the given table."""
+    dialect = conn.dialect.name
+    if dialect == "sqlite":
+        try:
+            rows = conn.execute(sa.text(f"PRAGMA table_info({table_name})")).fetchall()
+            return {row[1] for row in rows}
+        except Exception:
+            return set()
+    try:
+        rows = conn.execute(
+            sa.text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = :table_name"
+            ),
+            {"table_name": table_name},
+        ).fetchall()
+        return {row[0] for row in rows}
+    except Exception:
+        return set()
+
+
+def upgrade() -> None:
+    conn = op.get_bind()
+    if not _table_exists(conn, 'users'):
+        return
+    user_cols = _table_columns(conn, 'users')
+    if 'encryption_salt' not in user_cols:
+        op.add_column('users', sa.Column('encryption_salt', sa.String(), nullable=True))
+    if 'keyfile_path' not in user_cols:
+        op.add_column('users', sa.Column('keyfile_path', sa.String(), nullable=True))
+
 
 def downgrade() -> None:
     conn = op.get_bind()
