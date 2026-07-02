@@ -363,6 +363,7 @@ class Transaction(Base):
     __tablename__ = "transactions"
     __table_args__ = (
         Index("ix_transactions_tenant_id", "tenant_id"),
+        Index("ix_transactions_tenant_date_id", "tenant_id", "date", "id"),
         Index("ix_transactions_txn_uid", "tenant_id", "user_id", "txn_uid", unique=True),
     )
     id = Column(Integer, primary_key=True, index=True)

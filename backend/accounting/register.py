@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import asc
 from sqlalchemy.orm import Session
@@ -36,7 +36,8 @@ def list_transactions(
       - category: exact category match
       - gl_account_id: exact GL account match
       - q: case-insensitive substring search on description
-      - limit / offset: pagination (defaults 500, 0)
+      - limit / offset: offset pagination (defaults 500, 0)
+      - after_date / after_id: keyset pagination overrides (both required together)
     """
     filters = filters or {}
     query = db.query(models.Transaction).filter(
@@ -72,14 +73,26 @@ def list_transactions(
     if q:
         query = query.filter(models.Transaction.description.ilike(f"%{q}%"))
 
-    query = query.order_by(asc(models.Transaction.date), asc(models.Transaction.id))
-
-    limit = filters.get("limit", 500)
-    offset = filters.get("offset", 0)
-    if limit is not None:
-        query = query.limit(int(limit))
-    if offset:
-        query = query.offset(int(offset))
+    # Prefer keyset pagination when both after_date and after_id are provided.
+    after_date = filters.get("after_date")
+    after_id = filters.get("after_id")
+    if after_date is not None and after_id is not None:
+        query = query.filter(
+            ((models.Transaction.date == after_date) & (models.Transaction.id > after_id))
+            | (models.Transaction.date > after_date)
+        )
+        query = query.order_by(asc(models.Transaction.date), asc(models.Transaction.id))
+        limit = filters.get("limit", 500)
+        if limit is not None:
+            query = query.limit(int(limit))
+    else:
+        query = query.order_by(asc(models.Transaction.date), asc(models.Transaction.id))
+        limit = filters.get("limit", 500)
+        offset = filters.get("offset", 0)
+        if limit is not None:
+            query = query.limit(int(limit))
+        if offset:
+            query = query.offset(int(offset))
 
     return query.all()
 

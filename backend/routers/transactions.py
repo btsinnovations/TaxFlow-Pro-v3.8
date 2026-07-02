@@ -1,6 +1,8 @@
 """Transaction router for TaxFlow Pro v3.11.03."""
 from __future__ import annotations
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List
@@ -86,6 +88,8 @@ def list_transactions(
     q: str = None,
     limit: int = 100,
     offset: int = 0,
+    after_date: date = None,
+    after_id: int = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -101,6 +105,9 @@ def list_transactions(
         filters["account_id"] = account_id
     if q:
         filters["q"] = q
+    if after_date is not None and after_id is not None:
+        filters["after_date"] = after_date
+        filters["after_id"] = after_id
     transactions = register_logic.list_transactions(db, effective_tenant_id, filters)
     return [_transaction_response(tx, current_user) for tx in transactions]
 
