@@ -152,10 +152,11 @@ def _upsert_transactions(db: Session, statement, current_user, transactions: lis
 
 def _wrap_tenant(request: Request, db: Session, current_user: models.User):
     if not is_postgres():
-        return
+        return resolve_user_tenant_id(current_user)
     if local_settings.is_single_user():
-        set_tenant_id(db, resolve_user_tenant_id(current_user))
-        return
+        tenant_id = resolve_user_tenant_id(current_user)
+        set_tenant_id(db, tenant_id)
+        return tenant_id
     tenant_id = request.headers.get("x-tenant-id")
     if tenant_id is None:
         raise HTTPException(status_code=400, detail="X-Tenant-ID header required")
@@ -218,9 +219,14 @@ async def upload_statement(request: Request,
         ).first()
         if not account:
             raise HTTPException(status_code=404, detail="Account not found")
-        tenant_id = account.tenant_id
+        # The RLS session context was set to inferred_tenant_id; the new row
+        # must use the same tenant_id or PostgreSQL RLS will reject it.
+        tenant_id = inferred_tenant_id if inferred_tenant_id is not None else account.tenant_id
     else:
-        tenant_id = None
+        tenant_id = inferred_tenant_id
+
+    if tenant_id is None:
+        raise HTTPException(status_code=400, detail="Could not determine tenant_id for upload")
 
     statement = models.Statement(
         account_id=account_id,
