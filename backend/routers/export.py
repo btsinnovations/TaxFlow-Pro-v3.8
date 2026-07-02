@@ -302,7 +302,7 @@ def export_statement(request: Request,
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Helvetica", "B", 16)
-        pdf.cell(0, 10, "TaxFlow Pro - Statement Summary", ln=True, align="C")
+        pdf.cell(0, 10, "TaxFlow Pro - Statement Summary", new_x="LMARGIN", new_y="NEXT", align="C")
         pdf.ln(10)
 
         pdf.set_font("Helvetica", "B", 12)
@@ -312,21 +312,21 @@ def export_statement(request: Request,
         pdf.ln(5)
 
         pdf.set_font("Helvetica", "B", 14)
-        pdf.cell(0, 10, "Reconciliation", ln=True)
+        pdf.cell(0, 10, "Reconciliation", new_x="LMARGIN", new_y="NEXT")
         pdf.set_font("Helvetica", "", 12)
         open_bal = float(statement.opening_balance) if statement.opening_balance is not None else 0.0
         close_bal = float(statement.closing_balance) if statement.closing_balance is not None else 0.0
         variance = float(statement.variance) if statement.variance is not None else 0.0
         balanced = "Yes" if statement.is_balanced else "No"
 
-        pdf.cell(90, 8, f"Opening Balance: ${open_bal:,.2f}", ln=True)
-        pdf.cell(90, 8, f"Closing Balance: ${close_bal:,.2f}", ln=True)
-        pdf.cell(90, 8, f"Variance: ${variance:,.2f}", ln=True)
-        pdf.cell(90, 8, f"Balanced: {balanced}", ln=True)
+        pdf.cell(90, 8, f"Opening Balance: ${open_bal:,.2f}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(90, 8, f"Closing Balance: ${close_bal:,.2f}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(90, 8, f"Variance: ${variance:,.2f}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(90, 8, f"Balanced: {balanced}", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(5)
 
         pdf.set_font("Helvetica", "B", 14)
-        pdf.cell(0, 10, "Category Summary", ln=True)
+        pdf.cell(0, 10, "Category Summary", new_x="LMARGIN", new_y="NEXT")
         pdf.set_font("Helvetica", "", 12)
 
         cat_totals = defaultdict(float)
