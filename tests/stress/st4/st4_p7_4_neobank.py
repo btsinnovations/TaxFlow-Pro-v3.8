@@ -1,4 +1,4 @@
-"""ST4 Phase 7.4 — Unknown neobank / generic fallback test."""
+﻿"""ST4 Phase 7.4 - Unknown neobank / generic fallback test."""
 import os
 import sys
 import io
@@ -11,7 +11,7 @@ def build_neobank_pdf():
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, "NeoBank X — Account Summary", ln=True)
+    pdf.cell(0, 10, "NeoBank X - Account Summary", ln=True)
     pdf.set_font("Arial", "", 10)
     pdf.cell(0, 8, "Customer: Anonymous | Account: X-999-0001", ln=True)
     pdf.cell(0, 8, "Period: 2026-01-01 to 2026-01-31", ln=True)
@@ -31,14 +31,13 @@ def build_neobank_pdf():
         for cell in row:
             pdf.cell(35, 8, cell, border=1)
         pdf.ln()
-    raw = pdf.output(dest="S")
-    return io.BytesIO(raw.encode("latin-1"))
+    return io.BytesIO(bytes(pdf.output()))
 
 
 def login():
     r = requests.post(
-        "http://127.0.0.1:8000/api/auth/login-json",
-        json={"username": "p7user", "***": "password"},
+        "http://127.0.0.1:8010/api/auth/login-json",
+        json={"username": "p7user", "password": "password"},
         timeout=30,
     )
     r.raise_for_status()
@@ -49,7 +48,7 @@ def upload_pdf(pdf_bytes, filename):
     token = login()
     files = {"file": (filename, pdf_bytes.getvalue(), "application/pdf")}
     headers = {"Authorization": f"Bearer {token}", "X-Tenant-ID": "1"}
-    r = requests.post("http://127.0.0.1:8000/api/upload", files=files, headers=headers, timeout=120)
+    r = requests.post("http://127.0.0.1:8010/api/upload?account_id=1", files=files, headers=headers, timeout=120)
     return r.status_code, r.text[:500]
 
 

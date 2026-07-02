@@ -51,6 +51,11 @@ data/output/*
 !data/output/.gitkeep
 logs/*
 !logs/.gitkeep
+# Stress test artifacts
+st4_*.png
+st4_debug_*.py
+tmp_*.py
+tests/stress/st4/*.png
 memory/
 .env
 .env.local

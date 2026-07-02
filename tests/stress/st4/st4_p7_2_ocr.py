@@ -30,8 +30,7 @@ def build_clean_pdf():
         for cell in row:
             pdf.cell(35, 8, cell, border=1)
         pdf.ln()
-    raw = pdf.output(dest="S")
-    return io.BytesIO(raw.encode("latin-1"))
+    return io.BytesIO(bytes(pdf.output()))
 
 
 def degrade_pdf(pdf_bytes):
@@ -65,8 +64,7 @@ def degrade_pdf(pdf_bytes):
                 img.save(png.name, "PNG")
                 pdf.add_page()
                 pdf.image(png.name, 10, 10, 190)
-        raw = pdf.output(dest="S")
-        return io.BytesIO(raw.encode("latin-1"))
+        return io.BytesIO(bytes(pdf.output()))
     finally:
         try:
             os.remove(tmp_path)
@@ -76,8 +74,8 @@ def degrade_pdf(pdf_bytes):
 
 def login():
     r = requests.post(
-        "http://127.0.0.1:8000/api/auth/login-json",
-        json={"username": "p7user", "***": "password"},
+        "http://127.0.0.1:8010/api/auth/login-json",
+        json={"username": "p7user", "password": "password"},
         timeout=30,
     )
     r.raise_for_status()
@@ -88,7 +86,7 @@ def upload_pdf(pdf_bytes, filename):
     token = login()
     files = {"file": (filename, pdf_bytes.getvalue(), "application/pdf")}
     headers = {"Authorization": f"Bearer {token}", "X-Tenant-ID": "1"}
-    r = requests.post("http://127.0.0.1:8000/api/upload", files=files, headers=headers, timeout=120)
+    r = requests.post("http://127.0.0.1:8010/api/upload?account_id=1", files=files, headers=headers, timeout=120)
     return r.status_code, r.text[:400]
 
 

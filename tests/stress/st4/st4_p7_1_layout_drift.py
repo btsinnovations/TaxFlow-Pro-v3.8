@@ -32,7 +32,7 @@ def build_baseline_pdf():
         for cell in row:
             pdf.cell(35, 8, cell, border=1)
         pdf.ln()
-    return io.BytesIO(pdf.output(dest="S").encode("latin-1"))
+    return io.BytesIO(bytes(pdf.output()))
 
 
 def mutate_pdf(pdf_bytes, mutation):
@@ -133,14 +133,14 @@ def upload_pdf(pdf_bytes, filename):
     token = login()
     files = {"file": (filename, pdf_bytes.getvalue(), "application/pdf")}
     headers = {"Authorization": f"Bearer {token}", "X-Tenant-ID": "1"}
-    r = requests.post("http://127.0.0.1:8000/api/upload", files=files, headers=headers, timeout=120)
+    r = requests.post("http://127.0.0.1:8010/api/upload?account_id=1", files=files, headers=headers, timeout=120)
     return r.status_code, r.text[:400]
 
 
 def login():
     r = requests.post(
-        "http://127.0.0.1:8000/api/auth/login-json",
-        json={"username": "p7user", "***": "password"},
+        "http://127.0.0.1:8010/api/auth/login-json",
+        json={"username": "p7user", "password": "password"},
         timeout=30,
     )
     r.raise_for_status()

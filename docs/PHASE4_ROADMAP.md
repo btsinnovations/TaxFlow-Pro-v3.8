@@ -113,6 +113,25 @@
 - Immutable log of all changes: transaction edits, imports, backups, exports
 - Tamper-evident with hash chain
 
+### 6.5 Receipt Capture + Local OCR
+- Camera or file upload for receipt images from the desktop app.
+- Local OCR using Tesseract / PaddleOCR / DocLayout-YOLO; no cloud vision APIs.
+- Extract line items, merchant, date, total, tax.
+- Link receipt images to existing transactions or create new cash transactions.
+- Store images and extracted text locally.
+
+### 6.6 Anomaly Detection
+- Statistical + rule-based flags on imported transactions.
+- Detect duplicate transactions, unusual amounts compared to category history, off-hours activity, and missing recurring items.
+- Rank transactions by anomaly score in a review queue.
+- Exclude high-anomaly items from tax summaries until reviewed.
+
+### 6.7 OFX Direct Connect
+- Download statements directly from bank OFX servers where supported.
+- No third-party aggregator; credentials stored encrypted locally.
+- Configurable polling schedule, manual sync button, and per-bank enable/disable.
+- Falls back to manual file upload for unsupported institutions.
+
 ---
 
 ## 7. Backend Deliverables Checklist
@@ -131,6 +150,9 @@
 | 10 | Financial statement generation | aggregation engine |
 | 11 | Role-based permissions | `users` roles extension |
 | 12 | Audit trail hash chain | new `audit_log` table |
+| 13 | Receipt capture + local OCR | new `receipts` table, image storage, OCR sandbox |
+| 14 | Anomaly detection engine | transaction history + statistical heuristics |
+| 15 | OFX Direct Connect | encrypted credentials, OFX client library, scheduler |
 
 ---
 
@@ -138,8 +160,8 @@
 
 - Desktop wrapper / native app (Phase 5)
 - Cloud sync or SaaS hosting
-- Live bank feeds / Plaid integration
-- Mobile app companion
+- Live bank feeds / Plaid integration (OFX Direct Connect is local-only and in scope)
+- Mobile app companion (Phase 5)
 
 ---
 

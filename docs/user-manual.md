@@ -605,22 +605,48 @@ Reports show realized gains/losses, dividend income, and cost-basis summaries.
 
 ## 24. Machine Learning Categorization
 
-### 24.1 How it works
+### 24.1 What it does
 
-TaxFlow Pro can train a local text classifier on your own categorized transactions. The model learns from descriptions you have already labeled and suggests categories for new transactions.
+The Machine Learning feature looks at transaction descriptions you have already categorized and tries to guess the right category for new transactions. It runs entirely on your computer.
 
-### 24.2 Train the model
+### 24.2 When it is trustworthy
 
-1. Go to the **Machine Learning** section on the landing page.
-2. Make sure you have at least 10 manually categorized transactions.
-3. Click **Train Model**.
-4. Review the accuracy and category metrics.
+Machine learning needs examples. A brand-new model trained on only a handful of transactions is basically guessing. This is normal, not a bug.
 
-### 24.3 Enable or disable
+Use this rule of thumb:
+
+- **Under 50 labeled transactions:** Do not rely on ML. Use categorization rules and manual review.
+- **50–100 labeled transactions:** ML may help, but review its suggestions closely.
+- **100–500 labeled transactions:** ML is usually reliable for common, repeated merchants.
+- **500+ labeled transactions:** ML can handle most routine categorization.
+
+Accuracy also matters. Look at the **Overall Accuracy** shown in the ML Model Management panel:
+
+- **Below 60%:** The model is not useful yet. Label more transactions and retrain.
+- **60–80%:** Useful but error-prone. Use it as a helper, not the final word.
+- **Above 80%:** Generally reliable for day-to-day categorization.
+- **Above 90%:** Good enough to run with minimal review.
+
+### 24.3 How to build a good model
+
+1. Import and categorize real transactions by hand.
+2. Make sure every category you care about has many examples.
+3. Go to **System → ML Model Management**.
+4. Click **Train Now**.
+5. Review the accuracy and category breakdown.
+6. If accuracy is low, label more transactions and train again.
+
+> **Tip:** Rules should do the heavy lifting at first. ML improves over time as you label more data.
+
+### 24.4 How it works technically
+
+TaxFlow Pro trains a TF-IDF + LogisticRegression classifier on your own labeled transactions. No cloud AI service is used. The model is saved locally as `local_model.pkl` and protected by a SHA-256 hash manifest.
+
+### 24.5 Enable or disable
 
 Toggle ML categorization on or off at any time. When disabled, only rule-based categorization runs.
 
-### 24.4 Model safety
+### 24.6 Model safety
 
 Trained models are hashed and stored locally. Imported model files are verified before loading to prevent tampering.
 
