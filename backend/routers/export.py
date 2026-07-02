@@ -307,8 +307,8 @@ def export_statement(request: Request,
 
         pdf.set_font("Helvetica", "B", 12)
         # FIXED: Use multi_cell for long filenames to prevent overflow
-        pdf.multi_cell(0, 8, f"Statement: {statement.filename}")
-        pdf.multi_cell(0, 8, f"Period: {statement.period_start or 'N/A'} to {statement.period_end or 'N/A'}")
+        pdf.multi_cell(0, 8, f"Statement: {statement.filename}", new_x="LMARGIN", new_y="NEXT")
+        pdf.multi_cell(0, 8, f"Period: {statement.period_start or 'N/A'} to {statement.period_end or 'N/A'}", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(5)
 
         pdf.set_font("Helvetica", "B", 14)
@@ -334,7 +334,7 @@ def export_statement(request: Request,
             cat_totals[t.category] += float(t.amount)
 
         for cat, total in sorted(cat_totals.items(), key=lambda x: abs(x[1]), reverse=True):
-            pdf.multi_cell(0, 8, f"{cat}: ${total:,.2f}")
+            pdf.multi_cell(0, 8, f"{cat}: ${total:,.2f}", new_x="LMARGIN", new_y="NEXT")
 
         # FIXED: dest='B' returns raw bytes for FastAPI Response
         pdf_bytes = pdf.output(dest='B')
