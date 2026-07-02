@@ -133,13 +133,13 @@ def upload_pdf(pdf_bytes, filename):
     token = login()
     files = {"file": (filename, pdf_bytes.getvalue(), "application/pdf")}
     headers = {"Authorization": f"Bearer {token}", "X-Tenant-ID": "1"}
-    r = requests.post("http://localhost:8000/api/upload", files=files, headers=headers, timeout=120)
+    r = requests.post("http://127.0.0.1:8000/api/upload", files=files, headers=headers, timeout=120)
     return r.status_code, r.text[:400]
 
 
 def login():
     r = requests.post(
-        "http://localhost:8000/api/auth/login-json",
+        "http://127.0.0.1:8000/api/auth/login-json",
         json={"username": "p7user", "***": "password"},
         timeout=30,
     )

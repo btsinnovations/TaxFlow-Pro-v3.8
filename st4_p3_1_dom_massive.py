@@ -9,7 +9,7 @@ sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 from playwright.sync_api import sync_playwright
 
 BASE_URL = os.environ.get("ST4_BASE_URL", "http://localhost:5173")
-API_URL = os.environ.get("ST4_API_URL", "http://localhost:8000")
+API_URL = os.environ.get("ST4_API_URL", "http://127.0.0.1:8000")
 
 
 def login_get_token():

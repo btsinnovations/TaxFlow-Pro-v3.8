@@ -14,7 +14,7 @@ sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 TEST_DB = os.environ.get("ST4_TEST_DB", "taxflow_stress_4_p43")
 ADMIN_URL = f"postgresql://postgres@localhost:5433/{TEST_DB}"
 TEST_URL = f"postgresql://taxflow_test:taxflow_test@localhost:5433/{TEST_DB}"
-API_BASE = os.environ.get("ST4_API_URL", "http://localhost:8000")
+API_BASE = os.environ.get("ST4_API_URL", "http://127.0.0.1:8000")
 
 os.environ["DATABASE_URL"] = TEST_URL
 os.environ["TAXFLOW_SINGLE_USER"] = "false"

@@ -1,4 +1,4 @@
-﻿"""Stress Test 4 Phase 2.3 - DB pool exhaustion / slow DB simulation."""
+"""Stress Test 4 Phase 2.3 - DB pool exhaustion / slow DB simulation."""
 import os, sys, time, threading, requests
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
@@ -9,7 +9,7 @@ from backend.local.crypto import LocalCryptoManager
 
 TEST_DB = os.environ["ST4_TEST_DB"]
 ADMIN_URL = f"postgresql://postgres@localhost:5433/{TEST_DB}"
-BASE_URL = os.environ.get("ST4_BASE_URL", "http://localhost:8000")
+BASE_URL = os.environ.get("ST4_BASE_URL", "http://127.0.0.1:8000")
 PASS_ENV = os.environ.get("ST4_PASSWORD", "password")
 
 def seed(db):
