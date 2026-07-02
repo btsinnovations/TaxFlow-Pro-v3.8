@@ -336,10 +336,10 @@ def export_statement(request: Request,
         for cat, total in sorted(cat_totals.items(), key=lambda x: abs(x[1]), reverse=True):
             pdf.multi_cell(0, 8, f"{cat}: ${total:,.2f}", new_x="LMARGIN", new_y="NEXT")
 
-        # FIXED: dest='B' returns raw bytes for FastAPI Response
-        pdf_bytes = pdf.output(dest='B')
+        # FIXED: pdf.output() returns bytearray; wrap in bytes for Response
+        pdf_bytes = pdf.output()
         return Response(
-            content=pdf_bytes,
+            content=bytes(pdf_bytes),
             media_type="application/pdf",
             headers={"Content-Disposition": f"attachment; filename={_statement_export_filename(statement_id, "summary.pdf")}"}
         )
